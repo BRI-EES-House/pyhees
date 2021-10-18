@@ -321,26 +321,3 @@ def get_table_a_2():
         (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
     ]
     return table_a_2
-
-if __name__ == '__main__':
-    from section11_3 import load_schedule, get_schedule_app, get_schedule_cc
-
-    df = load_schedule()
-    schedule_app = get_schedule_app(df)
-    schedule_cc = get_schedule_cc(df)
-
-    print('家電(1人):{}'.format(np.sum(get_E_E_AP_p_d_t(1, schedule_app))))
-    print('家電(1.5人):{}'.format(np.sum(calc_E_E_AP_d_t(1.5, schedule_app))))
-    print('家電(2人):{}'.format(np.sum(get_E_E_AP_p_d_t(2, schedule_app))))
-    print('家電(2.5人):{}'.format(np.sum(calc_E_E_AP_d_t(2.5, schedule_app))))
-    print('家電(3人):{}'.format(np.sum(get_E_E_AP_p_d_t(3, schedule_app))))
-    print('家電(3.5人):{}'.format(np.sum(calc_E_E_AP_d_t(3.5, schedule_app))))
-    print('家電(4人):{}'.format(np.sum(get_E_E_AP_p_d_t(4, schedule_app))))
-
-    print('調理(1人):{}'.format(np.sum(get_E_G_CC_p_d_t(1, schedule_cc))))
-    print('調理(1.5人):{}'.format(np.sum(calc_E_G_CC_d_t(1.5, schedule_cc))))
-    print('調理(2人):{}'.format(np.sum(get_E_G_CC_p_d_t(2, schedule_cc))))
-    print('調理(2.5人):{}'.format(np.sum(calc_E_G_CC_d_t(2.5, schedule_cc))))
-    print('調理(3人):{}'.format(np.sum(get_E_G_CC_p_d_t(3, schedule_cc))))
-    print('調理(3.5人):{}'.format(np.sum(calc_E_G_CC_d_t(3.5, schedule_cc))))
-    print('調理(4人):{}'.format(np.sum(get_E_G_CC_p_d_t(4, schedule_cc))))

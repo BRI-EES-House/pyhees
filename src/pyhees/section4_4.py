@@ -188,32 +188,3 @@ def calc_Q_UT_H_d_t(q_max_H, L_H_d_t):
     Q_UT_H_d_t = L_H_d_t - Q_T_H_d_t
 
     return Q_UT_H_d_t
-
-
-if __name__ == '__main__':
-    # ダミー負荷
-    L_H_d_t = np.ones(24 * 365) * 12
-
-    # 設定値
-    q_max_H = 2585.8770
-    q_min_H = 580.6191
-    e_rtd_H = 0.860
-    P_rtd_H = 8.0938
-    P_itm_H = 40
-    fuel = 'G'
-
-    # FF暖房
-    E_E_H_d_t = calc_E_E_H_d_t(
-        q_max_H=q_max_H,
-        q_min_H=q_min_H,
-        P_rtd_H=P_rtd_H,
-        P_itm_H=P_itm_H,
-        L_H_d_t=L_H_d_t
-        )
-    E_G_H_d_t = calc_E_G_H_d_t(fuel, q_max_H, e_rtd_H, L_H_d_t)
-    E_K_H_d_t = calc_E_K_H_d_t(fuel, q_max_H, e_rtd_H, L_H_d_t)
-    E_M_H_d_t = get_E_M_H_d_t()
-    print('E_E_H = {} '.format(np.sum(E_E_H_d_t)))
-    print('E_G_H = {} '.format(np.sum(E_G_H_d_t)))
-    print('E_K_H = {} '.format(np.sum(E_K_H_d_t)))
-    print('E_M_H = {} '.format(np.sum(E_M_H_d_t)))

@@ -139,31 +139,3 @@ def get_e_rtd_H():
 
     """
     return 0.850
-
-
-if __name__ == '__main__':
-    region = 6
-    A_HCZ = 27.7
-    mode = '間歇運転'
-    R_type = '主たる居室'
-
-    # 単位面積当たりの必要暖房能力
-    q_rq_H = calc_q_rq_H(region)
-
-    # 外気温度補正係数
-    f_cT = get_f_cT(region)
-
-    # 間歇運転能力補正係数
-    f_cI = calc_f_cI(mode, R_type)
-
-    # 定格暖房能力
-    q_rtd_H = get_q_rtd_H(q_rq_H, A_HCZ, f_cT, f_cI)
-
-    print('region = {}'.format(region))
-    print('A_HCZ = {}'.format(A_HCZ))
-    print('mode = {}'.format(mode))
-    print('R_type = {}'.format(R_type))
-    print('q_rq_H = {}'.format(q_rq_H))
-    print('f_cT = {}'.format(f_cT))
-    print('f_cI = {}'.format(f_cI))
-    print('q_rtd_H = {}'.format(q_rtd_H))
