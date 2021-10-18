@@ -1252,38 +1252,3 @@ def get_U_c_j(m_fan_test_j=None, d1_j=None):
     U_c_j = - c_p_air * m_fan_test_j * 10 ** 3 * np.log(1 - 1 / (c_p_air * m_fan_test_j * 10 ** 3) * d1_j)
 
     return U_c_j
-
-
-if __name__ == '__main__':
-    spec = {
-
-        # 空気搬送ファンの自立運転用太陽光発電装置の採用
-        'pump_sso': False,
-
-        # 空気搬送ファンの種別
-        'fan_type': 'DC',
-
-        # 機外静圧をゼロとした時の空気搬送ファンの風量[m3/h]
-        'V_fan_P0': 2.0,
-
-        # 集熱した熱の給湯への利用
-        'use_hotwater': True,
-
-        # 集熱後の空気を供給する空間
-        'supply_target': '床下',
-
-        # 集熱器群
-        'collectors': [
-
-            # 集熱器群その1
-            {
-                # 集熱器群1の面積[m2]
-                'A_col': 1.0,
-                'P_alpha': 0.1,
-                'P_beta': 0.2,
-                'd0': 0.1,
-                'd1': 2.0,
-                'm_fan_test': 0.0107
-            }
-        ]
-    }

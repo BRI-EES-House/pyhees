@@ -791,36 +791,3 @@ def get_I_s_lwlim_cp_ss():
 
     """
     return 150.0
-
-
-if __name__ == '__main__':
-    from section11_2 import load_solrad
-
-    solrad = load_solrad(6, 3)
-
-    # ********** 太陽熱温水器 **********
-
-    # 補正集熱量
-    L_sun_lss_d = calc_L_sun_lss_d_t('太陽熱温水器', 2.0, 0.1, 0.2, 150, np.ones(365), np.ones(365), np.ones(365),
-                                     np.ones(365),
-                                     np.ones(365), np.ones(365), np.ones(365), solrad)
-
-    # 補機の消費電力量
-    E_E_lss_aux_d = calc_E_E_lss_aux_d_t('太陽熱温水器', '省消費電力型', 0.1, 0.2, solrad)
-
-    print('太陽熱温水器')
-    print('L_sun_lss = {}'.format(np.sum(L_sun_lss_d)))
-    print('E_E_lss_aux = {}'.format(np.sum(E_E_lss_aux_d)))
-
-    # ********** ソーラーシステム **********
-
-    # 補正集熱量
-    L_sun_lss_d = calc_L_sun_lss_d_t('ソーラーシステム', 2.0, 0.1, 0.2, 150, np.ones(365), np.ones(365), np.ones(365),
-                                     np.ones(365), np.ones(365), np.ones(365), np.ones(365), solrad)
-
-    # 補機の消費電力量
-    E_E_lss_aux_d = calc_E_E_lss_aux_d_t('ソーラーシステム', '省消費電力型', 0.1, 0.2, solrad)
-
-    print('ソーラーシステム')
-    print('L_sun_lss = {}'.format(np.sum(L_sun_lss_d)))
-    print('E_E_lss_aux = {}'.format(np.sum(E_E_lss_aux_d)))

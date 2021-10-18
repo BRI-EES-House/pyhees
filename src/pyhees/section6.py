@@ -1503,26 +1503,3 @@ def get_table_b_3_c():
         (0.00, 0.00, 0.00, 0.00, 0.25, 0.00, 0.00, 0.25, 0.25, 0.25, 0.00, 0.50, 0.00, 0.25, 0.00, 0.00, 0.25, 0.00, 0.00),
     ]
     return table_b_3_c
-
-if __name__ == '__main__':
-
-    from section2_1 import get_n_p, get_f_prim
-    from converter import get_spec
-
-    import pandas as pd
-
-    records = pd.read_csv('L_A.txt', encoding='Shift_JIS').to_dict(orient='records')
-    for record in records:
-        if record['内部識別子'].startswith('#') == False and record['E_L'] != 'ERR' and record['E_L'] != 'err':
-            spec = get_spec(record)
-
-            n_p = get_n_p(spec['A_A'])
-            E_E_L = np.sum(calc_E_E_L_d_t(n_p, spec['A_A'], spec['A_MR'], spec['A_OR'], spec['L']))
-            f_prim = get_f_prim()
-
-            E_L = E_E_L * f_prim / 1000
-            d = float(record['E_L']) - E_L
-
-            print('{} E_L: {} [MJ/年] {}'.format(record['内部識別子'], E_L, 'OK' if abs(d) < 1 else 'NG'))
-        else:
-            print('{} err'.format(record['内部識別子']))

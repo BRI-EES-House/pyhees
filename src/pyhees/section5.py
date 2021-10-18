@@ -323,25 +323,3 @@ table_c_1 = [
     (6.28, 3.52, 6.49, 12.56, 7.03, 12.98, 18.84, 10.55, 19.47, 25.12, 14.06, 25.95),
     (6.7, 6.28, 3.31, 13.39, 12.56, 6.61, 20.09, 18.84, 9.92, 26.79, 25.12, 13.23)
 ]
-
-if __name__ == '__main__':
-
-    from section2_1 import get_n_p, get_f_prim
-    from converter import get_spec
-    import pandas as pd
-
-    records = pd.read_csv('V_A.txt', encoding='Shift_JIS').to_dict(orient='records')
-    for record in records:
-        if record['E_V'] != 'ERR' and record['E_V'] != 'err':
-            spec = get_spec(record)
-
-            n_p = get_n_p(spec['A_A'])
-            E_E_V = np.sum(calc_E_E_V_d_t(n_p, spec['A_A'], spec['V']))
-            f_prim = get_f_prim()
-
-            E_V = E_E_V * f_prim / 1000
-            d = float(record['E_V']) - E_V
-
-            print('{} E_V: {} [MJ/年] {}'.format(record['内部識別子'], E_V, 'OK' if abs(d) < 1 else 'NG'))
-        else:
-            print('{} err'.format(record['内部識別子']))
