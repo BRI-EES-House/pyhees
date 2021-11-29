@@ -9,6 +9,9 @@ Python 3.8.5
 pip3 install git+https://github.com/BRI-EES-House/pyhees.git
 ```
 
+## Examples
+see examples [here](https://github.com/BRI-EES-House/pyhees_example)
+
 ## 著者
 
 Pyhees Development Team
