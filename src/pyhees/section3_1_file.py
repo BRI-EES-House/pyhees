@@ -87,7 +87,6 @@ def read_csv(hc, filename):
 
     """
     path = os.path.join(os.path.dirname(__file__), 'data', '3-1_HukaData_151019_unifyLDK', filename)
-    print(path)
     if hc == 'H':
         df = pd.read_csv(path, skiprows=4, nrows=24 * 365, names=(
             'date', 'hour', 'holiday', 'temp', 'humid', '1_HS', '1_HL', '2_HS', '2_HL', '3_HS', '3_HL', '4_HS', '4_HL',
