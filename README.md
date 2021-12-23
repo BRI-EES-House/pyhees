@@ -6,11 +6,11 @@ This calculation programe based on the documents of the evaluation of energy con
 
 The calculation method was developed by the Energy Conservation Performance Evaluation Method Study Committee established within the Institute for Building Environment and Energy Conservation (IBEC) and the Japan Sustainable Building Council (JSBC), and has been published as a calculation method for energy consumption performance on the website of the Building Research Institute (https://www.kenken.go.jp/becc/house.html) with the technical cooperation of the Building Research Institute (BRI) and the National Institute for Land and Infrastructure Management (NILIM).
 
-計算方法は建築環境・省エネルギー機構（IBEC）及び日本サステナブル建築協会（JSBC）内に設置された省エネルギー性能評価法検討委員会により開発され、建築研究所および国土技術政策総合研究所の技術的協力のもと、エネルギー消費性能の算定方法（ https://www.kenken.go.jp/becc/house.html ）として、建築研究所内のホームページにて公開されています。
+エネルギー消費性能の算定方法は、建築環境・省エネルギー機構（IBEC）及び日本サステナブル建築協会（JSBC）内に設置された省エネルギー性能評価法検討委員会により開発され、建築研究所および国土技術政策総合研究所の技術的協力のもと、建築研究所内のホームページ（ https://www.kenken.go.jp/becc/house.html ）にて公開されています。
 
 Based on this calculation method, an evaluation program for the Building Energy Conservation Law (https://house.lowenergy.jp/) has been developed. Therefore, it can be said that, in principle, the evaluation program published publicly and the calculation file published here are the same calculation method.
 
-この計算方法に基づき、建築物省エネ法における評価プログラム（ https://house.lowenergy.jp/ ）が開発されています。従って公開されている評価プログラムと、ここで公開する計算ファイルは原則として同じ計算方法であるといえます。
+この算定方法に基づき、建築物省エネ法における評価プログラム（ https://house.lowenergy.jp/ ）が開発されています。従って公開されている評価プログラムと、ここで公開する計算ファイルは原則として同じ算定方法であるといえます。
 
 The evaluation method in the Building Energy Conservation Law is published by the Building Research Institute (BRI) in response to the "Enforcement of the Law Concerning the Improvement of Energy Consumption Performance of Buildings (Technical Advice) (March 15, 2017)", and the program published here will be published by the Building Research Institute (BRI) in the same position.
 
