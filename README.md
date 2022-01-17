@@ -1,20 +1,17 @@
 # pyhees
 
-This calculation programe based on the documents of the evaluation of energy consumption performance (https://www.kenken.go.jp/becc/house.html) is released for the purpose of confirming the calculation process and using it for research and study. 
+This calculation programe based on [the documents of the evaluation of energy consumption performance](https://www.kenken.go.jp/becc/house.html) is released for the purpose of confirming the calculation process and using it for research and study. 
 
-計算過程の確認及び調査研究等に活⽤することを⽬的として、エネルギー消費性能の算定⽅法（ https://www.kenken.go.jp/becc/house.html ）に基づく計算ファイルを公開しています。 
+計算過程の確認及び調査研究等に活⽤することを⽬的として、[エネルギー消費性能の算定⽅法](https://www.kenken.go.jp/becc/house.html) に基づく計算ファイルを公開しています。 
 
-The calculation method was developed by the Energy Conservation Performance Evaluation Method Study Committee established within the Institute for Building Environment and Energy Conservation (IBEC) and the Japan Sustainable Building Council (JSBC), and has been published as a calculation method for energy consumption performance on the website of the Building Research Institute (https://www.kenken.go.jp/becc/house.html) with the technical cooperation of the Building Research Institute (BRI) and the National Institute for Land and Infrastructure Management (NILIM).
+The calculation method was developed by the Energy Conservation Performance Evaluation Method Study Committee established within [the Institute for Building Environment and Energy Conservation (IBEC)](https://www.ibec.or.jp/) and [the Japan Sustainable Building Council (JSBC)](https://www.jsbc.or.jp/), and has been published as a calculation method for energy consumption performance on [the website of the Building Research Institute](https://www.kenken.go.jp/becc/house.html) with the technical cooperation of [the Building Research Institute (BRI)](https://www.kenken.go.jp/) and [the National Institute for Land and Infrastructure Management (NILIM)](http://www.nilim.go.jp/).
 
-エネルギー消費性能の算定方法は、建築環境・省エネルギー機構（IBEC）及び日本サステナブル建築協会（JSBC）内に設置された省エネルギー性能評価法検討委員会により開発され、建築研究所および国土技術政策総合研究所の技術的協力のもと、建築研究所内のホームページ（ https://www.kenken.go.jp/becc/house.html ）にて公開されています。
+エネルギー消費性能の算定方法は、[建築環境・省エネルギー機構（IBEC）](https://www.ibec.or.jp/)及び[日本サステナブル建築協会（JSBC）](https://www.jsbc.or.jp/)内に設置された省エネルギー性能評価法検討委員会により開発され、[建築研究所](https://www.kenken.go.jp/)および[国土技術政策総合研究所](http://www.nilim.go.jp/)の技術的協力のもと、[建築研究所内のホームページ]( https://www.kenken.go.jp/becc/house.html)にて公開されています。
 
-Based on this calculation method, an evaluation program for the Building Energy Conservation Law (https://house.lowenergy.jp/) has been developed. Therefore, it can be said that, in principle, the evaluation program published publicly and the calculation file published here are the same calculation method.
+Based on this calculation method, an evaluation program for the Building Energy Conservation Law ( https://house.lowenergy.jp/ ) has been developed. Therefore, it can be said that, in principle, the evaluation program published publicly and the calculation file published here are the same calculation method.
 
 この算定方法に基づき、建築物省エネ法における評価プログラム（ https://house.lowenergy.jp/ ）が開発されています。従って公開されている評価プログラムと、ここで公開する計算ファイルは原則として同じ算定方法であるといえます。
 
-The evaluation method in the Building Energy Conservation Law is published by the Building Research Institute (BRI) in response to the "Enforcement of the Law Concerning the Improvement of Energy Consumption Performance of Buildings (Technical Advice) (March 15, 2017)", and the program published here will be published by the Building Research Institute (BRI) in the same position.
-
-建築物省エネ法における評価方法は「建築物のエネルギー消費性能の向上に関する法律等の施行について（技術的助言）（平成29年3月15日）」を受けて建築研究所にて公開されており、ここで公開するプログラムも同じ位置づけで建築研究所から公開する。
 
 ## Sponsors
 
