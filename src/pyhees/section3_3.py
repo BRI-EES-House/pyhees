@@ -152,8 +152,6 @@ Envelope---Envelope要素のノード名をkey、値をvalueとして持つ辞�
 |          
 |--'Door': ドアのリスト
 |
-|--'DoorWindow': ドアや窓が同一枠内で併設される場合の開口部のリスト
-|
 |--'Foundation': 基礎等のリスト
 |
 |--'LinearHeatBridge': 熱橋のリスト
@@ -744,105 +742,6 @@ Door---Door要素のノード名をkey、値をvalueとして持つ辞書
     |--'GammaH': 暖房期の日除けの効果係数
     |--'GammaC': 冷房期の日除けの効果係数
     |--'UValue': 熱貫流率
-    |--'UValueInfo': 熱貫流率の入力根拠
-    |--'Attachment': 付属品部材
-            'No'(なし) または 'Shutter'(シャッター) または 'Shoji'(障子) または 'WindbreakSpace'(風除室)
-"""
-## 出力
-"""
-|--'U_i': 熱貫流率
-"""
-
-
-###### ドアや窓が同一枠内で併設される場合 ######
-"""
-DoorWindow---DoorWindow要素のノード名をkey、値をvalueとして持つ辞書
-|
-|--'Method': 'DoorWindow' ※内部処理のため追加
-|--'Name': 名前
-|--'Area': 面積
-|--'Direction': 方位
-|       'Top'(屋根上面) または 'N'(北) または 'NE'(北東) または 'E'(東) または 'SE'(南東) または 
-|       'S'(南) または 'SW'(南西) または 'W'(西) または 'NW'(北西) または 'Bottom'(下面)
-|--'SolarGain': 日射取得率
-|       'Yes'(日射熱取得が発生する部位) または 'No'(日射熱取得が発生しない部分)
-|--'Adjacent': 隣接空間等の種類別
-|       'Open'(外気) または 'Connected'(外気に通じる空間) または 'Close'(外気に通じていない空間又は外気に通じる床裏) または
-|       'Separator'(住戸、住戸と同様の熱的環境の空間又は外気に通じていない床裏)
-|--'WindowPart': 窓部分(WindowPart形式をもつ辞書)
-|   |
-|   |
-|   WindowPart---窓部分についてのパラメータ名をキー、パラメータの値を値として持つ辞書
-|   |
-|   |--'IsSetWindow': 二重窓の入力
-|   |       'Yes'(二重窓の入力あり) または 'No'(二重窓の入力なし)
-|   |--'Area': 面積
-|   |--'OuterHeatTransferOpeningArea': 二重窓における外気側窓の伝熱開口面積
-|   |--'InternalHeatTransferOpeningArea': 二重窓における室内側窓の伝熱開口面積
-|   |--'HasShade': 日除けの有無
-|   |       'Yes'(あり) または 'No'(なし)
-|   |--'SashSpec': 建具仕様
-|   |       'WoodenOrResin'(木製建具又は樹脂製建具) または 'Mix'(木と金属の複合材料製建具又は樹脂と金属の複合材料製建具) または 
-|   |       'MetallicInsulated'(金属製熱遮断構造建具) または 'Metalic'(金属製建具) 
-|   |--'SashSpecForInnerWindow': 建具仕様(内窓)
-|   |       'WoodenOrResin'(木製建具又は樹脂製建具) または 'Mix'(木と金属の複合材料製建具又は樹脂と金属の複合材料製建具) または 
-|   |       'MetallicInsulated'(金属製熱遮断構造建具) または 'Metalic'(金属製建具) 
-|   |--'GlassSpecForCategory': ガラス仕様（区分）
-|   |       'Single'(単層) または '2Pair'(二層複層) または '3Pair'(三層以上の複層)
-|   |--'Attachment': 付属品部材
-|   |       'No'(なし) または 'Shutter'(シャッター) または 'Shoji'(障子) または 'WindbreakSpace'(風除室) または 'ExteriorBlind'(外付けブラインド)     
-|   |--'UValue': 熱貫流率
-|   |--'UValueInfo': 熱貫流率の入力根拠
-|   |--'UValueForInnerWindow': 熱貫流率（内窓）
-|   |--'UValueInfoForInnerWindow': 熱貫流率の入力根拠（内窓）
-|   |--'SolarHeatGainCoefficient': ガラスの垂直面日射熱取得率
-|   |--'SolarHeatGainCoefficientInfo': ガラスの垂直面日射熱取得率の入力根拠
-|   |--'GlassType': ガラス仕様の区分
-|   |       '3PairDoubleLowEG'(2枚以上のガラス表面にLow-E膜を使用したLow-E三層複層ガラス　日射取得型) または
-|   |       '3PairDoubleLowES'(2枚以上のガラス表面にLow-E膜を使用したLow-E三層複層ガラス　日射遮蔽型) または
-|   |       '3PairLowEG'(Low-E三層複層ガラス　日射取得型) または
-|   |       '3PairLowES'(Low-E三層複層ガラス　日射遮蔽型) または
-|   |       '3PairClear'(三層複層ガラス) または
-|   |       '2PairLowEG'(Low-E二層複層ガラス　日射取得型) または
-|   |       '2PairLowES'(Low-E二層複層ガラス　日射遮蔽型) または
-|   |       '2PairClear'(二層複層ガラス) または
-|   |       '2PairSingleClear'(単板ガラス2枚を組み合わせたもの) または
-|   |       'SingleClear'(単板ガラス) 
-|   |--'SolarHeatGainCoefficientForInnerWindow': ガラスの垂直面日射熱取得率（内窓）
-|   |--'SolarHeatGainCoefficientInfoForInnerWindow': ガラスの垂直面日射熱取得率の入力根拠（内窓）
-|   |--'GlassTypeForInnerWindow': ガラス仕様の区分（内窓）
-|   |       '3PairDoubleLowEG'(2枚以上のガラス表面にLow-E膜を使用したLow-E三層複層ガラス　日射取得型) または
-|   |       '3PairDoubleLowES'(2枚以上のガラス表面にLow-E膜を使用したLow-E三層複層ガラス　日射遮蔽型) または
-|   |       '3PairLowEG'(Low-E三層複層ガラス　日射取得型) または
-|   |       '3PairLowES'(Low-E三層複層ガラス　日射遮蔽型) または
-|   |       '3PairClear'(三層複層ガラス) または
-|   |       '2PairLowEG'(Low-E二層複層ガラス　日射取得型) または
-|   |       '2PairLowES'(Low-E二層複層ガラス　日射遮蔽型) または
-|   |       '2PairClear'(二層複層ガラス) または
-|   |       '2PairSingleClear'(単板ガラス2枚を組み合わせたもの) または
-|   |       'SingleClear'(単板ガラス) 
-|   |--'FcMethod': 窓の日射熱取得の計算方法
-|   |       'No'(計算しない) または 'Simple'(簡易法) または 'Accurate'(詳細法)
-|   |--'FrameRef': 枠の影響の有無
-|   |       'Yes'(枠の影響がある場合) または 'No'(枠の影響がない場合)
-|   |--'WindowTopToEaveHeight': 日除け下端から窓上端までの垂直方向の距離
-|   |--'WindowHeigt': 窓の開口高さ寸法
-|   |--'EaveDepth': 窓面からの日除けの張り出し寸法
-|   |--'GammaH': 暖房期の日除けの効果係数
-|   |--'GammaC': 冷房期の日除けの効果係数
-|
-|
-|--'DoorPart': ドア部分(DoorPart形式をもつ辞書)
-    |
-    |
-    DoorPart---ドア部分についてのパラメータ名をキー、パラメータの値を値として持つ辞書
-    |
-    |--'Area': 面積
-    |--'HasShade': 日除けの有無
-    |       'Yes'(あり) または 'No'(なし)
-    |--'GammaH': 暖房期の日除けの効果係数
-    |--'GammaC': 冷房期の日除けの効果係数
-    |--'Uvalue': 熱貫流率
     |--'UValueInfo': 熱貫流率の入力根拠
     |--'Attachment': 付属品部材
             'No'(なし) または 'Shutter'(シャッター) または 'Shoji'(障子) または 'WindbreakSpace'(風除室)

@@ -6,6 +6,7 @@ import numpy as np
 from pyhees.section4_7_common import get_Q_out_H_hs_d_t
 from pyhees.section4_8_a import calc_e_ref_H_th
 import pyhees.section4_7_h as appendix_H
+from pyhees.section4_7_o import get_virtual_HeatExchangerType
 
 
 # ============================================================================
@@ -48,11 +49,14 @@ def calc_E_E_hs_d_t(Q_dmd_H_hs_d_t, Theta_ex_a_Ave, Theta_ex_d_Ave_d, Theta_ex_H
     # 1日当たりの暖房負荷の年間最大値と1日当たりの冷房負荷の年間最大値の和に対する、これらの差の比（-）(20a)
     R_L_max = get_R_L_max(L_max_H, L_max_C)
 
+    # 付録Oによる熱交換器タイプの決定
+    virtual_HeatExchangerType = get_virtual_HeatExchangerType(HeatExchangerType)
+
     # 地中熱交換器からの戻り熱源水温度を求める式の係数（-）(19)
-    K_gsRW_H = calc_K_gsRW_H(R_L_max, HeatExchangerType)
+    K_gsRW_H = calc_K_gsRW_H(R_L_max, virtual_HeatExchangerType)
 
     # 暖房期における地中熱交換器からの戻り熱源水の期間平均温度と年平均外気温度との差（℃）(18)
-    Delta_Theta_gsRW_H = calc_Delta_Theta_gsRW_H(R_L_max, HeatExchangerType)
+    Delta_Theta_gsRW_H = calc_Delta_Theta_gsRW_H(R_L_max, virtual_HeatExchangerType)
 
     # 日付dにおける地中熱交換器からの戻り熱源水の日平均温度（℃）(17)
     Theta_gsRW_d_ave_d = get_Theta_gsRW_d_ave_d(K_gsRW_H, Theta_ex_d_Ave_d, Theta_ex_H_Ave, Theta_ex_a_Ave, Delta_Theta_gsRW_H)
@@ -817,11 +821,14 @@ def calc_Q_max_H_hs_d_t(Theta_SW_d_t, Theta_ex_d_Ave_d, Theta_ex_H_Ave, Theta_ex
     # 1日当たりの暖房負荷の年間最大値と1日当たりの冷房負荷の年間最大値の和に対する、これらの差の比（-）(20a)
     R_L_max = get_R_L_max(L_max_H, L_max_C)
 
+    # 付録Oによる熱交換器タイプの決定
+    virtual_HeatExchangerType = get_virtual_HeatExchangerType(HeatExchangerType)
+
     # 地中熱交換器からの戻り熱源水温度を求める式の係数（-）(19)
-    K_gsRW_H = calc_K_gsRW_H(R_L_max, HeatExchangerType)
+    K_gsRW_H = calc_K_gsRW_H(R_L_max, virtual_HeatExchangerType)
 
     # 暖房期における地中熱交換器からの戻り熱源水の期間平均温度と年平均外気温度との差（℃）(18)
-    Delta_Theta_gsRW_H = calc_Delta_Theta_gsRW_H(R_L_max, HeatExchangerType)
+    Delta_Theta_gsRW_H = calc_Delta_Theta_gsRW_H(R_L_max, virtual_HeatExchangerType)
 
     # 日付dにおける地中熱交換器からの戻り熱源水の日平均温度（℃）(17)
     Theta_gsRW_d_ave_d = get_Theta_gsRW_d_ave_d(K_gsRW_H, Theta_ex_d_Ave_d, Theta_ex_H_Ave, Theta_ex_a_Ave,

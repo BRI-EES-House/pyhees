@@ -84,18 +84,20 @@ def get_q_max_fh():
 # L.5 敷設面積
 # ============================================================================
 
-#
 def get_A_f(A_HCZ, r_Af):
     """温水床暖房の敷設面積 (4)
 
     Args:
       A_HCZ(float): 暖冷房区画の床面積
-      r_Af(flloat): 当該住戸における温水床暖房の敷設率 (-)
+      r_Af(float): 当該住戸における温水床暖房の敷設率 (-)
 
     Returns:
       float: 温水床暖房の敷設面積
 
     """
+    if r_Af is None:
+        r_Af = 0.4
+
     return A_HCZ * r_Af
 
 

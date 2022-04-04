@@ -207,7 +207,7 @@ def calc_Q_UT_H_MR_d_t(region, A_A, A_MR, A_OR, spec_MR, spec_OR, spec_HS, mode_
         elif spec_MR['type'] == '温水暖房用床暖房':
             # 床面積
             A_HCZ = calc_A_HCZ_i(1, A_A, A_MR, A_OR)
-            r_Af = spec_MR['r_Af']
+            r_Af = spec_MR.get('r_Af')
             A_f = rad_floor.get_A_f(A_HCZ, r_Af)
             # 温水床暖房の単位面積当たりの上面最大放熱能力
             Q_max_H_rad = rad_floor.get_Q_max_H_rad(Theta_SW_d_t, A_f)
@@ -281,7 +281,7 @@ def calc_Q_UT_H_OR_d_t(region, A_A, A_MR, A_OR, spec_MR, spec_OR, spec_HS, mode_
                 elif spec_OR['type'] == '温水暖房用床暖房':
                     # 床面積
                     A_HCZ = calc_A_HCZ_i(i, A_A, A_MR, A_OR)
-                    r_Af = spec_OR['r_Af']
+                    r_Af = spec_OR.get('r_Af')
                     A_f = rad_floor.get_A_f(A_HCZ, r_Af)
                     # 温水床暖房の単位面積当たりの上面最大放熱能力
                     Q_max_H_rad = rad_floor.get_Q_max_H_rad(Theta_SW_d_t, A_f)
@@ -379,7 +379,7 @@ def calc_Q_UT_H_d_t(i, device, A_A, A_MR, A_OR, region, mode, L_H_d_t):
     elif device['type'] == '電気ヒーター床暖房':
 
         # 仕様の取得
-        r_Af = device['r_Af']
+        r_Af = device.get('r_Af')
         r_up = device['r_up']
         A_f = eheater_spec.get_A_f(A_HCZ, r_Af)
 
@@ -396,7 +396,7 @@ def calc_Q_UT_H_d_t(i, device, A_A, A_MR, A_OR, region, mode, L_H_d_t):
     elif device['type'] == 'ルームエアコンディショナー付温水床暖房機':
 
         # 仕様の取得
-        r_Af = device['r_Af']
+        r_Af = device.get('r_Af')
 
         # 未処理負荷の計算
         Q_UT_H_d_t = racfh.calc_Q_UT_H_d_t(region, A_HCZ, r_Af, L_H_d_t)
@@ -773,7 +773,7 @@ def calc_E_E_H_d_t(i, device, A_A, A_MR, A_OR, region, mode, L_H_d_t):
     elif device['type'] == '電気ヒーター床暖房':
 
         # 仕様の取得
-        r_Af = device['r_Af']
+        r_Af = device.get('r_Af')
         r_up = device['r_up']
         A_f = eheater_spec.get_A_f(A_HCZ, r_Af)
 
@@ -807,7 +807,7 @@ def calc_E_E_H_d_t(i, device, A_A, A_MR, A_OR, region, mode, L_H_d_t):
     elif device['type'] == 'ルームエアコンディショナー付温水床暖房機':
 
         # 仕様の取得
-        r_Af = device['r_Af']
+        r_Af = device.get('r_Af')
         r_up = device['r_up']
         pipe_insulation = device['pipe_insulation']
 
@@ -904,9 +904,9 @@ def calc_L_H_d_t(region, sol_region, A_A, A_MR, A_OR, mode_H, mode_C, H_MR, H_OR
         args['hex'] = True
         args['etr_dash_t'] = calc_etr_dash_t(
             etr_t_raw=HEX['etr_t'],
-            e=HEX['e'],
-            C_bal=HEX['C_bal'],
-            C_leak=HEX['C_leak']
+            e=HEX.get('e'),
+            C_bal=HEX.get('C_bal'),
+            C_leak=HEX.get('C_leak')
         )
     else:
         args['hex'] = False
@@ -1015,14 +1015,14 @@ def get_R_l_i(H_MR, H_OR):
     if H_MR is not None:
         if H_MR['type'] in ['電気ヒーター床暖房', '温水暖房用床暖房', 'ルームエアコンディショナー付温水床暖房機']:
             if 'r_dash_Af' not in H_MR:
-                R_l_i[0] = H_MR['r_Af']
+                R_l_i[0] = H_MR.get('r_Af')
             else:
                 # 吹き抜けを有する場合
-                R_l_i[0] = H_MR['r_dash_Af']
+                R_l_i[0] = H_MR.get('r_dash_Af')
 
     if H_OR is not None:
         if H_OR['type'] in ['電気ヒーター床暖房', '温水暖房用床暖房', 'ルームエアコンディショナー付温水床暖房機']:
-            R_l_i[1:6] = H_OR['r_Af']
+            R_l_i[1:6] = H_OR.get('r_Af')
 
     return R_l_i
 
@@ -2259,9 +2259,9 @@ def calc_cooling_load(region, A_A, A_MR, A_OR, Q, mu_H, mu_C, NV_MR, NV_OR, r_A_
         hex = True
         etr_dash_t = calc_etr_dash_t(
             etr_t_raw=HEX['etr_t'],
-            e=HEX['e'],
-            C_bal=HEX['C_bal'],
-            C_leak=HEX['C_leak']
+            e=HEX.get('e'),
+            C_bal=HEX.get('C_bal'),
+            C_leak=HEX.get('C_leak')
         )
     else:
         hex = False

@@ -249,7 +249,7 @@ def calc_env_reference_spec(type, tatekata, region, A_A, ENV):
         etr_A_H = get_etr_A_H(tatekata, region)
         etr_A_C = get_etr_A_C(tatekata, region)
 
-        from pyhees.section3_2 import get_Q_dash, get_eta_H, get_eta_C
+        from pyhees.section3_2 import get_Q_dash, get_mu_H, get_mu_C
 
         if ENV['method'] == '当該住宅の外皮面積の合計を用いて評価する':
             A_env = ENV['A_env']
@@ -277,15 +277,15 @@ def calc_env_reference_spec(type, tatekata, region, A_A, ENV):
 
         Q_dash = get_Q_dash(U_A, r_env)
 
-        eta_H = get_eta_H(etr_A_H, r_env)
-        eta_C = get_eta_C(etr_A_C, r_env)
+        mu_H = get_mu_H(etr_A_H, r_env)
+        mu_C = get_mu_C(etr_A_C, r_env)
     else:
         from pyhees.section3_2 import calc_insulation_performance
-        U_A, r_env, eta_A_H, eta_A_C, Q_dash, eta_H, eta_C,_ = calc_insulation_performance(**ENV)
+        U_A, r_env, eta_A_H, eta_A_C, Q_dash, mu_H, mu_C,_ = calc_insulation_performance(**ENV)
 
     Q = get_Q(Q_dash)
 
-    return Q, eta_H, eta_C
+    return Q, mu_H, mu_C
 
 def calc_E_SH(type, tatekata, region, sol_region, A_A, A_MR, A_OR, ENV, mode_H, mode_C, NV_MR, NV_OR, H_MR, H_OR):
     """暖房設備の設計一次エネルギー消費量

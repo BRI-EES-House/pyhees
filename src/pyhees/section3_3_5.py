@@ -649,13 +649,8 @@ def calc_Opening_U_i(opening_i):
     #### 熱貫流率計算(2020.09.10 HEESENV-74 時点) ####
     #### ○データ構造
     #### Window>WindowPart>Attachment Door>DoorPart>Attachment
-    #### DoorWindow>WindowPart>Attachment
-    ####           >DoorPart>Attachment
-    #### 　⇒欄間付きドアの場合Attachmentは窓部分・ドア部分それぞれに付く
     #### ①窓・ドア
     #### 窓・ドアの熱貫流率を求め(5.2.4)、付属部材(5.2.1~3)の有無に応じて付属部材込みの熱貫流率を求める
-    #### ②欄間付きドア
-    #### ドア部分と窓部分についてそれぞれ①の方法で計算し、5.2.4式(10)より全体の熱貫流率を求める
 
 
     # 窓
@@ -666,19 +661,6 @@ def calc_Opening_U_i(opening_i):
     # ドア
     elif opening_i['Method'] == 'Door':
         U_i = calc_OpeningPart_U_i(opening_i['DoorPart'], 'Door')
-        opening_i['U_i'] = U_i
-        return U_i, opening_i
-    # 欄間付きドア
-    elif opening_i['Method'] == 'DoorWindow':
-        # 窓部分の面積
-        A_d_W = opening_i['WindowPart']['Area']
-        # 窓部分の熱貫流率
-        U_d_W = calc_OpeningPart_U_i(opening_i['WindowPart'], 'Window')
-        # ドア部分の面積
-        A_d_D = opening_i['DoorPart']['Area']
-        # ドア部分の熱貫流率
-        U_d_D = calc_OpeningPart_U_i(opening_i['DoorPart'], 'Door')
-        U_i = get_U_d_windowdoor(U_d_W, U_d_D, A_d_W, A_d_D)
         opening_i['U_i'] = U_i
         return U_i, opening_i
 
@@ -939,23 +921,6 @@ def get_U_d_setwindow(U_d_ex, U_d_in, A_ex, A_in, R_s, delta_R_a):
     """
 
     return 1.0/( (1.0/U_d_ex) + (A_ex / (A_in*U_d_in) ) - R_s + delta_R_a )
-
-
-def get_U_d_windowdoor(U_d_W, U_d_D, A_d_W, A_d_D):
-    """欄間付きドア、袖付きドア等のドアや窓が同一枠内で併設される場合の開口部（窓又はドア）の熱貫流率U_d…………式(10)
-
-    Args:
-      U_d_W(float): ドアや窓が同一枠内で併設される場合の開口部（窓又はドア）の窓部分の熱貫流率
-      U_d_D(float): ドアや窓が同一枠内で併設される場合の開口部（窓又はドア）のドア部分の熱貫流率
-      A_d_W(float): ドアや窓が同一枠内で併設される場合の開口部（窓又はドア）の窓部分の面積…………入力(WindowPart>Area)
-      A_d_D(float): ドアや窓が同一枠内で併設される場合の開口部（窓又はドア）のドア部分の面積…………入力(DoorPart>Area)
-
-    Returns:
-      float: 欄間付きドア、袖付きドア等のドアや窓が同一枠内で併設される場合の開口部（窓又はドア）の熱貫流率U_d
-
-    """
-
-    return (A_d_W * U_d_W + A_d_D * U_d_D) / (A_d_W + A_d_D)
 
 
 def range_correct(min, max, num):

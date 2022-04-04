@@ -445,8 +445,8 @@ def calc_Q_UT_hs_d_t(H_HS, H_MR, H_OR, region, A_A, A_MR, A_OR, mode_MR, mode_OR
             has_MR_hwh=has_MR_hwh,
             has_OR_hwh=has_OR_hwh
         )
-
-      # 最大出力
+        
+        # 最大出力
         Q_max_H_hs_d_t = hs_ghpump.calc_Q_max_H_hs_d_t(
             Theta_SW_d_t=Theta_SW_d_t,
             Theta_ex_d_Ave_d=Theta_ex_d_Ave_d,
@@ -456,7 +456,7 @@ def calc_Q_UT_hs_d_t(H_HS, H_MR, H_OR, region, A_A, A_MR, A_OR, mode_MR, mode_OR
             L_H_x_t_i=L_T_H_rad,
             L_CS_x_t_i=L_CS_x_t_i,
             L_CL_x_t_i=L_CL_x_t_i,
-            HeatExchangerType=H_HS['HeatExchanger']
+            HeatExchangerType=H_HS.get('HeatExchanger')
         )
 
         # 温水暖房用熱源機の暖房出力
@@ -696,7 +696,7 @@ def calc_E_E_hs_d_t(H_HS, H_MR, H_OR, region, A_A, A_MR, A_OR, mode_MR, mode_OR,
             L_H_x_t_i=L_T_H_rad,
             L_CS_x_t_i=L_CS_x_t_i,
             L_CL_x_t_i=L_CL_x_t_i,
-            HeatExchangerType=H_HS['HeatExchanger']
+            HeatExchangerType=H_HS.get('HeatExchanger')
         )
     else:
         raise ValueError(hs_type)
@@ -1833,7 +1833,7 @@ def calc_r_WS_rad_d_t_i(A_HCZ, radiator, Q_T_H_rad, Theta_SW, region, mode, R_ty
         )
     elif radiator['type'] == '温水暖房用床暖房':
         # 仕様の取得
-        A_f = rad_floor.get_A_f(A_HCZ, radiator['r_Af'])
+        A_f = rad_floor.get_A_f(A_HCZ, radiator.get('r_Af'))
         Q_max_H_rad = rad_floor.get_Q_max_H_rad(Theta_SW, A_f)
 
         # 温水供給運転率の計算
@@ -1909,7 +1909,7 @@ def calc_Q_max_H_rad_d_t_i(radiator, A_HCZ, Theta_SW, region, mode, R_type):
         )
     elif radiator['type'] == '温水暖房用床暖房':
         # 仕様の取得
-        A_f = rad_floor.get_A_f(A_HCZ, radiator['r_Af'])
+        A_f = rad_floor.get_A_f(A_HCZ, radiator.get('r_Af'))
 
         # 最大暖房出力の計算
         return rad_floor.get_Q_max_H_rad(
