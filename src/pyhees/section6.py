@@ -425,7 +425,7 @@ def get_Le_MR(i, MR_installed, MR_power=None):
 
     """
     if MR_installed == '設置しない':
-        return get_table_4()[i - 1][2]
+        return get_table_4()[i - 1][0]
     elif MR_installed == '設置する':
         if MR_power == 'すべての機器においてLEDを使用している':
             return get_table_4()[i - 1][0]
@@ -472,7 +472,7 @@ def get_Le_OR(i, OR_installed, OR_power=None):
 
     """
     if OR_installed == '設置しない':
-        return get_table_5()[i - 4][2]
+        return get_table_5()[i - 4][0]
     elif OR_installed == '設置する':
         if OR_power == 'すべての機器においてLEDを使用している':
             return get_table_5()[i - 4][0]
@@ -521,7 +521,7 @@ def get_Le_NO(i, NO_installed, NO_power=None):
 
     """
     if NO_installed == '設置しない':
-        return get_table_6()[i - 8][1]
+        return get_table_6()[i - 8][0]
     elif NO_installed == '設置する':
         if NO_power == 'すべての機器においてLEDを使用している':
             return get_table_6()[i - 8][0]
@@ -955,7 +955,7 @@ def get_P_port(NO_installed, NO_power=None):
 
     """
     if NO_installed == '設置しない':
-        return get_table_12()[1]
+        return get_table_12()[0]
     elif NO_installed == '設置する':
         if NO_power == 'すべての機器においてLEDを使用している':
             return get_table_12()[0]

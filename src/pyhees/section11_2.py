@@ -33,7 +33,7 @@ def load_solrad(region, sol_region):
     posnum = get_position_num(region, sol_region)
     csvpath =  os.path.join(os.path.dirname(__file__), 'data', 'solar', '%s.csv' % posnum)
     return pd.read_csv(csvpath, skiprows=2, nrows=24 * 365,
-                       names=('T_ex', 'I_DN', 'I_Sky', 'h', 'A'))
+                       names=('T_ex', 'I_DN', 'I_Sky', 'h', 'A'), encoding="cp932")
 
 
 def get_position_num(region, sol_region):
@@ -48,14 +48,14 @@ def get_position_num(region, sol_region):
 
     """
     nums = [
-        ['7', '117', '124', '-', '-'],
+        ['7', '117', '124', '124-A4', '124-A5'],
         ['49', '63', '59', '2A4', '2A5'],
         ['190', '230', '426', '403', '412'],
         ['286', '186', '292', '423', '401'],
         ['593', '542', '495', '473', '420'],
-        ['-', '569', '551', '480', '438'],
+        ['551-A1', '569', '551', '480', '438'],
         ['819-A1', '819-A2', '819', '798', '797'],
-        ['-', '-', '826', '836', '842']
+        ['826-A1', '826-A2', '826', '836', '842']
     ]
     return nums[region - 1][sol_region - 1]
 

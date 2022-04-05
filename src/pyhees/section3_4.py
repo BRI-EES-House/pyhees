@@ -13,9 +13,6 @@ import pyhees.section3_4_window as window
 # 7 大部分がガラスで構成されていないドア等の開口部
 import pyhees.section3_4_door as door
 
-# 8 欄間付きドアや袖付きドア等のドアや窓が同一枠内で併設される場合の開口部
-import pyhees.section3_4_doorwindow as doorwindow
-
 # 9 熱橋
 import pyhees.section3_4_heatbridge as heatbridge
 

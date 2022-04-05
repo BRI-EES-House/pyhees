@@ -43,7 +43,7 @@ def calc_E_E_V_d_t(n_p, A_A, V, HEX=None):
 
     # 有効換気量率
     if type.endswith('第一種換気設備'):
-        e = V['v_e']
+        e = V.get('v_e') or 1.0
     else:
         e = 1.0
 

@@ -1,7 +1,7 @@
 from pyhees.section3_2_b import get_H
 from pyhees.section3_2_c import get_nu_H, get_nu_C
 from pyhees.section3_4_b_2 import get_glass_spec_category
-from pyhees.section3_4 import common, window, door, doorwindow, heatbridge, earthfloor, gamma
+from pyhees.section3_4 import common, window, door, heatbridge, earthfloor, gamma
 from pyhees.section3_3_5 import *
 from pyhees.section3_3_6 import *
 
@@ -68,15 +68,6 @@ def calc_U_A(envelope):
         A_i = door_i['DoorPart']['Area']
         H_i = calc_H_byKey(door_i['Adjacent'], Region)
         U_i, door_i = calc_Opening_U_i(door_i)
-        sigma_A_i_U_i_H_i += A_i * U_i * H_i
-
-    # ドアや窓が同一枠内で併設される場合の開口部
-    doorwindow_list = envelope['DoorWindow']
-    for i in range(len(doorwindow_list)):
-        doorwindow_i = doorwindow_list[i]
-        A_i = doorwindow_i['Area']
-        H_i = calc_H_byKey(doorwindow_i['Adjacent'], Region)
-        U_i, doorwindow_i = calc_Opening_U_i(doorwindow_i)
         sigma_A_i_U_i_H_i += A_i * U_i * H_i
 
     sigma_L_j_psi_j_H_j = 0
@@ -235,32 +226,6 @@ def calc_eta_A_H(envelope):
         # ⇒隣接空間の種類が外気の場合のみ方位と地域から方位係数を求める
         if door_i['Adjacent'] == 'Outside':
             nu_H_i = calc_nu_byKey(Region, door_i['Direction'], 'H')
-        else:
-            nu_H_i = 0.0
-
-        A_i_eta_H_i_nu_H_i += A_i * eta_H_i * nu_H_i
-
-    # ドアや窓が同一枠内で併設される場合の開口部
-    doorwindow_list = envelope['DoorWindow']
-    for i in range(len(doorwindow_list)):
-        doorwindow_i = doorwindow_list[i]
-        A_i = doorwindow_i['Area']
-
-        # 日射熱取得率
-        if 'SolarGain' in doorwindow_i and doorwindow_i['SolarGain'] == 'No':
-            eta_H_i = 0.0
-        else:
-            eta_d_W_H_i = window.calc_eta_H_i_byDict(Region, doorwindow_i['Direction'], doorwindow_i['WindowPart'])
-            eta_d_D_H_i = door.calc_eta_H_i_byDict(Region, doorwindow_i['DoorPart'])
-            A_d_W = doorwindow_i['WindowPart']['Area']
-            A_d_D = doorwindow_i['DoorPart']['Area']
-            eta_H_i = doorwindow.get_eta_H_i(eta_d_W_H_i, eta_d_D_H_i, A_d_W, A_d_D)
-
-        # 方位係数(付録C)
-        # 隣接空間の種類が外気に通じる空間・外気に通じていない空間・外気に通じる床裏・住戸及び住戸と同様の熱的環境の空間・外気に通じていない床裏の場合の方位係数は0とする。
-        # ⇒隣接空間の種類が外気の場合のみ方位と地域から方位係数を求める
-        if doorwindow_i['Adjacent'] == 'Outside':
-            nu_H_i = calc_nu_byKey(Region, doorwindow_i['Direction'], 'H')
         else:
             nu_H_i = 0.0
 
@@ -439,32 +404,6 @@ def calc_eta_A_C(envelope):
 
         A_i_eta_C_i_nu_C_i += A_i * eta_C_i * nu_C_i
 
-    # ドアや窓が同一枠内で併設される場合の開口部
-    doorwindow_list = envelope['DoorWindow']
-    for i in range(len(doorwindow_list)):
-        doorwindow_i = doorwindow_list[i]
-        A_i = doorwindow_i['Area']
-
-        # 日射熱取得率 8
-        if 'SolarGain' in doorwindow_i and doorwindow_i['SolarGain'] == 'No':
-            eta_C_i = 0.0
-        else:
-            eta_d_W_C_i = window.calc_eta_C_i_byDict(Region, doorwindow_i['Direction'], doorwindow_i['WindowPart'])
-            eta_d_D_C_i = door.calc_eta_C_i_byDict(Region, doorwindow_i['DoorPart'])
-            A_d_W = doorwindow_i['WindowPart']['Area']
-            A_d_D = doorwindow_i['DoorPart']['Area']
-            eta_C_i = doorwindow.get_eta_C_i(eta_d_W_C_i, eta_d_D_C_i, A_d_W, A_d_D)
-
-        # 方位係数(付録C)
-        # 隣接空間の種類が外気に通じる空間・外気に通じていない空間・外気に通じる床裏・住戸及び住戸と同様の熱的環境の空間・外気に通じていない床裏の場合の方位係数は0とする。
-        # ⇒隣接空間の種類が外気の場合のみ方位と地域から方位係数を求める
-        if doorwindow_i['Adjacent'] == 'Outside':
-            nu_C_i = calc_nu_byKey(Region, doorwindow_i['Direction'], 'C')
-        else:
-            nu_C_i = 0.0
-
-        A_i_eta_C_i_nu_C_i += A_i * eta_C_i * nu_C_i
-
 
     # 熱橋
     heatbridge_list = envelope['LinearHeatBridge']
@@ -584,11 +523,6 @@ def get_A_env(envelope):
     foundation_list = envelope['Foundation']
     for j in range(len(foundation_list)):
         A_env += foundation_list[j]['Area']
-
-    # 欄間付きドア、袖付きドア等のドアや窓が同一枠内で併設される場合の開口部
-    doorwindow_list = envelope['DoorWindow']
-    for i in range(len(doorwindow_list)):
-        A_env += doorwindow_list[i]['Area']
         
     return A_env
 
