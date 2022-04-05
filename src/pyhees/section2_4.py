@@ -33,3 +33,17 @@ def get_E_ST_star(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM, reference):
         raise ValueError(building_year)
 
     return E_star_ST_rb
+
+
+def update_spec_for_ees(spec):
+    """敷設率を上書きする関数
+    
+    参照：2章4節 6.2 暖房設備の設計一次エネルギー消費量 
+    """
+    if spec['type'] == '事業主基準':
+        for _ in ['H_MR', 'H_OR']:
+            H_xR = spec.get(_)
+
+            if H_xR is not None:
+                if H_xR['type'] in ['電気ヒーター床暖房', '温水暖房用床暖房', 'ルームエアコンディショナー付温水床暖房機']:
+                    H_xR['r_Af'] = 0.40

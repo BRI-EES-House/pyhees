@@ -32,8 +32,16 @@ def calc_etr_dash_t(etr_t_raw, e, C_bal, C_leak):
     # 有効換気量率による温度交換効率の補正係数 (2)
     C_eff = get_C_eff(etr_t, e)
 
+    # 給気と排気の比率による温度交換効率の補正係数(規定値考慮済み)
+    virtual_C_bal = get_virtual_C_bal(C_bal)
+
+    # 排気過多時における住宅外皮経由の漏気による温度交換効率の補正係数(規定値考慮済み)
+    # 注意) get_virtual_C_leakの引数のC_balは「温度交換効率の補正係数の入力」の結果が考慮されているため、
+    #       規定値を判定する際はC_balを使用する
+    virtual_C_leak = get_virtual_C_leak(C_bal, C_leak)
+
     # 熱交換型換気設備の補正熱交換効率 (-) (1)
-    etr_dash_t = get_etr_dash_t(etr_t, C_tol, C_eff, C_bal, C_leak)
+    etr_dash_t = get_etr_dash_t(etr_t, C_tol, C_eff, virtual_C_bal, virtual_C_leak)
 
     return etr_dash_t
 
@@ -112,6 +120,11 @@ def get_C_eff(etr_t, e):
 
     """
 
+    # 有効換気量率eは、第五章6.5を参照する。
+    # 還気が給気に混入することのない場合、もしくは熱交換型換気設備を評価しない、または設置しない場合は1とする。
+    if e is None:
+        e = 1.0
+
     C_eff = 1 - ((1 / e - 1) * (1 - etr_t) / etr_t)  # (2)
 
     #100 分の 1 未満の端数を切り下げた小数第二位までの値
@@ -139,7 +152,7 @@ def get_C_bal(etr_t, etr_t_d, correction_flag):
 
     """
     if not correction_flag:
-        return 0.90
+        return get_default_C_bal()
 
     C_bal =  etr_t_d / etr_t  # (3)
 
@@ -147,6 +160,23 @@ def get_C_bal(etr_t, etr_t_d, correction_flag):
     C_bal = floor(C_bal * 100) / 100
 
     return C_bal
+
+
+def get_virtual_C_bal(C_bal):
+    """ 給気と排気の比率による温度交換効率の補正係数を入力値から判断して返す
+
+    :param C_bal: 給気と排気の比率による温度交換効率の補正係数の入力値又はNone
+    :type C_bal: float
+    :return: 給気と排気の比率による温度交換効率の補正係数
+    :rtype: float
+    """
+    if C_bal is None:
+        return get_default_C_bal()
+    return C_bal
+
+
+def get_default_C_bal():
+    return 0.90
 
 
 def get_etr_t_d(etr_d, R_dash_vnt_d, V_d_SA, V_d_RA):
@@ -380,7 +410,7 @@ def get_C_leak(V_d_SA, V_d_RA, correction_flag):
 
     """
     if not correction_flag:
-        return 1.00
+        return get_default_C_leak()
 
     C_leak =  min(1.0, V_d_SA / V_d_RA)  # (15)
 
@@ -388,3 +418,20 @@ def get_C_leak(V_d_SA, V_d_RA, correction_flag):
     C_leak = floor(C_leak * 100) / 100
 
     return C_leak
+
+
+def get_virtual_C_leak(C_bal, C_leak):
+    """ 給気と排気の比率による温度交換効率の補正係数を入力値から判断して返す
+
+    :param C_bal: 給気と排気の比率による温度交換効率の補正係数の入力値又はNone
+    :type C_bal: float
+    :return: 給気と排気の比率による温度交換効率の補正係数
+    :rtype: float
+    """
+    if C_bal is None:
+        return get_default_C_leak()
+    return C_leak
+
+
+def get_default_C_leak():
+    return 1.00

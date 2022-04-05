@@ -223,6 +223,12 @@ def get_f_R_Eqp_i(floorheating, mode, R_l_i):
         else:
             raise ValueError(mode)
 
+        # 敷設率𝑅𝑙,𝑖は、電気ヒーター床暖房の場合は第四章「暖冷房設備」第五節「電気ヒーター床暖房」付録 A、温水
+        # 床暖房の場合は第四章「暖冷房設備」第七節「温水暖房」付録 L で定まる床暖房の敷設率𝑟𝐴𝑓とする
+        # どちらの場合でも規定値は0.4のため、便宜上本関数内で規定値を0.4にする
+        if np.isnan(R_l_i):
+            R_l_i = 0.40
+
         return a_R_Eqp_i * R_l_i + 1.0  # (3)
     else:
         return 1.0

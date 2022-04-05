@@ -7,7 +7,7 @@
 # ============================================================================
 
 # 敷設面積 A_f
-def get_A_f(A_HCZ, r_Af):
+def get_A_f(A_HCZ, r_Af = None):
     """敷設面積
 
     Args:
@@ -18,6 +18,9 @@ def get_A_f(A_HCZ, r_Af):
       float: 敷設面積
 
     """
+    if r_Af is None:
+        r_Af = 0.4
+
     return A_HCZ * r_Af  # (1)
 
 

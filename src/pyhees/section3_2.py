@@ -119,10 +119,10 @@ def calc_insulation_performance(method, A_env=None, A_A=None, U_A=None, eta_A_H=
     Q_dash = get_Q_dash(U_A, r_env)
 
     # 日射取得係数
-    eta_H = get_eta_H(eta_A_H, r_env)
-    eta_C = get_eta_C(eta_A_C, r_env)
+    mu_H = get_mu_H(eta_A_H, r_env)
+    mu_C = get_mu_C(eta_A_C, r_env)
 
-    return U_A, r_env, eta_A_H, eta_A_C, Q_dash, eta_H, eta_C, house_insulation_type
+    return U_A, r_env, eta_A_H, eta_A_C, Q_dash, mu_H, mu_C, house_insulation_type
 
 
 # ============================================================================
@@ -147,7 +147,7 @@ def get_Q_dash(U_A, r_env):
 # 6. 日射取得係数
 # ============================================================================
 
-def get_eta_H(eta_A_H, r_env):
+def get_mu_H(eta_A_H, r_env):
     """暖房期の日射取得係数 (2)
 
     Args:
@@ -163,7 +163,7 @@ def get_eta_H(eta_A_H, r_env):
     return eta_A_H / 100.0 * r_env
 
 
-def get_eta_C(eta_A_C, r_env):
+def get_mu_C(eta_A_C, r_env):
     """冷房期の日射取得係数 (3)
 
     Args:
