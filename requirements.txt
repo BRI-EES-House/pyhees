@@ -1,5 +1,5 @@
 wheel==0.37.0
-numpy==1.18.1
+numpy==1.21.0
 pandas==0.25.3
 pip>=21.1
 python-dateutil==2.8.2
