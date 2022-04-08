@@ -10,7 +10,7 @@ def _requires_from_file(filename):
 
 setup(
     name="pyhees",
-    version="3.1.0",
+    version="3.2.0",
     license="MIT",
     author="Pyhees Development Team",
     packages=find_packages("src"),
