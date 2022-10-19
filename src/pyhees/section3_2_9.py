@@ -20,7 +20,7 @@ import pyhees.section3_4 as eater
 # 9.3 外皮平均熱貫流率
 # ============================================================================
 
-def __calc_U_A(house_insulation_type, floor_bath_insulation, U_roof, U_wall, U_door, U_window, U_floor_bath, U_floor_other,
+def __calc_U_A(house_insulation_type, floor_bath_insulation, U_roof, U_wall, U_door, U_window, U_floor_bath, H_floor_bath, U_floor_other, H_floor_other,
                U_base_etrc, U_base_bath, U_base_other,
                Psi_prm_etrc, Psi_prm_bath, Psi_prm_other,
                Psi_HB_roof, Psi_HB_wall, Psi_HB_floor, Psi_HB_roof_wall, Psi_HB_wall_wall, Psi_HB_wall_floor):
@@ -34,7 +34,9 @@ def __calc_U_A(house_insulation_type, floor_bath_insulation, U_roof, U_wall, U_d
       U_door(float): ドアの熱貫流率
       U_window(float): 窓の熱貫流率
       U_floor_bath(float): 浴室の床の熱貫流率
+      H_floor_bath(float): 浴室の床の温度差係数
       U_floor_other(float): その他の熱貫流率
+      H_floor_other(float): その他の床の温度差係数
       U_base_etrc(float): 玄関等の基礎の熱貫流率
       U_base_bath(float): 浴室の基礎の熱貫流率
       U_base_other(float): その他の基礎の熱貫流率
@@ -50,11 +52,11 @@ def __calc_U_A(house_insulation_type, floor_bath_insulation, U_roof, U_wall, U_d
 
     Returns:
       float: 外皮平均熱貫流率
-  
+
     """
     # 単位温度差当たりの外皮熱損失量[W/K] (9b)
     q = get_q(house_insulation_type, floor_bath_insulation,
-              U_roof, U_wall, U_door, U_window, U_floor_bath, U_floor_other,
+              U_roof, U_wall, U_door, U_window, U_floor_bath, H_floor_bath, U_floor_other, H_floor_other,
               U_base_etrc, U_base_bath, U_base_other,
               Psi_prm_etrc, Psi_prm_bath, Psi_prm_other,
               Psi_HB_roof, Psi_HB_wall, Psi_HB_floor, Psi_HB_roof_wall,
@@ -88,7 +90,7 @@ def get_U_A(q, A_dash_env):
 
 
 def get_q(house_insulation_type, floor_bath_insulation,
-          U_roof, U_wall, U_door, U_window, U_floor_bath, U_floor_other,
+          U_roof, U_wall, U_door, U_window, U_floor_bath, H_floor_bath, U_floor_other, H_floor_other,
           U_base_etrc, U_base_bath, U_base_other,
           Psi_prm_etrc, Psi_prm_bath, Psi_prm_other,
           Psi_HB_roof, Psi_HB_wall, Psi_HB_floor, Psi_HB_roof_wall,
@@ -105,7 +107,9 @@ def get_q(house_insulation_type, floor_bath_insulation,
       U_door(float): ドアの熱貫流率
       U_window(float): 窓の熱貫流率
       U_floor_bath(float): 浴室の床の熱貫流率
+      H_floor_bath(float): 浴室の床の温度差係数
       U_floor_other(float): その他の熱貫流率
+      H_floor_other(float): その他の床の温度差係数
       U_base_etrc(float): 玄関等の基礎の熱貫流率
       U_base_bath(float): 浴室の基礎の熱貫流率
       U_base_other(float): その他の基礎の熱貫流率
@@ -211,9 +215,9 @@ def get_q(house_insulation_type, floor_bath_insulation,
          + A_dash_window_180
          + A_dash_window_270) * H_OS * U_window,
         # floor bath
-        A_dash_floor_bath * H_IS * U_floor_bath,
+        A_dash_floor_bath * H_floor_bath * U_floor_bath,
         # floor other
-        A_dash_floor_other * H_IS * U_floor_other,
+        A_dash_floor_other * H_floor_other * U_floor_other,
         # 玄関等の基礎
         ((A_dash_base_etrc_OS_0
           + A_dash_base_etrc_OS_90
@@ -695,7 +699,7 @@ def get_r_env(A_dash_env, A_dash_A):
 # ============================================================================
 
 def calc_U_A(insulation_structure, house_structure_type, floor_bath_insulation=None, bath_insulation_type=None,
-             U_roof=None, U_wall=None, U_door=None, U_window=None, U_floor_bath=None, U_floor_other=None,
+             U_roof=None, U_wall=None, U_door=None, U_window=None, U_floor_bath=None, H_floor_bath=None, U_floor_other=None, H_floor_other=None,
              U_base_etrc=None, U_base_bath=None, U_base_other=None,
              Psi_prm_etrc=None, Psi_prm_bath=None, Psi_prm_other=None, Psi_HB_roof=None, Psi_HB_wall=None,
              Psi_HB_floor=None, Psi_HB_roof_wall=None, Psi_HB_wall_wall=None, Psi_HB_wall_floor=None):
@@ -711,7 +715,9 @@ def calc_U_A(insulation_structure, house_structure_type, floor_bath_insulation=N
       U_door(float, optional): ドアの熱貫流率 (Default value = None)
       U_window(float, optional): 窓の熱貫流率 (Default value = None)
       U_floor_bath(float, optional): 浴室の床の熱貫流率 (Default value = None)
+      H_floor_bath(float, optional): 浴室の床の温度差係数 (Default value = None)
       U_floor_other(float, optional): その他の熱貫流率 (Default value = None)
+      H_floor_other(float, optional): その他の床の温度差係数 (Default value = None)
       Psi_prm_etrc(float, optional): 玄関等の土間床等の外周部の線熱貫流率 (Default value = None)
       Psi_prm_bath(float, optional): 浴室の土間床等の外周部の線熱貫流率 (Default value = None)
       Psi_prm_other(float, optional): その他の土間床等の外周部の線熱貫流率 (Default value = None)
@@ -733,13 +739,13 @@ def calc_U_A(insulation_structure, house_structure_type, floor_bath_insulation=N
     # 断熱構造による住戸の種類
     if insulation_structure == '床断熱住戸の場合':
         U = get_U('床断熱住戸', house_structure_type, floor_bath_insulation, bath_insulation_type, U_roof, U_wall,
-                  U_door, U_window, U_floor_bath, U_floor_other, U_base_etrc, U_base_bath, U_base_other,
+                  U_door, U_window, U_floor_bath, H_floor_bath, U_floor_other, H_floor_other, U_base_etrc, U_base_bath, U_base_other,
                   Psi_prm_etrc, Psi_prm_bath, Psi_prm_other, Psi_HB_roof, Psi_HB_wall, Psi_HB_floor, Psi_HB_roof_wall,
                   Psi_HB_wall_wall, Psi_HB_wall_floor)
         U_A = __calc_U_A(**U)
     elif insulation_structure == '基礎断熱住戸の場合':
         U = get_U('基礎断熱住戸', house_structure_type, floor_bath_insulation, bath_insulation_type, U_roof, U_wall,
-                  U_door, U_window, U_floor_bath, U_floor_other, U_base_etrc, U_base_bath, U_base_other,
+                  U_door, U_window, U_floor_bath, H_floor_bath, U_floor_other, H_floor_other, U_base_etrc, U_base_bath, U_base_other,
                   Psi_prm_etrc, Psi_prm_bath, Psi_prm_other, Psi_HB_roof, Psi_HB_wall, Psi_HB_floor, Psi_HB_roof_wall,
                   Psi_HB_wall_wall, Psi_HB_wall_floor)
         U_A = __calc_U_A(**U)
@@ -749,11 +755,11 @@ def calc_U_A(insulation_structure, house_structure_type, floor_bath_insulation=N
         # 表3（ろ）欄に示す値の両方を式(9a)及び式(9b)で表される外皮平均熱貫流率の計算に適用し、
         # 外皮平均熱貫流率の値が大きい方の場合を採用する
         U_0 = get_U('床断熱住戸', house_structure_type, floor_bath_insulation, bath_insulation_type, U_roof, U_wall,
-                    U_door, U_window, U_floor_bath, U_floor_other, U_base_etrc, U_base_bath, U_base_other,
+                    U_door, U_window, U_floor_bath, H_floor_bath, U_floor_other, H_floor_other, U_base_etrc, U_base_bath, U_base_other,
                     Psi_prm_etrc, Psi_prm_bath, Psi_prm_other, Psi_HB_roof, Psi_HB_wall, Psi_HB_floor, Psi_HB_roof_wall,
                     Psi_HB_wall_wall, Psi_HB_wall_floor)
         U_1 = get_U('基礎断熱住戸', house_structure_type, floor_bath_insulation, bath_insulation_type, U_roof, U_wall,
-                    U_door, U_window, U_floor_bath, U_floor_other, U_base_etrc, U_base_bath, U_base_other,
+                    U_door, U_window, U_floor_bath, H_floor_bath, U_floor_other, H_floor_other, U_base_etrc, U_base_bath, U_base_other,
                     Psi_prm_etrc, Psi_prm_bath, Psi_prm_other, Psi_HB_roof, Psi_HB_wall, Psi_HB_floor, Psi_HB_roof_wall,
                     Psi_HB_wall_wall, Psi_HB_wall_floor)
         U_A_0 = __calc_U_A(**U_0)
@@ -1744,6 +1750,41 @@ def get_H_IS():
     return get_H(adjacent_type)
 
 
+def get_H_floor_other(H_floor_other):
+    """9.7.1 その他の床の温度差係数
+
+    Args:
+      H_floor_other(float): その他の床の温度差係数
+
+    Returns:
+      float: その他床の温度差係数
+    """
+    return H_floor_other
+
+def get_H_floor_bath(H_floor_bath, H_floor_other, house_insulation_type, floor_bath_insulation):
+    """9.7.2 浴室の床の温度差係数
+
+    Args:
+      H_floor_bath(float): 浴室の床の温度差係数
+      H_floor_other(float): その他の床の温度差係数
+      house_insulation_type(str): 床断熱住戸'または'基礎断熱住戸'
+      floor_bath_insulation(str): 浴室床の断熱
+    Returns:
+      float: 浴室の床の温度差係数
+
+    """
+
+    if house_insulation_type == '床断熱住戸':
+        if floor_bath_insulation == '浴室部分の外皮を床とする':
+              return H_floor_bath
+        elif floor_bath_insulation == '浴室の床及び基礎が外気等に面していない':
+            # 床断熱住戸において外皮の部位として浴室の床が存在しない場合はその他の床の温度差係数に等しい
+            return H_floor_other
+        else:
+            raise ValueError(floor_bath_insulation)
+    else:
+        return None
+
 # ============================================================================
 # 9.8 外皮の部位及び熱橋等の方位係数
 # ============================================================================
@@ -1756,7 +1797,7 @@ def get_H_IS():
 # ============================================================================
 
 def get_U(house_insulation_type, house_structure_type, floor_bath_insulation=None, bath_insulation_type=None, U_roof=None, U_wall=None,
-          U_door=None, U_window=None, U_floor_bath=None, U_floor_other=None, U_base_etrc=None, U_base_bath=None, U_base_other=None,
+          U_door=None, U_window=None, U_floor_bath=None, H_floor_bath=None, U_floor_other=None, H_floor_other=None, U_base_etrc=None, U_base_bath=None, U_base_other=None,
           Psi_prm_etrc=None, Psi_prm_bath=None, Psi_prm_other=None,
           Psi_HB_roof=None, Psi_HB_wall=None, Psi_HB_floor=None, Psi_HB_roof_wall=None,
           Psi_HB_wall_wall=None, Psi_HB_wall_floor=None):
@@ -1772,7 +1813,9 @@ def get_U(house_insulation_type, house_structure_type, floor_bath_insulation=Non
       U_door(float, optional): ドアの熱貫流率 (Default value = None)
       U_window(float, optional): 窓の熱貫流率 (Default value = None)
       U_floor_bath(float, optional): 浴室の床の熱貫流率 (Default value = None)
+      H_floor_bath(float, optional): 浴室の床の温度差係数 (Default value = None)
       U_floor_other(float, optional): その他の熱貫流率 (Default value = None)
+      H_floor_other(float, optional): その他の床の温度差係数 (Default value = None)
       Psi_prm_etrc(float, optional): 玄関等の土間床等の外周部の線熱貫流率 (Default value = None)
       Psi_prm_bath(float, optional): 浴室の土間床等の外周部の線熱貫流率 (Default value = None)
       Psi_prm_other(float, optional): その他の土間床等の外周部の線熱貫流率 (Default value = None)
@@ -1796,6 +1839,12 @@ def get_U(house_insulation_type, house_structure_type, floor_bath_insulation=Non
 
         # 浴室の断熱構造
         if floor_bath_insulation == '床断熱':
+            H_floor_bath = get_H_floor_bath(
+              H_floor_bath=H_floor_bath,
+              H_floor_other=H_floor_other,
+              house_insulation_type=house_insulation_type,
+              floor_bath_insulation='浴室部分の外皮を床とする'
+            )
             U_floor_bath = get_U_floor_bath(
                 U_floor_bath=U_floor_bath,
                 U_floor_other=U_floor_other,
@@ -1807,10 +1856,17 @@ def get_U(house_insulation_type, house_structure_type, floor_bath_insulation=Non
             U_base_bath = 0
         elif floor_bath_insulation == '基礎断熱':
             U_floor_bath = 0
+            H_floor_bath = 0
             Psi_prm_etrc = get_psi_prm_etrc(Psi_prm_etrc)
             Psi_prm_bath = get_psi_prm_bath(Psi_prm_bath, Psi_prm_other, house_insulation_type)
             U_base_bath = get_U_base_bath(U_base_bath, U_base_other, house_insulation_type, floor_bath_insulation)
         elif floor_bath_insulation == '浴室の床及び基礎が外気等に面していない':
+            H_floor_bath = get_H_floor_bath(
+              H_floor_bath=H_floor_bath,
+              H_floor_other=H_floor_other,
+              house_insulation_type=house_insulation_type,
+              floor_bath_insulation=floor_bath_insulation
+            )
             U_floor_bath = get_U_floor_bath(
                 U_floor_bath=U_floor_bath,
                 U_floor_other=U_floor_other,
@@ -1827,6 +1883,7 @@ def get_U(house_insulation_type, house_structure_type, floor_bath_insulation=Non
         U_wall = get_U_wall(U_wall)
         U_door = get_U_door(U_door)
         U_window = get_U_window(U_window)
+        H_floor_other = get_H_floor_other(H_floor_other)
         U_floor_other = get_U_floor_other(U_floor_other)
         U_base_etrc = get_U_base_etrc(U_base_etrc)
         U_base_other = 0
@@ -1838,7 +1895,9 @@ def get_U(house_insulation_type, house_structure_type, floor_bath_insulation=Non
         U_door = get_U_door(U_door)
         U_window = get_U_window(U_window)
         U_floor_bath = 0
+        H_floor_bath = 0
         U_floor_other = 0
+        H_floor_other = 0
         U_base_etrc = get_U_base_etrc(U_base_etrc)
         U_base_bath = get_U_base_bath(U_base_bath, U_base_other, house_insulation_type, floor_bath_insulation)
         U_base_bath = get_U_base_bath(U_base_bath, U_base_other, house_insulation_type, floor_bath_insulation)
@@ -1869,7 +1928,9 @@ def get_U(house_insulation_type, house_structure_type, floor_bath_insulation=Non
         'U_wall': U_wall,
         'U_window': U_window,
         'U_floor_bath': U_floor_bath,
+        'H_floor_bath': H_floor_bath,
         'U_floor_other': U_floor_other,
+        'H_floor_other': H_floor_other,
         'U_base_etrc': U_base_etrc,
         'U_base_bath': U_base_bath,
         'U_base_other': U_base_other,
@@ -1885,92 +1946,72 @@ def get_U(house_insulation_type, house_structure_type, floor_bath_insulation=Non
     }
 
 
-def get_U_roof(U_roof, H_roof=None):
+def get_U_roof(U_roof):
     """9.9.1 屋根又は天井の熱貫流率
 
     Args:
       U_roof(float): 屋根又は天井の熱貫流率
-      H_roof(float, optional): 屋根又は天井の温度差係数 (Default value = None)
 
     Returns:
       float: 9屋根又は天井の熱貫流率
 
     """
-    if type(U_roof) in [list, tuple]:
-        return U_roof[np.argmax(np.array(U_roof) * np.array(H_roof))]
-    else:
-        return U_roof
+    return U_roof
 
 
-def get_U_wall(U_wall, H_wall=None):
+def get_U_wall(U_wall):
     """9.9.2 壁の熱貫流率
 
     Args:
       U_wall(float): 壁の熱貫流率
-      H_wall(float, optional): 壁の温度差係数 (Default value = None)
 
     Returns:
       float: 壁の熱貫流率
 
     """
-    if type(U_wall) in [list, tuple]:
-        return U_wall[np.argmax(np.array(U_wall) * np.array(H_wall))]
-    else:
-        return U_wall
+    return U_wall
 
 
-def get_U_door(U_door, H_door=None):
+def get_U_door(U_door):
     """9.9.3 ドアの熱貫流率
 
     Args:
       U_door(float): ドアの熱貫流率
-      H_door(float, optional): ドアの温度差係数 (Default value = None)
 
     Returns:
       float: ドアの熱貫流率
 
     """
-    if type(U_door) in [list, tuple]:
-        return U_door[np.argmax(np.array(U_door) * np.array(H_door))]
-    else:
-        return U_door
+    return U_door
 
 
-def get_U_window(U_window, H_window=None):
+def get_U_window(U_window):
     """9.9.4 窓の熱貫流率
 
     Args:
       U_window(float): 窓の熱貫流率
-      H_window(float, optional): 窓の温度差係数 (Default value = None)
 
     Returns:
       float: 窓の熱貫流率
 
     """
-    if type(U_window) in [list, tuple]:
-        return U_window[np.argmax(np.array(U_window) * np.array(H_window))]
-    else:
-        return U_window
+    return U_window
 
 
-def get_U_floor_other(U_floor_other, H_floor_other=None):
+def get_U_floor_other(U_floor_other):
     """9.9.5 その他の床の熱貫流率
 
     Args:
       U_floor_other(float): その他の床の熱貫流率
-      H_floor_other(float, optional): その他の床の温度差係数 (Default value = None)
 
     Returns:
       float: その他の床の熱貫流率
 
     """
-    if type(U_floor_other) in [list, tuple]:
-        return U_floor_other[np.argmax(np.array(U_floor_other) * np.array(H_floor_other))]
-    else:
-        return U_floor_other
+    return U_floor_other
 
 
-def get_U_floor_bath(U_floor_bath, U_floor_other, house_insulation_type, floor_bath_insulation, H_floor_bath=None):
+def get_U_floor_bath(U_floor_bath, U_floor_other, house_insulation_type, floor_bath_insulation):
     """9.9.6 浴室の床の熱貫流率
 
     Args:
@@ -1978,7 +2019,6 @@ def get_U_floor_bath(U_floor_bath, U_floor_other, house_insulation_type, floor_b
       U_floor_other(float): その他の熱貫流率
       house_insulation_type(str): 床断熱住戸'または'基礎断熱住戸'
       floor_bath_insulation(str): 浴室床の断熱
-      H_floor_bath(float, optional): 浴室の床の温度差係数 (Default value = None)
 
     Returns:
       float: 浴室の床の熱貫流率
@@ -1986,10 +2026,7 @@ def get_U_floor_bath(U_floor_bath, U_floor_other, house_insulation_type, floor_b
     """
     if house_insulation_type == '床断熱住戸':
         if floor_bath_insulation == '浴室部分の外皮を床とする':
-            if type(U_floor_bath) in [list, tuple]:
-                return U_floor_bath[np.argmax(np.array(U_floor_bath) * np.array(H_floor_bath))]
-            else:
-                return U_floor_bath
+            return U_floor_bath
         elif floor_bath_insulation == '浴室の床及び基礎が外気等に面していない':
             # 床断熱住戸において外皮の部位として浴室の床が存在しない場合はその他の床の熱貫流率に等しい
             return U_floor_other
@@ -1999,24 +2036,20 @@ def get_U_floor_bath(U_floor_bath, U_floor_other, house_insulation_type, floor_b
         return None
 
 
-def get_U_base_etrc(U_base_etrc, H_base_etrc=None):
+def get_U_base_etrc(U_base_etrc):
     """9.9.7 玄関等の基礎の熱貫流率
 
     Args:
       U_base_etrc(float): 玄関等の基礎の熱貫流率
-      H_base_etrc(float, optional): 玄関等の基礎の温度差係数 (Default value = None)
 
     Returns:
       float: 玄関等の基礎の熱貫流率
 
     """
-    if type(U_base_etrc) in [list, tuple]:
-        return U_base_etrc[np.argmax(np.array(U_base_etrc) * np.array(H_base_etrc))]
-    else:
-        return U_base_etrc
+    return U_base_etrc
 
 
-def get_U_base_bath(U_base_bath, U_base_other, house_insulation_type, floor_bath_insulation, H_base_bath=None):
+def get_U_base_bath(U_base_bath, U_base_other, house_insulation_type, floor_bath_insulation):
     """9.9.8 浴室の基礎の熱貫流率
 
     Args:
@@ -2024,7 +2057,6 @@ def get_U_base_bath(U_base_bath, U_base_other, house_insulation_type, floor_bath
       U_base_other(float): その他の基礎の熱貫流率
       house_insulation_type(str): 床断熱住戸'または'基礎断熱住戸'
       floor_bath_insulation(str): 浴室の基礎の断熱
-      H_base_bath(return: 浴室の基礎の熱貫流率, optional): 浴室の基礎の温度差係数 (Default value = None)
 
     Returns:
       float: 浴室の基礎の熱貫流率
@@ -2032,10 +2064,7 @@ def get_U_base_bath(U_base_bath, U_base_other, house_insulation_type, floor_bath
     """
     if house_insulation_type == '床断熱住戸':
         if floor_bath_insulation == '基礎断熱':
-            if type(U_base_bath) in [list, tuple]:
-                return U_base_bath[np.argmax(np.array(U_base_bath) * np.array(H_base_bath))]
-            else:
-                return U_base_bath
+            return U_base_bath
         else:
             return None
     if house_insulation_type == '基礎断熱住戸':
@@ -2044,207 +2073,167 @@ def get_U_base_bath(U_base_bath, U_base_other, house_insulation_type, floor_bath
         return None
 
 
-def get_U_base_other(U_base_other, H_base_other=None):
+def get_U_base_other(U_base_other):
     """9.9.9 その他の基礎の熱貫流率
 
     Args:
       U_base_other(float): その他の基礎の熱貫流率
-      H_base_other(float, optional): その他の基礎の温度差係数 (Default value = None)
 
     Returns:
       float: その他の基礎の熱貫流率
 
     """
-    if type(U_base_other) in [list, tuple]:
-        return U_base_other[np.argmax(np.array(U_base_other) * np.array(H_base_other))]
-    else:
-        return U_base_other
+    return U_base_other
 
 
-def get_psi_prm_etrc(psi_prm_etrc, H_prm_etrc=None):
+def get_psi_prm_etrc(psi_prm_etrc):
     """9.9.10 玄関等の土間床等の外周部の線熱貫流率
 
     Args:
       psi_prm_etrc(list, tuple or float): 玄関等の土間床等の外周部の線熱貫流率
-      H_prm_etrc(float, optional): 玄関等の土間床等の外周部の温度差係数 (Default value = None)
 
     Returns:
       float: 玄関等の土間床等の外周部の線熱貫流率
 
     """
-    if type(psi_prm_etrc) in [list, tuple]:
-        return psi_prm_etrc[np.argmax(np.array(psi_prm_etrc) * np.array(H_prm_etrc))]
-    else:
-        return psi_prm_etrc
+    return psi_prm_etrc
 
 
-def get_psi_prm_bath(psi_prm_bath, phi_prm_other, house_insulation_type, H_prm_bath=None):
+def get_psi_prm_bath(psi_prm_bath, phi_prm_other, house_insulation_type):
     """9.9.11 浴室の土間床等の外周部の線熱貫流率
 
     Args:
       psi_prm_bath(list, tuple or float): 浴室の土間床等の外周部の線熱貫流率
       phi_prm_other(float): その他の土間床等の外周部の線熱貫流率
       house_insulation_type(str): 床断熱住戸'または'基礎断熱住戸'
-      H_prm_bath(float, optional): 浴室の土間床等の外周部の温度差係数 (Default value = None)
 
     Returns:
       float: 浴室の土間床等の外周部の線熱貫流率
 
     """
     if house_insulation_type == '床断熱住戸':
-        if type(psi_prm_bath) in [list, tuple]:
-            return psi_prm_bath[np.argmax(np.array(psi_prm_bath) * np.array(H_prm_bath))]
-        else:
-            return psi_prm_bath
+        return psi_prm_bath
     elif house_insulation_type == '基礎断熱住戸':
         return phi_prm_other
     else:
         return None
 
 
-def get_psi_prm_other(psi_prm_other, house_insulation_type, H_prm_other=None):
+def get_psi_prm_other(psi_prm_other, house_insulation_type):
     """9.9.12 その他の土間床等の外周部の線熱貫流率
 
     Args:
       psi_prm_other(list, tuple or float): その他の土間床等の外周部の線熱貫流率
       house_insulation_type(str): 床断熱住戸'または'基礎断熱住戸'
-      H_prm_other(float, optional): その他の土間床等の外周部の温度差係数 (Default value = None)
 
     Returns:
       float: その他の土間床等の外周部の線熱貫流率
 
     """
     if house_insulation_type == '基礎断熱住戸':
-        if type(psi_prm_other) in [list, tuple]:
-            return psi_prm_other[np.argmax(np.array(psi_prm_other) * np.array(H_prm_other))]
-        else:
-            return psi_prm_other
+        return psi_prm_other
     else:
         return None
 
 
-def get_psi_HB_roof(psi_HB_roof, house_structure_type, H_HB_roof=None):
+def get_psi_HB_roof(psi_HB_roof, house_structure_type):
     """9.9.13 屋根又は天井の熱橋の線熱貫流率
 
     Args:
       psi_HB_roof(list, tuple or float): 屋根又は天井の熱橋の線熱貫流率
       house_structure_type(structure_type: structure_type: str): 木造'または'鉄筋コンクリート造'、'鉄骨造'
-      H_HB_roof(float, optional): 屋根又は天井の熱橋の温度差係数 (Default value = None)
 
     Returns:
       float: 屋根又は天井の熱橋の線熱貫流率
 
     """
     if house_structure_type == '鉄筋コンクリート造' or house_structure_type == '鉄骨造':
-        if type(psi_HB_roof) in [list, tuple]:
-            return psi_HB_roof[np.argmax(np.array(psi_HB_roof) * np.array(H_HB_roof))]
-        else:
-            return psi_HB_roof
+        return psi_HB_roof
     else:
         return 0
 
 
-def get_psi_HB_wall(psi_HB_wall, house_structure_type, H_HB_wall=None):
+def get_psi_HB_wall(psi_HB_wall, house_structure_type):
     """9.9.14 壁の熱橋の線熱貫流率
 
     Args:
       psi_HB_wall(list, tuple or float): 壁の熱橋の線熱貫流率
       house_structure_type(structure_type: structure_type: str): 木造'または'鉄筋コンクリート造'、'鉄骨造'
-      H_HB_wall(float, optional): 壁の熱橋の温度差係数 (Default value = None)
 
     Returns:
       float: 壁の熱橋の線熱貫流率
 
     """
     if house_structure_type == '鉄筋コンクリート造' or house_structure_type == '鉄骨造':
-        if type(psi_HB_wall) in [list, tuple]:
-            return psi_HB_wall[np.argmax(np.array(psi_HB_wall) * np.array(H_HB_wall))]
-        else:
-            return psi_HB_wall
+        return psi_HB_wall
     else:
         return 0
 
 
-def get_psi_HB_floor(psi_HB_floor, house_structure_type, H_HB_floor=None):
+def get_psi_HB_floor(psi_HB_floor, house_structure_type):
     """9.9.15 床の熱橋の線熱貫流率
 
     Args:
       psi_HB_floor(list, tuple or float): 床の熱橋の線熱貫流率
       house_structure_type: 木造'または'鉄筋コンクリート造'、'鉄骨造
-      H_HB_floor(float, optional): 床の熱橋の温度差係数 (Default value = None)
 
     Returns:
       float: 床の熱橋の線熱貫流率
 
     """
     if house_structure_type == '鉄筋コンクリート造' or house_structure_type == '鉄骨造':
-        if type(psi_HB_floor) in [list, tuple]:
-            return psi_HB_floor[np.argmax(np.array(psi_HB_floor) * np.array(H_HB_floor))]
-        else:
-            return psi_HB_floor
+        return psi_HB_floor
     else:
         return 0
 
 
-def get_psi_HB_roof_wall(psi_HB_roof_wall, house_structure_type, H_HB_roof_wall=None):
+def get_psi_HB_roof_wall(psi_HB_roof_wall, house_structure_type):
     """9.9.16 屋根又は天井と壁の熱橋の線熱貫流率
 
     Args:
       psi_HB_roof_wall(list, tuple or float): 屋根又は天井と壁の熱橋の線熱貫流率
       house_structure_type(structure_type: structure_type: str): 木造'または'鉄筋コンクリート造'、'鉄骨造'
-      H_HB_roof_wall(float, optional): 屋根又は天井と壁の熱橋の温度差係数 (Default value = None)
 
     Returns:
       float: 屋根又は天井と壁の熱橋の線熱貫流率
 
     """
     if house_structure_type == '鉄筋コンクリート造' or house_structure_type == '鉄骨造':
-        if type(psi_HB_roof_wall) in [list, tuple]:
-            return psi_HB_roof_wall[np.argmax(np.array(psi_HB_roof_wall) * np.array(H_HB_roof_wall))]
-        else:
-            return psi_HB_roof_wall
+        return psi_HB_roof_wall
     else:
         return 0
 
 
-def get_psi_HB_wall_wall(psi_HB_wall_wall, house_structure_type, H_HB_wall_wall=None):
+def get_psi_HB_wall_wall(psi_HB_wall_wall, house_structure_type):
     """9.9.17 壁と壁の熱橋の線熱貫流率
 
     Args:
       psi_HB_wall_wall(list, tuple or float): 壁と壁の熱橋の線熱貫流率
       house_structure_type(structure_type: structure_type: str): 木造'または'鉄筋コンクリート造'、'鉄骨造'
-      H_HB_wall_wall(float, optional): 壁と壁の熱橋の温度差係数 (Default value = None)
 
     Returns:
       float: 壁と壁(出隅)の熱橋の線熱貫流率
 
     """
     if house_structure_type == '鉄筋コンクリート造' or house_structure_type == '鉄骨造':
-        if type(psi_HB_wall_wall) in [list, tuple]:
-            return psi_HB_wall_wall[np.argmax(np.array(psi_HB_wall_wall) * np.array(H_HB_wall_wall))]
-        else:
-            return psi_HB_wall_wall
+        return psi_HB_wall_wall
     else:
         return 0
 
 
-def get_psi_HB_wall_floor(psi_HB_wall_floor, house_structure_type, H_HB_wall_floor=None):
+def get_psi_HB_wall_floor(psi_HB_wall_floor, house_structure_type):
     """9.9.18 壁と床の熱橋の線熱貫流率
 
     Args:
       psi_HB_wall_floor(list, tuple or float): 壁と床の熱橋の線熱貫流率
       house_structure_type(structure_type: structure_type: str): 木造'または'鉄筋コンクリート造'、'鉄骨造'
-      H_HB_wall_floor(float, optional): 壁と床の熱橋の温度差係数 (Default value = None)
 
     Returns:
       float: 壁と床の熱橋の線熱貫流率
 
     """
     if house_structure_type == '鉄筋コンクリート造' or house_structure_type == '鉄骨造':
-        if type(psi_HB_wall_floor) in [list, tuple]:
-            return psi_HB_wall_floor[np.argmax(np.array(psi_HB_wall_floor) * np.array(H_HB_wall_floor))]
-        else:
-            return psi_HB_wall_floor
+        return psi_HB_wall_floor
     else:
         return 0
 

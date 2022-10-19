@@ -955,3 +955,95 @@ def get_table_m_1_d_6():
         (0, 0, 0, 0, 0, 0, 0, 0),
     ])
     return table_m_1_d_6
+
+if __name__ == '__main__':
+
+    # ----- 1日ごとの表との差分がないことを確認する処理 -----
+
+    # 表 6a 居住人数 4 人における基準給湯量（L/d）
+    table_6_a = [
+        (184, 240, 0, 46, 180, 0),
+        (140, 200, 0, 30, 180, 0),
+        (136, 200, 0, 34, 180, 0),
+        (92, 150, 0, 28, 180, 0),
+        (62, 100, 0, 8, 180, 0),
+        (32, 190, 0, 28, 0, 0)
+    ]
+
+    # 表 6b 居住人数 3 人における基準給湯量（L/d）
+    table_6_b = [
+        (164, 210, 0, 46, 180, 0),
+        (136, 160, 0, 24, 180, 0),
+        (132, 160, 0, 28, 180, 0),
+        (88, 110, 0, 22, 180, 0),
+        (48, 60, 0, 12, 180, 0),
+        (58, 110, 0, 32, 0, 0)
+    ]
+
+    # 表 6c 居住人数 2 人における基準給湯量（L/d）
+    table_6_c = [
+        (128, 130, 0, 32, 180, 0),
+        (96, 70, 0, 24, 180, 0),
+        (96, 70, 0, 24, 180, 0),
+        (44, 30, 0, 16, 180, 0),
+        (44, 110, 0, 16, 0, 0),
+        (38, 20, 0, 12, 0, 0)
+    ]
+
+    # 表 6d 居住人数 1 人における基準給湯量（L/d）
+    table_6_d = [
+        (28, 80, 0, 32, 180, 0),
+        (26, 20, 0, 24, 180, 0),
+        (26, 20, 0, 24, 180, 0),
+        (54, 90, 0, 36, 0, 0),
+        (34, 60, 0, 16, 0, 0),
+        (8, 20, 0, 12, 0, 0)
+    ]
+
+    # 4人
+    table = get_table_m_for_p(4)
+    for i in range(6):
+        print(np.sum(table[i], axis=0)[:6] - table_6_a[i])
+        for j in [4, 5]:
+            if table_6_a[i][j] > 0:
+                assert np.sum(table[i], axis=0)[j] > 0
+            else:
+                assert np.sum(table[i], axis=0)[j] == 0
+            assert np.sum(table[i], axis=0)[4] <= 180
+            assert np.sum(table[i], axis=0)[5] <= 180
+
+    # 3人
+    table = get_table_m_for_p(3)
+    for i in range(6):
+        print(np.sum(table[i], axis=0)[:6] - table_6_b[i])
+        for j in [4, 5]:
+            if table_6_b[i][j] > 0:
+                assert np.sum(table[i], axis=0)[j] > 0
+            else:
+                assert np.sum(table[i], axis=0)[j] == 0
+            assert np.sum(table[i], axis=0)[4] <= 180
+            assert np.sum(table[i], axis=0)[5] <= 180
+
+    # 2人
+    table = get_table_m_for_p(2)
+    for i in range(6):
+        print(np.sum(table[i], axis=0)[:6] - table_6_c[i])
+        for j in [4, 5]:
+            if table_6_c[i][j] > 0:
+                assert np.sum(table[i], axis=0)[j] > 0
+            else:
+                assert np.sum(table[i], axis=0)[j] == 0
+            assert np.sum(table[i], axis=0)[4] <= 180
+            assert np.sum(table[i], axis=0)[5] <= 180
+
+    # 1人
+    table = get_table_m_for_p(1)
+    for i in range(6):
+        print(np.sum(table[i], axis=0)[:6] - table_6_d[i])
+        for j in [4, 5]:
+            if table_6_d[i][j] > 0:
+                assert np.sum(table[i], axis=0)[j] > 0
+            else:
+                assert np.sum(table[i], axis=0)[j] == 0
+            assert np.sum(table[i], axis=0)[4] <= 180
+            assert np.sum(table[i], axis=0)[5] <= 180

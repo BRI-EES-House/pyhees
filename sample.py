@@ -1,4 +1,4 @@
-from pyhees.section2_1 import calc_E_T 
+from pyhees.section2_2 import calc_E_T 
 
 if __name__ == '__main__':
     spec = {"region": 6, "type": "一般住宅", "reference": {"reference_year": None

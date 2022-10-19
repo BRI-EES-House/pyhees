@@ -103,6 +103,11 @@ def get_index_of_table_a_1(type):
         '電気ヒーター床暖房': 6,
         'ルームエアコンディショナー付温水床暖房機': 7
     }
+
+    key_table.update({
+        '温水床暖房（併用運転に対応）': key_table['温水暖房用床暖房'],
+    })
+
     return key_table[type]
 
 
@@ -353,3 +358,14 @@ def get_table_a_6():
         'ガス従来型温水暖房機',
     ]
     return table_a_6
+
+if __name__ == '__main__':
+    # ダクト式セントラル
+    print(calc_heating_mode(region=6, H_A_type='ダクト式セントラル空調機'))
+    # 個別
+    print(calc_heating_mode(region=6, H_MR_type='電気蓄熱暖房器', H_OR_type='パネルラジエータ―'))
+    # その他居室なし
+    print(calc_heating_mode(region=6, H_MR_type='FF暖房機'))
+    print(get_default_heatsource(1))
+    print(get_default_heatsource(6))
+    print(get_default_heating_spec(region=2))

@@ -1290,3 +1290,48 @@ def get_E_M_C_d_t():
 
     """
     return np.zeros(24 * 365)
+
+
+if __name__ == '__main__':
+    from section11_1 import load_outdoor
+
+    outdoor = load_outdoor()
+
+    # ダミー負荷
+    L_H_d_t = np.ones(24 * 365) * 12
+    L_CS_d_t = np.ones(24 * 365) * 12
+    L_CL_d_t = np.ones(24 * 365) * 12
+
+    # エアコン暖房
+    E_E_H_d_t = calc_E_E_H_d_t(
+        region=7,
+        outdoor=outdoor,
+        q_rtd_C=4066.6500,
+        q_rtd_H=4066.6500,
+        e_rtd_H=1.3420,
+        L_H_d_t=L_H_d_t
+    )
+    E_G_H_d_t = get_E_G_H_d_t()
+    E_K_H_d_t = get_E_K_H_d_t()
+    E_M_H_d_t = get_E_M_H_d_t()
+    print('E_E_H = {} '.format(np.sum(E_E_H_d_t)))
+    print('E_G_H = {} '.format(np.sum(E_G_H_d_t)))
+    print('E_K_H = {} '.format(np.sum(E_K_H_d_t)))
+    print('E_M_H = {} '.format(np.sum(E_M_H_d_t)))
+
+    # エアコン冷房
+    E_E_C_d_t = calc_E_E_C_d_t(
+        region=7,
+        outdoor=outdoor,
+        q_rtd_C=4066.6500,
+        e_rtd_C=1.3420,
+        L_CS_d_t=L_CS_d_t,
+        L_CL_d_t=L_CL_d_t
+    )
+    E_G_C_d_t = get_E_G_C_d_t()
+    E_K_C_d_t = get_E_K_C_d_t()
+    E_M_C_d_t = get_E_M_C_d_t()
+    print('E_E_C = {} '.format(np.sum(E_E_C_d_t)))
+    print('E_G_C = {} '.format(np.sum(E_G_C_d_t)))
+    print('E_K_C = {} '.format(np.sum(E_K_C_d_t)))
+    print('E_M_C = {} '.format(np.sum(E_M_C_d_t)))

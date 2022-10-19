@@ -28,13 +28,13 @@ def calc_E_E_hs(r_WS_hs, E_G_hs):
     )
 
 
-def calc_E_G_hs(q_rtd_hs, Q_out_H_hs, P_hs):
+def calc_E_G_hs(q_rtd_hs, Q_out_H_hs, Theta_SW_hs):
     """1時間当たりの温水床暖房用熱源機のガス消費量 (MJ/h)
 
     Args:
       q_rtd_hs(float): 温水暖房用熱源機の定格能力 (W)
       Q_out_H_hs(ndarray): 1時間当たりの温水暖房用熱源機の暖房出力 (MJ/h)
-      P_hs(int): 送水温度の区分
+      Theta_SW_hs(ndarray): 温水暖房用熱源機の往き温水温度 (℃)
 
     Returns:
       ndarray: 1時間当たりの温水床暖房用熱源機のガス消費量 (MJ/h)
@@ -45,7 +45,7 @@ def calc_E_G_hs(q_rtd_hs, Q_out_H_hs, P_hs):
         q_rtd_hs=q_rtd_hs,
         Q_out_H_hs=Q_out_H_hs,
         hs_type="ガス潜熱回収型給湯温水暖房機",
-        P_hs=P_hs
+        Theta_SW_hs=Theta_SW_hs,
     )
 
 

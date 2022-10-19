@@ -99,3 +99,13 @@ def get_schedule_cc(df):
 
     """
     return df['調理'].values
+
+
+if __name__ == '__main__':
+    df = load_schedule()
+    print(get_schedule_ac(df))
+    print(get_schedule_v(df))
+    print(get_schedule_hw(df))
+    print(get_schedule_l(df))
+    print(get_schedule_app(df))
+    print(get_schedule_cc(df))

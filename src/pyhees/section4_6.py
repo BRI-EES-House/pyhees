@@ -117,3 +117,26 @@ def get_E_M_H_d_t():
 
     """
     return np.zeros(24 * 365)
+
+
+if __name__ == '__main__':
+    # ダミー負荷
+    L_H_d_t = np.ones(24 * 365) * 12
+
+    # 設定値
+    q_rtd_H = 15.0
+    e_rtd_H = 0.75
+
+    # FF暖房
+    E_E_H_d_t = calc_E_E_H_d_t(
+        q_rtd_H=q_rtd_H,
+        e_rtd_H=e_rtd_H,
+        L_H_d_t=L_H_d_t
+    )
+    E_G_H_d_t = get_E_G_H_d_t()
+    E_K_H_d_t = get_E_K_H_d_t()
+    E_M_H_d_t = get_E_M_H_d_t()
+    print('E_E_H = {} '.format(np.sum(E_E_H_d_t)))
+    print('E_G_H = {} '.format(np.sum(E_G_H_d_t)))
+    print('E_K_H = {} '.format(np.sum(E_K_H_d_t)))
+    print('E_M_H = {} '.format(np.sum(E_M_H_d_t)))

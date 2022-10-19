@@ -21,6 +21,8 @@ import pyhees.section4_7_j as rad_panel
 import pyhees.section4_7_k as rad_fanc
 import pyhees.section4_7_l as rad_floor
 
+import pyhees.section4_7_q as sc4_7_q
+
 import pyhees.section4_7_i as pipe
 
 from pyhees.section4_7_common import get_Q_out_H_hs_d_t
@@ -68,7 +70,7 @@ def calc_Q_max_H_d_t_i(radiator, A_HCZ, Theta_SW, region, mode, R_type):
 # ============================================================================
 
 
-def calc_E_E_H_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_rad, L_CS_x_t, L_CL_x_t, CG=None):
+def calc_E_E_H_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_rad, L_CS_x_t, L_CL_x_t, HW=None, CG=None):
     """消費電力量 (1)
 
     Args:
@@ -83,6 +85,7 @@ def calc_E_E_H_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, 
       L_T_H_rad(ndarray): 放熱器の暖房負荷
       L_CS_x_t(ndarray): 暖冷房区画の冷房顕熱負荷
       L_CL_x_t(ndarray): 暖冷房区画の冷房潜熱負荷
+      HW(dict, optional): 給湯機の仕様 (Default value = None)
       CG(dict, optional): コージェネレーション設備の仕様 (Default value = None)
       A_A: returns: 消費電力量 (1)
 
@@ -94,7 +97,15 @@ def calc_E_E_H_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, 
 
     rad_list = get_rad_list(H_MR, H_OR)
 
-    E_E_hs_d_t = calc_E_E_hs_d_t(H_HS, H_MR, H_OR, region, A_A, A_MR, A_OR, mode_MR, mode_OR, L_T_H_rad, CG, L_CS_x_t, L_CL_x_t)
+    E_E_hs_d_t = calc_E_E_hs_d_t(H_HS, H_MR, H_OR, region, A_A, A_MR, A_OR, mode_MR, mode_OR, L_T_H_rad, HW, CG, L_CS_x_t, L_CL_x_t)
+
+    # 主たる居室で温水床暖房とエアコンを併用する場合か否か
+    racfh_combed = H_MR['type'] == '温水床暖房（併用運転に対応）'
+
+    # 温水暖房用熱源機の往き温水温度
+    Theta_SW_hs_op = get_Theta_SW_hs_op(H_HS['type'], HW, CG, racfh_combed)
+    p_hs_d_t = calc_p_hs_d_t(Theta_SW_hs_op, rad_list, L_T_H_rad, A_A, A_MR, A_OR, region, mode_MR, mode_OR)
+    Theta_SW_d_t = get_Theta_SW_d_t(Theta_SW_hs_op, p_hs_d_t)
 
     E_E_rad_d_t = np.zeros((5, 24 * 365))
     for i in [1, 3, 4, 5]:
@@ -106,9 +117,6 @@ def calc_E_E_H_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, 
             mode = mode_MR if i == 1 else mode_OR
             A_HCZ = calc_A_HCZ_i(i, A_A, A_MR, A_OR)
 
-            Theta_SW_hs_op = get_Theta_SW_hs_op(H_HS['type'], CG)
-            p_hs_d_t = calc_p_hs_d_t(Theta_SW_hs_op, rad_list, L_T_H_rad, A_A, A_MR, A_OR, region, mode_MR, mode_OR)
-            Theta_SW_d_t = get_Theta_SW_d_t(Theta_SW_hs_op, p_hs_d_t)
             Q_max_H_rad_d_t_i = calc_Q_max_H_rad_d_t_i(radiator, A_HCZ, Theta_SW_d_t, region, mode, R_type)
             Q_T_H_rad_d_t_i = calc_Q_T_H_rad_d_t_i(Q_max_H_rad_d_t_i, L_T_H_rad[i - 1])
 
@@ -130,7 +138,7 @@ def calc_E_E_H_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, 
 # ============================================================================
 
 
-def calc_E_K_H_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_rad, CG):
+def calc_E_K_H_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_rad, HW, CG):
     """灯油消費量 (2)
 
     Args:
@@ -144,13 +152,14 @@ def calc_E_K_H_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, 
       mode_MR(str): 主たる居室の運転モード 'い', 'ろ', 'は'
       mode_OR(str): その他の居室の運転モード 'い', 'ろ', 'は'
       L_T_H_rad(ndarray): 放熱器の暖房負荷
+      HW(dict): 給湯機の仕様
       CG(dict): コージェネレーションの機器
 
     Returns:
       ndarray: 灯油消費量 (2)
 
     """
-    return calc_E_K_hs_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_rad, CG)
+    return calc_E_K_hs_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_rad, HW, CG)
 
 
 # ============================================================================
@@ -158,7 +167,7 @@ def calc_E_K_H_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, 
 # ============================================================================
 
 
-def calc_E_G_H_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_rad, CG):
+def calc_E_G_H_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_rad, HW, CG):
     """ガス消費量 (3)
 
     Args:
@@ -172,13 +181,14 @@ def calc_E_G_H_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, 
       mode_MR(str): 主たる居室の運転モード 'い', 'ろ', 'は'
       mode_OR(str): その他の居室の運転モード 'い', 'ろ', 'は'
       L_T_H_rad(ndarray): 放熱器の暖房負荷
+      HW(dict): 給湯機の仕様
       CG(dict): コージェネレーションの機器
 
     Returns:
       ndarray: ガス消費量 (3)
 
     """
-    return calc_E_G_hs_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_rad, CG)
+    return calc_E_G_hs_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_rad, HW, CG)
 
 
 # ============================================================================
@@ -204,7 +214,7 @@ def calc_E_M_H_d_t(H_HS):
 # ============================================================================
 
 
-def calc_Q_UT_hs_d_t(H_HS, H_MR, H_OR, region, A_A, A_MR, A_OR, mode_MR, mode_OR, L_T_H_rad, CG, L_CS_x_t_i, L_CL_x_t_i):
+def calc_Q_UT_hs_d_t(H_HS, H_MR, H_OR, region, A_A, A_MR, A_OR, mode_MR, mode_OR, L_T_H_rad, HW, CG, L_CS_x_t_i, L_CL_x_t_i):
     """温水暖房用熱源機の未処理
 
     Args:
@@ -218,6 +228,7 @@ def calc_Q_UT_hs_d_t(H_HS, H_MR, H_OR, region, A_A, A_MR, A_OR, mode_MR, mode_OR
       mode_MR(str): 主たる居室の運転モード 'い', 'ろ', 'は'
       mode_OR(str): その他の居室の運転モード 'い', 'ろ', 'は'
       L_T_H_rad(ndarray): 放熱器の暖房負荷
+      HW(dict): 給湯機の仕様
       CG(dict): コージェネレーションの機器
       L_CS_x_t_i(ndarray): 日付dの時刻tにおける暖冷房区画iの冷房顕熱負荷 (MJ/h)
       L_CL_x_t_i(ndarray): 日付dの時刻tにおける暖冷房区画iの冷房潜熱負荷 (MJ/h)
@@ -231,8 +242,11 @@ def calc_Q_UT_hs_d_t(H_HS, H_MR, H_OR, region, A_A, A_MR, A_OR, mode_MR, mode_OR
     # 主たる居室、その他の居室という単位で設定された放熱機器を暖房区画ごとの配列に変換
     rad_list = get_rad_list(H_MR, H_OR)
 
+    # 主たる居室で温水床暖房とエアコンを併用する場合か否か
+    racfh_combed = H_MR['type'] == '温水床暖房（併用運転に対応）'
+
     # 温水暖房用熱源機の往き温水温度
-    Theta_SW_hs_op = get_Theta_SW_hs_op(hs_type, CG)
+    Theta_SW_hs_op = get_Theta_SW_hs_op(hs_type, HW, CG, racfh_combed)
     p_hs = calc_p_hs_d_t(Theta_SW_hs_op, rad_list, L_T_H_rad, A_A, A_MR, A_OR, region, mode_MR, mode_OR)
     Theta_SW_d_t = get_Theta_SW_d_t(Theta_SW_hs_op, p_hs)
 
@@ -472,7 +486,7 @@ def calc_Q_UT_hs_d_t(H_HS, H_MR, H_OR, region, A_A, A_MR, A_OR, mode_MR, mode_OR
 # ============================================================================
 
 
-def calc_E_E_hs_d_t(H_HS, H_MR, H_OR, region, A_A, A_MR, A_OR, mode_MR, mode_OR, L_T_H_rad, CG, L_CS_x_t_i, L_CL_x_t_i):
+def calc_E_E_hs_d_t(H_HS, H_MR, H_OR, region, A_A, A_MR, A_OR, mode_MR, mode_OR, L_T_H_rad, HW, CG, L_CS_x_t_i, L_CL_x_t_i):
     """温水暖房用熱源機の消費電力量
 
     Args:
@@ -486,6 +500,7 @@ def calc_E_E_hs_d_t(H_HS, H_MR, H_OR, region, A_A, A_MR, A_OR, mode_MR, mode_OR,
       mode_MR(str): 主たる居室の運転モード 'い', 'ろ', 'は'
       mode_OR(str): その他の居室の運転モード 'い', 'ろ', 'は'
       L_T_H_rad(ndarray): 放熱器の暖房負荷
+      HW(dict): 給湯機の仕様
       CG(dict): コージェネレーションの機器
       L_CS_x_t_i(ndarray): 日付dの時刻tにおける暖冷房区画iの冷房顕熱負荷 (MJ/h)
       L_CL_x_t_i(ndarray): 日付dの時刻tにおける暖冷房区画iの冷房潜熱負荷 (MJ/h)
@@ -499,8 +514,11 @@ def calc_E_E_hs_d_t(H_HS, H_MR, H_OR, region, A_A, A_MR, A_OR, mode_MR, mode_OR,
     # 主たる居室、その他の居室という単位で設定された放熱機器を暖房区画ごとの配列に変換
     rad_list = get_rad_list(H_MR, H_OR)
 
+    # 主たる居室で温水床暖房とエアコンを併用する場合か否か
+    racfh_combed = H_MR['type'] == '温水床暖房（併用運転に対応）'
+
     # 温水暖房用熱源機の往き温水温度
-    Theta_SW_hs_op = get_Theta_SW_hs_op(hs_type, CG)
+    Theta_SW_hs_op = get_Theta_SW_hs_op(hs_type, HW, CG, racfh_combed)
     p_hs = calc_p_hs_d_t(Theta_SW_hs_op, rad_list, L_T_H_rad, A_A, A_MR, A_OR, region, mode_MR, mode_OR)
     Theta_SW_d_t = get_Theta_SW_d_t(Theta_SW_hs_op, p_hs)
 
@@ -530,7 +548,7 @@ def calc_E_E_hs_d_t(H_HS, H_MR, H_OR, region, A_A, A_MR, A_OR, mode_MR, mode_OR,
 
     if hs_type in ['石油温水暖房機', '石油給湯温水暖房機', '石油従来型温水暖房機', '石油従来型給湯温水暖房機', '石油潜熱回収型温水暖房機', '石油潜熱回収型給湯温水暖房機']:
         # 温水暖房用熱源機の灯油消費量
-        E_K_hs = calc_E_K_hs_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_rad, CG)
+        E_K_hs = calc_E_K_hs_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_rad, HW, CG)
 
         E_E_hs = hs_oil.calc_E_E_hs(
             hs_type=hs_type,
@@ -539,7 +557,7 @@ def calc_E_E_hs_d_t(H_HS, H_MR, H_OR, region, A_A, A_MR, A_OR, mode_MR, mode_OR,
         )
     elif hs_type in ['ガス温水暖房機', 'ガス給湯温水暖房機', 'ガス従来型温水暖房機', 'ガス従来型給湯温水暖房機', 'ガス潜熱回収型温水暖房機', 'ガス潜熱回収型給湯温水暖房機']:
         # 温水暖房用熱源機のガス消費量
-        E_G_hs = calc_E_G_hs_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_rad, CG)
+        E_G_hs = calc_E_G_hs_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_rad, HW, CG)
 
         E_E_hs = hs_gas.calc_E_E_hs(
             r_WS_hs=r_WS_hs,
@@ -644,7 +662,7 @@ def calc_E_E_hs_d_t(H_HS, H_MR, H_OR, region, A_A, A_MR, A_OR, mode_MR, mode_OR,
     elif hs_type == '電気ヒートポンプ・ガス瞬間式併用型給湯温水暖房機(給湯熱源：電気ヒートポンプ・ガス瞬間式併用、暖房熱源：ガス瞬間式)(試験された値を用いる)' or \
             hs_type == '電気ヒートポンプ・ガス瞬間式併用型給湯温水暖房機(給湯熱源：電気ヒートポンプ・ガス瞬間式併用、暖房熱源：ガス瞬間式)(仕様による)':
         # 温水暖房用熱源機のガス消費量 (MJ/h)
-        E_G_hs = calc_E_G_hs_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_rad, CG)
+        E_G_hs = calc_E_G_hs_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_rad, HW, CG)
 
         # 1時間当たりの熱源機の消費電力量 (kWh/h)
         E_E_hs = hs_hybrid_gas.calc_E_E_hs(
@@ -719,7 +737,8 @@ def get_rad_type_list():
     return [
         '温水暖房用パネルラジエーター',
         '温水暖房用ファンコンベクター',
-        '温水暖房用床暖房'
+        '温水暖房用床暖房',
+        '温水床暖房（併用運転に対応）',
     ]
 
 
@@ -756,7 +775,7 @@ def get_rad_list(H_MR, H_OR):
     return rad_list
 
 
-def calc_L_HWH(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_rad, CG):
+def calc_L_HWH(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_rad, HW, CG):
     """温水暖房用熱源機の熱負荷
 
     Args:
@@ -770,6 +789,7 @@ def calc_L_HWH(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_
       mode_MR(str): 主たる居室の運転モード 'い', 'ろ', 'は'
       mode_OR(str): その他の居室の運転モード 'い', 'ろ', 'は'
       L_T_H_rad(ndarray): 放熱器の暖房負荷
+      HW(dict): 給湯機の仕様
       CG(dict): コージェネレーションの機器
 
     Returns:
@@ -781,8 +801,11 @@ def calc_L_HWH(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_
     # 主たる居室、その他の居室という単位で設定された放熱機器を暖房区画ごとの配列に変換
     rad_list = get_rad_list(H_MR, H_OR)
 
+    # 主たる居室で温水床暖房とエアコンを併用する場合か否か
+    racfh_combed = H_MR['type'] == '温水床暖房（併用運転に対応）'
+
     # 温水暖房用熱源機の往き温水温度
-    Theta_SW_hs_op = get_Theta_SW_hs_op(hs_type, CG)
+    Theta_SW_hs_op = get_Theta_SW_hs_op(hs_type, HW, CG, racfh_combed)
     p_hs = calc_p_hs_d_t(Theta_SW_hs_op, rad_list, L_T_H_rad, A_A, A_MR, A_OR, region, mode_MR, mode_OR)
     Theta_SW_d_t = get_Theta_SW_d_t(Theta_SW_hs_op, p_hs)
 
@@ -794,7 +817,7 @@ def calc_L_HWH(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_
     return Q_dmd_H_hs_d_t
 
 
-def calc_E_K_hs_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_rad, CG):
+def calc_E_K_hs_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_rad, HW, CG):
     """温水暖房用熱源機の灯油消費量
 
     Args:
@@ -808,6 +831,7 @@ def calc_E_K_hs_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR,
       mode_MR(str): 主たる居室の運転モード 'い', 'ろ', 'は'
       mode_OR(str): その他の居室の運転モード 'い', 'ろ', 'は'
       L_T_H_rad(ndarray): 放熱器の暖房負荷
+      HW(dict): 給湯機の仕様
       CG(dict): コージェネレーションの機器
 
     Returns:
@@ -819,8 +843,11 @@ def calc_E_K_hs_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR,
     # 主たる居室、その他の居室という単位で設定された放熱機器を暖房区画ごとの配列に変換
     rad_list = get_rad_list(H_MR, H_OR)
 
+    # 主たる居室で温水床暖房とエアコンを併用する場合か否か
+    racfh_combed = H_MR['type'] == '温水床暖房（併用運転に対応）'
+
     # 温水暖房用熱源機の往き温水温度
-    Theta_SW_hs_op = get_Theta_SW_hs_op(hs_type, CG)
+    Theta_SW_hs_op = get_Theta_SW_hs_op(hs_type, HW, CG, racfh_combed)
     p_hs = calc_p_hs_d_t(Theta_SW_hs_op, rad_list, L_T_H_rad, A_A, A_MR, A_OR, region, mode_MR, mode_OR)
     Theta_SW_d_t = get_Theta_SW_d_t(Theta_SW_hs_op, p_hs)
 
@@ -901,7 +928,7 @@ def calc_E_K_hs_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR,
     return E_K_hs
 
 
-def calc_E_G_hs_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_rad, CG):
+def calc_E_G_hs_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_rad, HW, CG):
     """温水暖房用熱源機のガス消費量
 
     Args:
@@ -915,6 +942,7 @@ def calc_E_G_hs_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR,
       mode_MR(str): 主たる居室の運転モード 'い', 'ろ', 'は'
       mode_OR(str): その他の居室の運転モード 'い', 'ろ', 'は'
       L_T_H_rad(ndarray): 放熱器の暖房負荷
+      HW(dict): 給湯機の仕様
       CG(dict): コージェネレーションの機器
 
     Returns:
@@ -926,8 +954,11 @@ def calc_E_G_hs_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR,
     # 主たる居室、その他の居室という単位で設定された放熱機器を暖房区画ごとの配列に変換
     rad_list = get_rad_list(H_MR, H_OR)
 
+    # 主たる居室で温水床暖房とエアコンを併用する場合か否か
+    racfh_combed = H_MR['type'] == '温水床暖房（併用運転に対応）'
+
     # 温水暖房用熱源機の往き温水温度
-    Theta_SW_hs_op = get_Theta_SW_hs_op(hs_type, CG)
+    Theta_SW_hs_op = get_Theta_SW_hs_op(hs_type, HW, CG, racfh_combed)
     p_hs = calc_p_hs_d_t(Theta_SW_hs_op, rad_list, L_T_H_rad, A_A, A_MR, A_OR, region, mode_MR, mode_OR)
     Theta_SW_d_t = get_Theta_SW_d_t(Theta_SW_hs_op, p_hs)
 
@@ -976,7 +1007,7 @@ def calc_E_G_hs_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR,
             q_rtd_hs=q_rtd_hs,
             Q_out_H_hs=Q_out_H_hs,
             hs_type=hs_type,
-            P_hs=p_hs,
+            Theta_SW_hs=Theta_SW_d_t,
         )
     elif hs_type == '電気ヒーター温水暖房機' or hs_type == '電気ヒーター給湯温水暖房機':
         E_G_hs = hs_eheater.get_E_G_hs()
@@ -1041,7 +1072,7 @@ def calc_E_G_hs_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR,
         E_G_hs = hs_hybrid_gas.calc_E_G_hs(
             q_rtd_hs=q_rtd_hs,
             Q_out_H_hs=Q_out_H_hs,
-            P_hs=p_hs
+            Theta_SW_hs=Theta_SW_d_t,
         )
     elif hs_type == '電気ヒートポンプ・ガス瞬間式併用型給湯温水暖房機(給湯熱源：電気ヒートポンプ・ガス瞬間式併用、暖房熱源：電気ヒートポンプ・ガス瞬間式併用)':
         E_G_hs = hs_whybrid.get_E_G_hs()
@@ -1240,17 +1271,22 @@ def calc_r_WS_hs_d_t(rad_list, Q_dmd_H_hs_d_t, Q_T_H_rad, Theta_SW, region, A_A,
 # ============================================================================
 
 
-def get_Theta_SW_hs_op(hs_type, CG=None):
+def get_Theta_SW_hs_op(hs_type, HW=None, CG=None, racfh_combed=False):
     """温水暖房用熱源機の往き温水温度の候補
 
     Args:
       hs_type(str): 温水暖房用熱源機の種類
+      HW(dict, optional): 給湯機の仕様 (Default value = None)
       CG(dict, optional): コージェネレーションの機器 (Default value = None)
+      racfh_combed (bool, optional): 主たる居室で温水床暖房とエアコンを併用する場合か否か (Default value = False)
 
     Returns:
       tuple: 温水暖房用熱源機の往き温水温度の候補
 
     """
+    if racfh_combed:
+        return sc4_7_q.get_Theta_SW_hs_op()
+
     if hs_type == '石油従来型温水暖房機' or hs_type == '石油従来型給湯温水暖房機':
         return get_table_4()[0]
     elif hs_type == '石油潜熱回収型温水暖房機' or hs_type == '石油潜熱回収型給湯温水暖房機':
@@ -1280,7 +1316,7 @@ def get_Theta_SW_hs_op(hs_type, CG=None):
             type_BB_HWH = CG['type_BB_HWH']
         return get_Theta_SW_hs_op(type_BB_HWH)
     elif hs_type == '給湯・温水暖房一体型を使用する':
-        raise NotImplementedError()
+        return get_Theta_SW_hs_op(HW['hw_type'])
     else:
         raise ValueError(hs_type)
 
@@ -1323,11 +1359,11 @@ def get_Theta_SW_d_t(Theta_SW_hs_op, p_hs_d_t):
     """要求往き温水温度
 
     Args:
-      Theta_SW_hs_op(tuple): 温水暖房用熱源機の往き温水温度の候補
-      p_hs_d_t(ndarray): 温水暖房用熱源機の往き温水温度
+      Theta_SW_hs_op(tuple): 各区分における温水暖房用熱源機の往き温水温度 (℃)
+      p_hs_d_t(ndarray): 日付d時刻tにおける温水暖房用熱源機の往き温水温度の区分
 
     Returns:
-      ndarray: 要求往き温水温度
+      ndarray: 日付d時刻tにおける温水暖房用熱源機の往き温水温度 (℃)
 
     """
     # 一括変換用のndarrayを作成
@@ -1728,7 +1764,7 @@ def calc_E_E_rad_d_t_i(i, radiator, Q_T_H_rad, Theta_SW, A_A, A_MR, A_OR, region
       ndarray: 1時間当たりの暖冷房区画iに設置された放熱器の消費電力量
 
     """
-    if radiator['type'] == '温水暖房用パネルラジエーター' or radiator['type'] == '温水暖房用床暖房':
+    if radiator['type'] in ['温水暖房用パネルラジエーター', '温水暖房用床暖房', '温水床暖房（併用運転に対応）']:
         return np.zeros(24 * 365)
     elif radiator['type'] == '温水暖房用ファンコンベクター':
 
@@ -1778,9 +1814,9 @@ def calc_Q_loss_rad_d_t_i(radiator, Q_T_H_rad):
       ndarray: 1時間当たりの暖冷房区画iに設置された放熱器の熱損失
 
     """
-    if radiator['type'] == '温水暖房用パネルラジエーター' or radiator['type'] == '温水暖房用ファンコンベクター':
+    if radiator['type'] in ['温水暖房用パネルラジエーター', '温水暖房用ファンコンベクター']:
         return np.zeros_like(Q_T_H_rad)
-    elif radiator['type'] == '温水暖房用床暖房':
+    elif radiator['type'] in ['温水暖房用床暖房', '温水床暖房（併用運転に対応）']:
         return rad_floor.get_Q_loss_rad(
             r_up=radiator['r_up'],
             Q_T_H_rad=Q_T_H_rad
@@ -1831,15 +1867,20 @@ def calc_r_WS_rad_d_t_i(A_HCZ, radiator, Q_T_H_rad, Theta_SW, region, mode, R_ty
             Q_min_H_FC=Q_min_H_FC,
             Q_T_H_rad=Q_T_H_rad
         )
-    elif radiator['type'] == '温水暖房用床暖房':
+    elif radiator['type'] in ['温水暖房用床暖房', '温水床暖房（併用運転に対応）']:
         # 仕様の取得
         A_f = rad_floor.get_A_f(A_HCZ, radiator.get('r_Af'))
-        Q_max_H_rad = rad_floor.get_Q_max_H_rad(Theta_SW, A_f)
+
+        # 主たる居室で温水床暖房とエアコンを併用する場合か否か
+        racfh_combed = (R_type == '主たる居室') and (radiator['type'] == '温水床暖房（併用運転に対応）')
+
+        Q_max_H_rad = rad_floor.get_Q_max_H_rad(Theta_SW, A_f, racfh_combed)
 
         # 温水供給運転率の計算
         r_WS_rad_d_t_i = rad_floor.get_r_WS_rad(
             Q_T_H_rad=Q_T_H_rad,
-            Q_max_H_rad=Q_max_H_rad
+            Q_max_H_rad=Q_max_H_rad,
+            racfh_combed=racfh_combed,
         )
     else:
         raise ValueError(radiator['type'])
@@ -1907,14 +1948,70 @@ def calc_Q_max_H_rad_d_t_i(radiator, A_HCZ, Theta_SW, region, mode, R_type):
             q_max_FC=q_max_FC,
             Theta_SW=Theta_SW
         )
-    elif radiator['type'] == '温水暖房用床暖房':
+    elif radiator['type'] in ['温水暖房用床暖房', '温水床暖房（併用運転に対応）']:
         # 仕様の取得
         A_f = rad_floor.get_A_f(A_HCZ, radiator.get('r_Af'))
+
+        # 主たる居室で温水床暖房とエアコンを併用する場合か否か
+        racfh_combed = (R_type == '主たる居室') and (radiator['type'] == '温水床暖房（併用運転に対応）')
 
         # 最大暖房出力の計算
         return rad_floor.get_Q_max_H_rad(
             A_f=A_f,
-            Theta_SW=Theta_SW
+            Theta_SW=Theta_SW,
+            racfh_combed=racfh_combed,
         )
     else:
         raise ValueError(radiator['type'])
+
+
+if __name__ == '__main__':
+    # 温水暖房用熱源機の往き温水温度の候補
+    Theta_SW_hs_op = get_Theta_SW_hs_op('石油温水暖房機潜熱回収型')
+    print('Theta_SW_hs_op = {}'.format(Theta_SW_hs_op))
+
+    # 仮に最低温度を選択しておく
+    Theta_SW = Theta_SW_hs_op[len(Theta_SW_hs_op) - 1] * np.ones(24 * 365)
+    print('Theta_SW = {}'.format(Theta_SW))
+
+    # 放熱系の暖房負荷
+    Q_T_H_rad = np.ones(24 * 365)
+
+    # 仕様
+    spec = {'region': 1, 'mode': '間歇運転', 'R_type': '主たる居室', 'A_A': 120.8, 'A_MR': 29.81, 'A_OR': 50}
+    region = spec['region']
+    mode = spec['mode']
+    R_type = spec['R_type']
+
+    # 仮の放熱器
+    pnl = {'type': 'パネルラジエーター'}
+    fhw = {'type': '温水床暖房', 'r_Af': 0.5, 'r_up': 0.7}
+    fc = {'type': 'ファンコンベクター'}
+
+    # 放熱系の消費電力
+    print('*放熱系の消費電力')
+    print(np.sum(calc_E_E_rad_d_t_i(1, pnl, Q_T_H_rad, Theta_SW, **spec)))
+    print(np.sum(calc_E_E_rad_d_t_i(1, fhw, Q_T_H_rad, Theta_SW, **spec)))
+    print(np.sum(calc_E_E_rad_d_t_i(1, fc, Q_T_H_rad, Theta_SW, **spec)))
+
+    # 放熱系の熱損失
+    print('*放熱系の熱損失')
+    print(np.sum(calc_Q_loss_rad_d_t_i(pnl, Q_T_H_rad)))
+    print(np.sum(calc_Q_loss_rad_d_t_i(fhw, Q_T_H_rad)))
+    print(np.sum(calc_Q_loss_rad_d_t_i(fc, Q_T_H_rad)))
+
+    # 放熱器の温水供給運転率
+    A_HCZ = 15.2
+    Q_max_H_rad_d_t_pnl = calc_Q_max_H_rad_d_t_i(pnl, A_HCZ, Theta_SW, region, mode, R_type)
+    Q_max_H_rad_d_t_fhw = calc_Q_max_H_rad_d_t_i(fhw, A_HCZ, Theta_SW, region, mode, R_type)
+    Q_max_H_rad_d_t_fc = calc_Q_max_H_rad_d_t_i(fc, A_HCZ, Theta_SW, region, mode, R_type)
+    print('*放熱器の温水供給運転率')
+    print(np.sum(Q_max_H_rad_d_t_pnl))
+    print(np.sum(Q_max_H_rad_d_t_fhw))
+    print(np.sum(Q_max_H_rad_d_t_fc))
+
+    # 放熱器の温水熱需要
+    print('*放熱器の温水熱需要')
+    print(np.sum(calc_Q_dmd_H_rad_d_t_i(pnl, Q_max_H_rad_d_t_pnl, Q_T_H_rad)))
+    print(np.sum(calc_Q_dmd_H_rad_d_t_i(fhw, Q_max_H_rad_d_t_fhw, Q_T_H_rad)))
+    print(np.sum(calc_Q_dmd_H_rad_d_t_i(fc, Q_max_H_rad_d_t_fc, Q_T_H_rad)))

@@ -279,3 +279,24 @@ def get_D(L_H_x_t_i):
 
     # 暖房日の判定を行った365日分の配列を返す
     return D
+
+
+if __name__ == '__main__':
+    import numpy as np
+
+    df = load_outdoor()
+
+    for region in range(1, 9):
+        # 外気温
+        Theta_ex = get_Theta_ex(region, df)
+
+        # 絶対湿度
+        X_ex = get_X_ex(region, df)
+
+        # 相対湿度
+        h_ex = calc_h_ex(X_ex, Theta_ex)
+
+        print('** 地域区分{0} **'.format(region))
+        print('平均気温: {0} [K]'.format(np.average(Theta_ex)))
+        print('平均絶対湿度: {0} [g/kg\']'.format(np.average(X_ex)))
+        print('外気相対湿度: {0} [%]'.format(np.average(h_ex)))

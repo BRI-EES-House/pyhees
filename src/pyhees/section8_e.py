@@ -9,7 +9,7 @@ import numpy as np
 # E.2 ガス消費量
 # ============================================================================
 
-def calc_E_G_BB_HWH_d_t(BB_type, e_rtd, q_rtd, L_BB_HWH_d_t, p_hs):
+def calc_E_G_BB_HWH_d_t(BB_type, e_rtd, q_rtd, L_BB_HWH_d_t, Theta_SW_BB_HWH):
     """1時間当たりの温水暖房時のバックアップボイラーのガス消費量 (MJ/h)
 
     Args:
@@ -17,7 +17,7 @@ def calc_E_G_BB_HWH_d_t(BB_type, e_rtd, q_rtd, L_BB_HWH_d_t, p_hs):
       e_rtd(float): バックアップボイラーの温水暖房部の定格効率 (-)
       q_rtd(int): バックアップボイラーの温水暖房の定格能力 (W)
       L_BB_HWH_d_t(ndarray): 1時間当たりのバックアップボイラーが分担する温水暖房熱負荷 (MJ/h)
-      p_hs(ndarray): 温水暖房用熱源機の往き温水温度の区分
+      Theta_SW_BB_WHW(ndarray): バックアップボイラーの温水暖房部の往き温水温度 (℃)
 
     Returns:
       ndarray: 1時間当たりの温水暖房時のバックアップボイラーのガス消費量 (MJ/h)
@@ -30,10 +30,10 @@ def calc_E_G_BB_HWH_d_t(BB_type, e_rtd, q_rtd, L_BB_HWH_d_t, p_hs):
     Q_out_BB_HWH_d_t = get_Q_out_BB_HWH_d_t(L_BB_HWH_d_t, Q_max_BB_HWH)
 
     # 1時間平均の定格効率を補正する係数 (-) (4)
-    f_rtd_d_t = get_f_rtd_d_t(BB_type, p_hs)
+    f_rtd_d_t = get_f_rtd_d_t(BB_type, Theta_SW_BB_HWH)
 
     # 1時間当たりのバックアップボイラーの温水暖房部の筐体熱損失 (MJ/h) (3)
-    Q_body_d_t = get_Q_body_d_t(BB_type, p_hs)
+    Q_body_d_t = get_Q_body_d_t(BB_type, Theta_SW_BB_HWH)
 
     # 1時間平均のバックアップボイラーの温水暖房部の熱交換効率 (-) (2)
     e_ex_d_t = get_e_ex_d_t(e_rtd, f_rtd_d_t, q_rtd, Q_body_d_t)
@@ -92,12 +92,12 @@ def get_e_ex_d_t(e_rtd, f_rtd_d_t, q_rtd, Q_body_d_t):
     return e_ex_d_t
 
 
-def get_Q_body_d_t(BB_type, p_hs=None):
+def get_Q_body_d_t(BB_type, Theta_SW_BB_WHW):
     """1時間当たりのバックアップボイラーの温水暖房部の筐体熱損失 (MJ/h) (3)
 
     Args:
       BB_type(str): 当該バックアップボイラーの温水暖房部の種類
-      p_hs(ndarray, optional): 送水温度の区分 (Default value = None)
+      Theta_SW_BB_WHW(ndarray): バックアップボイラーの温水暖房部の往き温水温度 (℃)
 
     Returns:
       ndarray: 1時間当たりのバックアップボイラーの温水暖房部の筐体熱損失 (MJ/h)
@@ -108,12 +108,10 @@ def get_Q_body_d_t(BB_type, p_hs=None):
     if BB_type in ['ガス従来型', 'G_NEJ']:
         Q_body_d_t[:] = 240.96 * 3600 * 10 ** (-6)
     elif BB_type in ['ガス潜熱回収型', 'G_EJ']:
-        # 送水温度の区分p_hsが1(送水温度60℃)の場合
-        f1 = (p_hs == 1)
+        f1 = (Theta_SW_BB_WHW == 60)
         Q_body_d_t[f1] = 225.26 * 3600 * 10 ** (-6)
 
-        # 送水温度の区分p_hsが2(送水温度40℃)の場合
-        f2 = (p_hs == 2)
+        f2 = (Theta_SW_BB_WHW == 40)
         Q_body_d_t[f2] = 123.74 * 3600 * 10 ** (-6)
     else:
         raise ValueError(BB_type)
@@ -121,12 +119,12 @@ def get_Q_body_d_t(BB_type, p_hs=None):
     return Q_body_d_t
 
 
-def get_f_rtd_d_t(BB_type, p_hs):
+def get_f_rtd_d_t(BB_type, Theta_SW_BB_WHW):
     """1時間平均の定格効率を補正する係数 (-) (4)
 
     Args:
       BB_type(str): 当該バックアップボイラーの温水暖房部の種類
-      p_hs(ndarray): 送水温度の区分
+      Theta_SW_BB_WHW(ndarray): バックアップボイラーの温水暖房部の往き温水温度 (℃)
 
     Returns:
       ndarray: 1時間平均の定格効率を補正する係数 (-)
@@ -136,12 +134,10 @@ def get_f_rtd_d_t(BB_type, p_hs):
     if BB_type in ['ガス従来型', 'G_NEJ']:
         f_rtd_d_t[:] = 0.985
     elif BB_type in ['ガス潜熱回収型', 'G_EJ']:
-        # 送水温度の区分p_hsが1(送水温度60℃)の場合
-        f1 = (p_hs == 1)
+        f1 = (Theta_SW_BB_WHW == 60)
         f_rtd_d_t[f1] = 1.038
 
-        # 送水温度の区分p_hsが2(送水温度40℃)の場合
-        f2 = (p_hs == 2)
+        f2 = (Theta_SW_BB_WHW == 40)
         f_rtd_d_t[f2] = 1.064
     else:
         raise ValueError(BB_type)

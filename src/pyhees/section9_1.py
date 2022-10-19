@@ -17,11 +17,11 @@ from pyhees.section11_2 import \
 # ============================================================================
 
 
-def calc_E_E_PV_d_t(pv_list, df):
+def calc_E_E_PV_d_t(pv, df):
     """太陽光発電設備の発電量 (1)
 
     Args:
-      pv_list(list: list: list): 太陽光発電設備のリスト
+      pv(dict): 太陽光発電設備
       df(DateFrame): load_solrad の返り値
 
     Returns:
@@ -29,8 +29,8 @@ def calc_E_E_PV_d_t(pv_list, df):
 
     """
 
-    if pv_list is not None:
-        return np.sum([calc_E_p_i_d_t(**pv, df=df) for pv in pv_list], axis = 0)
+    if pv is not None:
+        return np.sum([calc_E_p_i_d_t(**panel, etr_IN_r=pv["etr_IN_r"], df=df) for panel in pv["panels"] ], axis = 0)
     else:
         return np.zeros(24 * 365)
 
@@ -130,7 +130,7 @@ def calc_K_p_i_d_t(pv_type, pv_setup, etr_IN_R, Theta_A_d_t, I_s_i_d_t):
 
     # 太陽電池アレイの温度補正係数
     K_PT_i_d_t = calc_K_PT_i_d_t(pv_type, pv_setup, Theta_A_d_t, I_s_i_d_t)
-    
+
     # インバータ回路補正係数
     K_IN = get_K_IN(etr_IN_R)
 
@@ -290,7 +290,7 @@ if __name__ == "__main__":
         """
 
         Args:
-          case: 
+          case:
 
         Returns:
 
@@ -314,8 +314,7 @@ if __name__ == "__main__":
         n = int(case['pv_panelsuu'])
         for i in range(1,n+1):
             panel = {
-                'P_p_i': float(case['pv_panel{}_youryo'.format(i)]),
-                'etr_IN_r': etr_IN_r
+                'P_p_i': float(case['pv_panel{}_youryo'.format(i)])
             }
 
             # 太陽電池アレイの種類
@@ -325,7 +324,7 @@ if __name__ == "__main__":
                 panel['pv_type'] = '結晶シリコン系以外'
             else:
                 raise ValueError(case['pv_panel{}_shurui'.format(i)])
-            
+
             # 太陽電池アレイ設置方式
             if case['pv_panel{}_setti'.format(i)] in [1,'1']:
                 panel['pv_setup'] = '架台設置型'
@@ -347,9 +346,12 @@ if __name__ == "__main__":
             panel['P_beta'] = ((float(case['pv_panel{}_keisha'.format(i)])-1) * 10) * pi / 180
 
             panel_list.append(panel)
-        
-        spec['panel_list'] = panel_list
-        
+
+        spec['PV'] = {
+            'etr_IN_r': etr_IN_r,
+            'panels': panel_list
+        }
+
         return spec
 
     import pandas as pd
@@ -361,7 +363,7 @@ if __name__ == "__main__":
 
             solrad = load_solrad(spec['region'], spec['sol_region'])
 
-            E_E_gen = np.sum(calc_E_E_PV_d_t(spec['panel_list'], solrad))
+            E_E_gen = np.sum(calc_E_E_PV_d_t(spec['PV'], solrad))
 
             print('{} E_E_gen: {} [KWh/年], 正解との差分: {} [KWh/年]'.format(record['内部識別子'], E_E_gen, E_E_gen - float(record['E_E_gen'])))
         else:

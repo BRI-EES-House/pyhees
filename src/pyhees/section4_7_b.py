@@ -14,7 +14,7 @@ import pyhees.section4_7_h as appendix_H
 # B.2.1 ガス消費量
 # ============================================================================
 
-def calc_E_G_hs(e_rtd, q_rtd_hs, Q_out_H_hs, hs_type, P_hs):
+def calc_E_G_hs(e_rtd, q_rtd_hs, Q_out_H_hs, hs_type, Theta_SW_hs):
     """1時間当たりの温水床暖房用熱源機のガス消費量 (1)
 
     Args:
@@ -22,17 +22,17 @@ def calc_E_G_hs(e_rtd, q_rtd_hs, Q_out_H_hs, hs_type, P_hs):
       q_rtd_hs(float): 温水暖房用熱源機の定格能力 (W)
       Q_out_H_hs(ndarray): 1時間当たりの温水暖房用熱源機の暖房出力 (MJ/h)
       hs_type(str): 温水暖房用熱源機の種類
-      P_hs(int): 送水温度の区分
+      Theta_SW_hs(ndarray): 温水暖房用熱源機の往き温水温度 (℃)
 
     Returns:
       ndarray: 1時間当たりの温水床暖房用熱源機のガス消費量
 
     """
     # 1時間当たりの温水暖房用熱源機の筐体放熱損失 (MJ/h) (2)
-    Q_body = get_Q_body(hs_type, P_hs)
+    Q_body = get_Q_body(hs_type, Theta_SW_hs)
 
     # 熱交換効率
-    e_ex = calc_e_ex(e_rtd, Q_body, hs_type, P_hs, q_rtd_hs)
+    e_ex = calc_e_ex(e_rtd, Q_body, hs_type, Theta_SW_hs, q_rtd_hs)
 
     # 1時間当たりの温水床暖房用熱源機のガス消費量 (1)
     E_G_hs = (Q_out_H_hs + Q_body) / e_ex
@@ -41,12 +41,12 @@ def calc_E_G_hs(e_rtd, q_rtd_hs, Q_out_H_hs, hs_type, P_hs):
     return E_G_hs
 
 
-def get_Q_body(hs_type, P_hs):
+def get_Q_body(hs_type, Theta_SW_hs):
     """1時間当たりの温水暖房用熱源機の筐体放熱損失 (2)
 
     Args:
       hs_type(str): 温水暖房用熱源機の種類
-      P_hs(int): 送水温度の区分
+      Theta_SW_hs(ndarray): 温水暖房用熱源機の往き温水温度 (℃)
 
     Returns:
       ndarray: 1時間当たりの温水暖房用熱源機の筐体放熱損失
@@ -59,25 +59,23 @@ def get_Q_body(hs_type, P_hs):
     elif hs_type in ['ガス潜熱回収型温水暖房機', 'ガス潜熱回収型給湯温水暖房機', 'ガス潜熱回収型']:
         Q_body = np.zeros(24*365)
 
-        # (2b-1)
-        Q_body[P_hs == 1] = 225.26 * 3600 * 10 ** (-6)
-
-        # (2b-2)
-        Q_body[P_hs == 2] = 123.74 * 3600 * 10 ** (-6)
+        # (2b)
+        Q_body[Theta_SW_hs == 60] = 225.26 * 3600 * 10 ** (-6)
+        Q_body[Theta_SW_hs == 40] = 123.74 * 3600 * 10 ** (-6)
 
         return Q_body
     else:
         raise ValueError(hs_type)
 
 
-def calc_e_ex(e_rtd, Q_body, hs_type, P_hs, q_rtd_hs):
+def calc_e_ex(e_rtd, Q_body, hs_type, Theta_SW_hs, q_rtd_hs):
     """1時間平均の温水暖房用熱源機の熱交換効率 (3)
 
     Args:
       e_rtd(float): 当該給湯機の効率
       Q_body(ndarray): 1時間当たりの温水暖房用熱源機の筐体放熱損失
       hs_type(str): 温水暖房用熱源機の種類
-      P_hs(int): 送水温度の区分
+      Theta_SW_hs(ndarray): 温水暖房用熱源機の往き温水温度 (℃)
       q_rtd_hs(float): 温水暖房用熱源機の定格能力 (W)
 
     Returns:
@@ -85,17 +83,17 @@ def calc_e_ex(e_rtd, Q_body, hs_type, P_hs, q_rtd_hs):
 
     """
     # 定格効率を補正する係数
-    f_rtd = get_f_rtd(hs_type, P_hs)
+    f_rtd = get_f_rtd(hs_type, Theta_SW_hs)
 
     return e_rtd * f_rtd * (q_rtd_hs * 3600 * 10 ** (-6) + Q_body) / (q_rtd_hs * 3600 * 10 ** (-6))
 
 
-def get_f_rtd(hs_type, P_hs):
+def get_f_rtd(hs_type, Theta_SW_hs):
     """定格効率を補正する係数
 
     Args:
       hs_type(str): 温水暖房用熱源機の種類
-      P_hs(int): 送水温度の区分
+      Theta_SW_hs(ndarray): 温水暖房用熱源機の往き温水温度 (℃)
 
     Returns:
       ndarray: 定格効率を補正する係数
@@ -105,8 +103,8 @@ def get_f_rtd(hs_type, P_hs):
         return np.ones(24*365) * 0.985
     elif hs_type in ['ガス潜熱回収型温水暖房機', 'ガス潜熱回収型給湯温水暖房機', 'ガス潜熱回収型']:
         f_rtd = np.zeros(24*365)
-        f_rtd[P_hs == 1] = 1.038
-        f_rtd[P_hs == 2] = 1.064
+        f_rtd[Theta_SW_hs == 60] = 1.038
+        f_rtd[Theta_SW_hs == 40] = 1.064
         return f_rtd
     else:
         raise ValueError(hs_type)
@@ -156,14 +154,14 @@ def calc_q_rtd_hs(region, A_A, A_MR, A_OR, mode_MR, mode_OR, has_MR_hwh, has_OR_
 # ============================================================================
 
 def calc_E_E_hs(r_WS_hs, E_G_hs):
-    """消費電力量 (4)
+    """消費電力量 (5)
 
     Args:
       r_WS_hs(ndarray): 1時間平均の温水暖房用熱源機の温水供給運転率
       E_G_hs(ndarray): 1時間当たりの温水暖房用熱源機のガス消費量（MJ/h）
 
     Returns:
-      ndarray: 消費電力量 (4)
+      ndarray: 消費電力量 (5)
 
     """
     # 送水ポンプの消費電力量
@@ -176,13 +174,13 @@ def calc_E_E_hs(r_WS_hs, E_G_hs):
 
 
 def calc_E_E_hs_pmp(r_WS_hs):
-    """送水ポンプの消費電力量 (5)
+    """送水ポンプの消費電力量 (6)
 
     Args:
       r_WS_hs(ndarray): 1時間平均の温水暖房用熱源機の温水供給運転率
 
     Returns:
-      ndarray: 送水ポンプの消費電力量 (5)
+      ndarray: 送水ポンプの消費電力量 (6)
 
     """
     # 送水ポンプの消費電力
@@ -204,7 +202,7 @@ def get_P_hs_pmp():
 
 
 def get_E_E_hs_fan(E_G_hs):
-    """排気ファンの消費電力量 (6)
+    """排気ファンの消費電力量 (7)
 
     Args:
       E_G_hs(ndarray): 1時間当たりの温水暖房用熱源機のガス消費量（MJ/h）
@@ -270,7 +268,7 @@ def get_E_M_hs():
 # ============================================================================
 
 def get_Q_max_H_hs(q_rtd_hs):
-    """1時間当たりの温水暖房用熱源機の最大暖房出力 (7)
+    """1時間当たりの温水暖房用熱源機の最大暖房出力 (8)
 
     Args:
       q_rtd_hs(float): 温水暖房用熱源機の定格能力 (W)

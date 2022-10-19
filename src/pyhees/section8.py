@@ -193,8 +193,11 @@ def calc_E_G_CG_d_t(bath_function, CG, E_E_dmd_d_t,
         # 主たる居室、その他の居室という単位で設定された放熱機器を暖房区画ごとの配列に変換
         rad_list = hwh.get_rad_list(H_MR, H_OR)
 
+        # 主たる居室で温水床暖房とエアコンを併用する場合か否か
+        racfh_combed = H_MR['type'] == '温水床暖房（併用運転に対応）'
+
         # 温水暖房用熱源機の往き温水温度
-        Theta_SW_hs_op = hwh.get_Theta_SW_hs_op(type_BB_HWH)
+        Theta_SW_hs_op = hwh.get_Theta_SW_hs_op(type_BB_HWH, racfh_combed=racfh_combed)
         p_hs = hwh.calc_p_hs_d_t(Theta_SW_hs_op, rad_list, L_T_H_rad, A_A, A_MR, A_OR, region, mode_MR, mode_OR)
         Theta_SW_d_t = hwh.get_Theta_SW_d_t(Theta_SW_hs_op, p_hs)
 
@@ -348,7 +351,7 @@ def calc_E_G_CG_d_t(bath_function, CG, E_E_dmd_d_t,
         L_BB_HWH_d_t = get_L_BB_HWH_d_t(L_HWH_d_t, L_HWH_d, Q_gen_HWH_d)
 
         # 1時間当たりの温水暖房時のバックアップボイラーのガス消費量 (MJ/h)
-        E_G_BB_HWH_d_t = bb_hwh.calc_E_G_BB_HWH_d_t(type_BB_HWH, e_rtd_BB_HWH, q_rtd_BB_HWH, L_BB_HWH_d_t, p_hs)
+        E_G_BB_HWH_d_t = bb_hwh.calc_E_G_BB_HWH_d_t(type_BB_HWH, e_rtd_BB_HWH, q_rtd_BB_HWH, L_BB_HWH_d_t, Theta_SW_d_t)
     else:
         L_BB_HWH_d_t = np.zeros(24 * 365)
         E_G_BB_HWH_d_t = np.zeros(24 * 365)

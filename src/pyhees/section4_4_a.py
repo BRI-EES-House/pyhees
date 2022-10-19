@@ -113,3 +113,25 @@ def get_e_rtd_from_multi_devices(e_rtd_list):
 
     """
     return min(e_rtd_list)
+
+
+if __name__ == '__main__':
+    A_HCZ = 120.08
+
+    # 最大暖房能力
+    q_max_H = get_q_max_H(A_HCZ)
+
+    # 最大冷房能力
+    q_min_H = get_q_min_H(q_max_H)
+
+    # 定格暖房消費電力
+    P_rtd_H = get_P_rtd_H(q_max_H)
+
+    # 断続時消費電力
+    P_itm_H = get_P_itm_H()
+
+    print('A_HCZ = {}'.format(A_HCZ))
+    print('q_min_H = {}'.format(q_min_H))
+    print('q_max_H = {}'.format(q_max_H))
+    print('P_rtd_H = {}'.format(P_rtd_H))
+    print('P_itm_H = {}'.format(P_itm_H))

@@ -114,3 +114,29 @@ def get_e_rtd_C(e_class, q_rtd_C):
         return -0.473 * 10 ** (-3) * q_rtd_C + 5.50
     else:
         raise ValueError(e_class)
+
+
+if __name__ == '__main__':
+    A_HCZ = 120.08
+    e_class = 'い'
+
+    # 定格冷房能力, 定格暖房能力
+    q_rtd_C = get_q_rtd_C(A_HCZ)
+    q_rtd_H = get_q_rtd_H(q_rtd_C)
+
+    # 最大冷房能力, 最大暖房能力
+    q_max_C = get_q_max_C(q_rtd_C)
+    q_max_H = get_q_max_H(q_rtd_H, q_max_C)
+
+    # 定格冷房エネルギー効率
+    e_rtd_C = get_e_rtd_C(e_class, q_rtd_C)
+    e_rtd_H = get_e_rtd_H(e_rtd_C)
+
+    print('A_HCZ = {}'.format(A_HCZ))
+    print('エネルギー消費効率の区分 = {}'.format(e_class))
+    print('q_rtd_C = {}'.format(q_rtd_C))
+    print('q_rtd_H = {}'.format(q_rtd_H))
+    print('q_max_C = {}'.format(q_max_C))
+    print('q_max_H = {}'.format(q_max_H))
+    print('e_rtd_C = {}'.format(e_rtd_C))
+    print('e_rtd_H = {}'.format(e_rtd_H))
