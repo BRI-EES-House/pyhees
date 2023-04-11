@@ -1345,14 +1345,15 @@ def calc_E_CG_d_t(A_A, region, sol_region, HW, SHC, CG, H_A=None, H_MR=None, H_O
     else:
         heating_flag_d = None
 
-    # 暖房
-    E_E_H_d_t = get_E_E_H_d_t(region, sol_region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, H_A, spec_MR, spec_OR, spec_HS, mode_MR, mode_OR,
-                              HW, CG, SHC, heating_flag_d, L_T_H_d_t_i)
     # 冷房負荷の計算
     L_CS_d_t, L_CL_d_t = \
         calc_cooling_load(region, A_A, A_MR, A_OR, Q, mu_H, mu_C,
                           NV_MR, NV_OR, r_A_ufvnt, underfloor_insulation,
                           mode_C, mode_H, mode_MR, mode_OR, TS, HEX)
+        
+    # 暖房
+    E_E_H_d_t = get_E_E_H_d_t(region, sol_region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, H_A, spec_MR, spec_OR, spec_HS, mode_MR, mode_OR,
+                              HW, CG, SHC, heating_flag_d, L_T_H_d_t_i, L_CS_d_t, L_CL_d_t)
 
     # 冷房
     E_E_C_d_t = calc_E_E_C_d_t(region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, C_A, C_MR, C_OR,

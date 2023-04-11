@@ -18,14 +18,3 @@ import pyhees.section3_4_heatbridge as heatbridge
 
 # 10 土間床等の外周部
 import pyhees.section3_4_earthfloor as earthfloor
-
-
-# 付録A 一般部位及び大部分がガラスで構成されていないドア等の開口部における日除けの効果係数
-import pyhees.section3_4_a as gamma
-
-# 付録B 大部分がガラスで構成されている窓等の開口部における取得日射熱補正係数
-import pyhees.section3_4_b as f
-
-# 付録C 大部分がガラスで構成される窓等の開口部の垂直面日射熱取得率
-import pyhees.section3_4_c as eater_d
-

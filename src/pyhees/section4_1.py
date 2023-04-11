@@ -1762,7 +1762,7 @@ def calc_E_E_H_hs_MROR_d_t(region, A_A, A_MR, A_OR, H_MR, H_OR, H_HS, HW, CG, L_
     # 暖房方式及び運転方法の区分
     mode_MR, mode_OR = calc_heating_mode(region=region, H_MR=H_MR, H_OR=H_OR)
 
-    return hwh.calc_E_E_H_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_d_t_i, L_CS_x_t_i, L_CL_x_t_i, CG)
+    return hwh.calc_E_E_H_d_t(H_HS, H_MR, H_OR, A_A, A_MR, A_OR, region, mode_MR, mode_OR, L_T_H_d_t_i, L_CS_x_t_i, L_CL_x_t_i, HW, CG)
 
 
 def calc_E_G_H_hs_MROR_d_t(mode_MR, mode_OR, spec_HS, spec_MR, spec_OR, L_T_H_d_t_i, HW, CG, A_A, A_MR, A_OR, region):

@@ -41,9 +41,10 @@ from pyhees.section11_3 import load_schedule, get_schedule_hw
 def calc_hotwater_load(n_p, region, sol_region, has_bath, bath_function, pipe_diameter, kitchen_watersaving_A,
                       kitchen_watersaving_C, shower_watersaving_A, shower_watersaving_B, washbowl_watersaving_C,
                       bath_insulation,
-                      type=None, ls_type=None, A_sp=None, P_alpha_sp=None, P_beta_sp=None, W_tnk_ss=None,
+                      type=None, ls_type=None, P_alpha_sp=None, P_beta_sp=None, W_tnk_ss=None,
                       hotwater_use=None, heating_flag_d=None, A_col=None, P_alpha=None, P_beta=None, V_fan_P0=None,
-                      d0=None, d1=None, m_fan_test=None, W_tnk_ass=None
+                      d0=None, d1=None, m_fan_test=None, W_tnk_ass=None, A_stcp=None, b0=None, b1=None, c_p_htm=None,
+                      eta_r_tank=None, g_htm=None, Gs_htm=None, hw_connection_type=None, UA_hx=None, UA_stp=None, UA_tank=None
                       ):
     """給湯負荷の計算
 
@@ -61,7 +62,7 @@ def calc_hotwater_load(n_p, region, sol_region, has_bath, bath_function, pipe_di
       washbowl_watersaving_C(bool): 洗面水栓の水優先吐水機能の有無
       bath_insulation(bool): 浴槽の断熱の有無
       type(str, optional): 太陽熱利用設備の種類 (液体集熱式,空気集熱式,None) (Default value = None)
-      ls_type(str, optional): 液体集熱式太陽熱利用設備の種類 (太陽熱温水器,ソーラーシステム) (Default value = None)
+      ls_type(str, optional): 液体集熱式太陽熱利用設備の種類 (密閉形太陽熱温水器（直圧式）,ソーラーシステム) (Default value = None)
       A_sp(float, optional): 太陽熱集熱部の有効集熱面積 (m2) (Default value = None)
       P_alpha_sp(float, optional): 太陽熱集熱部の方位角 (°) (Default value = None)
       P_beta_sp(float, optional): 太陽熱集熱部の傾斜角 (°) (Default value = None)
@@ -158,7 +159,14 @@ def calc_hotwater_load(n_p, region, sol_region, has_bath, bath_function, pipe_di
         sol_region=sol_region,
         solar_device=type,
         ls_type=ls_type,
-        A_sp=A_sp,
+        A_stcp=A_stcp,
+        b0=b0,
+        b1=b1,
+        c_p_htm=c_p_htm,
+        eta_r_tank=eta_r_tank,
+        g_htm=g_htm,
+        Gs_htm=Gs_htm,
+        hw_connection_type=hw_connection_type,
         P_alpha_sp=P_alpha_sp,
         P_beta_sp=P_beta_sp,
         W_tnk_ss=W_tnk_ss,
@@ -173,6 +181,9 @@ def calc_hotwater_load(n_p, region, sol_region, has_bath, bath_function, pipe_di
         m_fan_test=m_fan_test,
         W_tnk_ass=W_tnk_ass,
         Theta_wtr_d=Theta_wtr_d,
+        UA_hx=UA_hx,
+        UA_stp=UA_stp,
+        UA_tank=UA_tank,
         L_dash_k_d_t=L_dash_k_d_t,
         L_dash_s_d_t=L_dash_s_d_t,
         L_dash_w_d_t=L_dash_w_d_t,
@@ -303,10 +314,20 @@ def calc_E_E_W_d_t(n_p, L_HWH, heating_flag_d, region, sol_region, HW, SHC):
             args.update({
                 'type': SHC['type'],
                 'ls_type': SHC['ls_type'],
-                'A_sp': SHC['A_sp'],
+                'A_stcp': SHC['A_stcp'],
+                'b0': SHC['b0'],
+                'b1': SHC['b1'],
+                'c_p_htm': SHC['c_p_htm'],
+                'eta_r_tank': SHC['eta_r_tank'],
+                'g_htm': SHC['g_htm'],
+                'Gs_htm': SHC['Gs_htm'],
+                'hw_connection_type': SHC['hw_connection_type'],
                 'P_alpha_sp': SHC['P_alpha_sp'],
                 'P_beta_sp': SHC['P_beta_sp'],
-                'W_tnk_ss': SHC['W_tnk_ss']
+                'UA_hx': SHC['UA_hx'],
+                'UA_stp': SHC['UA_stp'],
+                'UA_tank': SHC['UA_tank'],
+                'W_tnk_ss': SHC['V_tank']
             })
         elif SHC['type'] == '空気集熱式':
             args.update({
@@ -389,11 +410,12 @@ def calc_E_E_aux_ss_d_t(SHC, region=None, sol_region=None, heating_flag_d=None):
         # 1時間当たりの補機の消費電力量 (kWh/h)
         return lss.calc_E_E_lss_aux_d_t(
             ls_type=SHC['ls_type'],
-            pmp_type='上記以外の機種',
             P_alpha_sp=SHC['P_alpha_sp'],
             P_beta_sp=SHC['P_beta_sp'],
             region=region,
-            sol_region=sol_region
+            sol_region=sol_region,
+            P_pump_hc=SHC['P_pump_hc'],
+            P_pump_non_hc=SHC['P_pump_non_hc']
         )
     elif SHC['type'] == '空気集熱式':
         # 第九章「自然エネルギー利用設備」第三節「空気集熱式太陽熱利用設備」の算定方法により定まる
@@ -467,10 +489,20 @@ def calc_E_G_W_d_t(n_p, L_HWH, heating_flag_d, A_A, region, sol_region, HW, SHC)
             args.update({
                 'type': SHC['type'],
                 'ls_type': SHC['ls_type'],
-                'A_sp': SHC['A_sp'],
+                'A_stcp': SHC['A_stcp'],
+                'b0': SHC['b0'],
+                'b1': SHC['b1'],
+                'c_p_htm': SHC['c_p_htm'],
+                'eta_r_tank': SHC['eta_r_tank'],
+                'g_htm': SHC['g_htm'],
+                'Gs_htm': SHC['Gs_htm'],
+                'hw_connection_type': SHC['hw_connection_type'],
                 'P_alpha_sp': SHC['P_alpha_sp'],
                 'P_beta_sp': SHC['P_beta_sp'],
-                'W_tnk_ss': SHC['W_tnk_ss']
+                'UA_hx': SHC['UA_hx'],
+                'UA_stp': SHC['UA_stp'],
+                'UA_tank': SHC['UA_tank'],
+                'W_tnk_ss': SHC['V_tank']
             })
         elif SHC['type'] == '空気集熱式':
             args.update({
@@ -570,10 +602,20 @@ def calc_E_K_W_d_t(n_p, L_HWH, heating_flag_d, A_A, region, sol_region, HW, SHC)
             args.update({
                 'type': SHC['type'],
                 'ls_type': SHC['ls_type'],
-                'A_sp': SHC['A_sp'],
+                'A_stcp': SHC['A_stcp'],
+                'b0': SHC['b0'],
+                'b1': SHC['b1'],
+                'c_p_htm': SHC['c_p_htm'],
+                'eta_r_tank': SHC['eta_r_tank'],
+                'g_htm': SHC['g_htm'],
+                'Gs_htm': SHC['Gs_htm'],
+                'hw_connection_type': SHC['hw_connection_type'],
                 'P_alpha_sp': SHC['P_alpha_sp'],
                 'P_beta_sp': SHC['P_beta_sp'],
-                'W_tnk_ss': SHC['W_tnk_ss']
+                'UA_hx': SHC['UA_hx'],
+                'UA_stp': SHC['UA_stp'],
+                'UA_tank': SHC['UA_tank'],
+                'W_tnk_ss': SHC['V_tank']
             })
         elif SHC['type'] == '空気集熱式':
             args.update({
@@ -1166,18 +1208,20 @@ def get_L_dashdash_ba2_d_t(L_dash_ba2_d_t):
     return L_dash_ba2_d_t
 
 
-def calc_L_sun_d_t(region, sol_region=None, solar_device=None, ls_type=None, A_sp=None, P_alpha_sp=None, P_beta_sp=None,
+def calc_L_sun_d_t(region, sol_region=None, solar_device=None, ls_type=None, P_alpha_sp=None, P_beta_sp=None,
                   W_tnk_ss=None, hotwater_use=None, heating_flag_d=None, A_col=None, P_alpha=None, P_beta=None,
                   V_fan_P0=None, d0=None,
                   d1=None, m_fan_test=None, W_tnk_ass=None, Theta_wtr_d=None, L_dash_k_d_t=None, L_dash_s_d_t=None,
-                  L_dash_w_d_t=None, L_dash_b1_d_t=None, L_dash_b2_d_t=None, L_dash_ba1_d_t=None):
+                  L_dash_w_d_t=None, L_dash_b1_d_t=None, L_dash_b2_d_t=None, L_dash_ba1_d_t=None,
+                  A_stcp=None, b0=None, b1=None, c_p_htm=None, eta_r_tank=None, g_htm=None, Gs_htm=None,
+                  hw_connection_type=None, UA_hx=None, UA_stp=None, UA_tank=None):
     """太陽熱利用給湯設備による補正集熱量
 
     Args:
       region(int): 省エネルギー地域区分
       sol_region(int, optional): 年間の日射地域区分 (Default value = None)
       solar_device(str, optional): 太陽熱利用設備の種類 (液体集熱式,空気集熱式,None) (Default value = None)
-      ls_type(str, optional): 液体集熱式太陽熱利用設備の種類 (太陽熱温水器,ソーラーシステム) (Default value = None)
+      ls_type(str, optional): 液体集熱式太陽熱利用設備の種類 (密閉形太陽熱温水器（直圧式）,ソーラーシステム) (Default value = None)
       A_sp(float, optional): 太陽熱集熱部の有効集熱面積 (m2) (Default value = None)
       P_alpha_sp(float, optional): 太陽熱集熱部の方位角 (°) (Default value = None)
       P_beta_sp(float, optional): 太陽熱集熱部の傾斜角 (°) (Default value = None)
@@ -1205,21 +1249,36 @@ def calc_L_sun_d_t(region, sol_region=None, solar_device=None, ls_type=None, A_s
 
     """
     if solar_device == '液体集熱式':
+        # 1時間当たりの給湯熱需要（浴槽追焚を除く）
+        Q_W_dmd_excl_ba2_d_t = calc_Q_W_dmd_excl_ba2_d_t(L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t, L_dash_b1_d_t, L_dash_b2_d_t, L_dash_ba1_d_t)
+
+        # 日射量データ
+        solrad = load_solrad(region, sol_region)
+
+        # 外気温度
+        outdoor = load_outdoor()
+        Theta_ex_d_t = get_Theta_ex(region, outdoor)
+
         return lss.calc_L_sun_lss_d_t(
-            region=region,
-            sol_region=sol_region,
             ls_type=ls_type,
-            A_sp=A_sp,
+            A_stcp=A_stcp,
+            b0 = b0,
+            b1 = b1,
+            c_p_htm=c_p_htm,
+            eta_r_tank=eta_r_tank,
+            g_htm=g_htm,
+            Gs_htm=Gs_htm,
+            hw_connection_type=hw_connection_type,
             P_alpha_sp=P_alpha_sp,
             P_beta_sp=P_beta_sp,
-            W_tnk_ss=W_tnk_ss,
             Theta_wtr_d=Theta_wtr_d,
-            L_dash_k_d_t=L_dash_k_d_t,
-            L_dash_s_d_t=L_dash_s_d_t,
-            L_dash_w_d_t=L_dash_w_d_t,
-            L_dash_b1_d_t=L_dash_b1_d_t,
-            L_dash_b2_d_t=L_dash_b2_d_t,
-            L_dash_ba1_d_t=L_dash_ba1_d_t
+            UA_hx=UA_hx,
+            UA_stp=UA_stp,
+            UA_tank=UA_tank,
+            V_tank=W_tnk_ss,
+            solrad = solrad,
+            Q_W_dmd_excl_ba2_d_t = Q_W_dmd_excl_ba2_d_t,
+            Theta_ex_d_t = Theta_ex_d_t
         )
     elif solar_device == '空気集熱式':
         if hotwater_use == True:
@@ -2226,3 +2285,22 @@ def get_L_HWH_d(L_HWH_d_t):
     L_HWH_d = np.sum(tmp, axis=1)
 
     return L_HWH_d
+
+
+def calc_Q_W_dmd_excl_ba2_d_t(L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t, L_dash_b1_d_t, L_dash_b2_d_t, L_dash_ba1_d_t):
+    """1時間当たりの給湯熱需要（浴槽追焚を除く） (MJ/h) (15)
+
+    Args:
+      L_dash_k_d_t(ndarrayL, optional): 1時間当たりの台所水栓における節湯補正給湯熱負荷 (MJ/h) (Default value = None)
+      L_dash_s_d_t(ndarray, optional): 1時間当たりの浴室シャワー水栓における節湯補正給湯熱負荷 (MJ/h) (Default value = None)
+      L_dash_w_d_t(ndarray, optional): 1時間当たりの洗面水栓における節湯補正給湯熱負荷 (MJ/h) (Default value = None)
+      L_dash_b1_d_t(ndarray, optional): 1時間当たりの浴槽水栓湯はりにおける節湯補正給湯熱負荷 (MJ/h) (Default value = None)
+      L_dash_b2_d_t(ndarray, optional): 1時間当たりの浴槽自動湯はりにおける節湯補正給湯熱負荷 (MJ/h) (Default value = None)
+      L_dash_ba1_d_t(ndarray, optional): 1時間当たりの浴槽水栓さし湯における節湯補正給湯熱負荷 (MJ/h) (Default value = None)
+
+    Returns:
+      ndarray: 1時間当たりの給湯熱需要（浴槽追焚を除く） (MJ/h)
+
+    """
+    return L_dash_k_d_t + L_dash_s_d_t + L_dash_w_d_t + L_dash_b1_d_t + L_dash_b2_d_t + L_dash_ba1_d_t
+

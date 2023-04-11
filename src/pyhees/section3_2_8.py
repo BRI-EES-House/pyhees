@@ -1,7 +1,7 @@
 from pyhees.section3_2_b import get_H
 from pyhees.section3_2_c import get_nu_H, get_nu_C
 from pyhees.section3_4_b_2 import get_glass_spec_category
-from pyhees.section3_4 import common, window, door, heatbridge, earthfloor, gamma
+from pyhees.section3_4 import common, window, door, heatbridge, earthfloor
 from pyhees.section3_3_5 import *
 from pyhees.section3_3_6 import *
 
@@ -171,7 +171,12 @@ def calc_eta_A_H(envelope):
         # 日射熱取得率を計算
         if 'SolarGain' in wall_i and wall_i['SolarGain'] != 'No':
             gamma_H_i = wall_i['GammaH']
-            eta_H_i = common.get_eta_H_i(gamma_H_i, U_i)
+            # 外気側表⾯の日射吸収率を指定する場合
+            if ('SolarAbsorptance' in wall_i):
+                alpha = wall_i['SolarAbsorptance']
+                eta_H_i = common.get_eta_H_i(gamma_H_i, U_i, alpha)
+            else:
+                eta_H_i = common.get_eta_H_i(gamma_H_i, U_i)
         else:
             eta_H_i = 0.0
 
@@ -278,7 +283,12 @@ def calc_eta_A_H(envelope):
         gamma_H_i = gamma_H_i_sum / len(heatbridge_j['ComponentNames'])
         # 日射熱取得率を計算
         if 'SolarGain' in heatbridge_j and heatbridge_j['SolarGain'] != 'No':
-            eta_H_i = heatbridge.get_eta_dash_H_j(gamma_H_i, psi_i_j)
+            # 外気側表⾯の日射吸収率を指定する場合
+            if ('SolarAbsorptance' in heatbridge_j):
+                alpha = heatbridge_j['SolarAbsorptance']
+                eta_H_i = heatbridge.get_eta_dash_H_j(gamma_H_i, psi_i_j, alpha)
+            else:
+                eta_H_i = heatbridge.get_eta_dash_H_j(gamma_H_i, psi_i_j)
         else:
             eta_H_i = 0.0
 
@@ -345,7 +355,12 @@ def calc_eta_A_C(envelope):
         # 日射熱取得率を計算
         if 'SolarGain' in wall_i and wall_i['SolarGain'] != 'No':
             gamma_C_i = wall_i['GammaC']
-            eta_C_i = common.get_eta_C_i(gamma_C_i, U_i)
+            # 外気側表⾯の日射吸収率を指定する場合
+            if ('SolarAbsorptance' in wall_i):
+                alpha = wall_i['SolarAbsorptance']
+                eta_C_i = common.get_eta_C_i(gamma_C_i, U_i, alpha)
+            else:
+                eta_C_i = common.get_eta_C_i(gamma_C_i, U_i)
         else:
             eta_C_i = 0.0
 
@@ -450,7 +465,12 @@ def calc_eta_A_C(envelope):
 
         # 日射熱取得率を計算
         if 'SolarGain' in heatbridge_j and heatbridge_j['SolarGain'] != 'No':
-            eta_C_i = heatbridge.get_eta_dash_C_j(gamma_C_i, psi_i_j)
+            # 外気側表⾯の日射吸収率を指定する場合
+            if ('SolarAbsorptance' in heatbridge_j):
+                alpha = heatbridge_j['SolarAbsorptance']
+                eta_C_i = heatbridge.get_eta_dash_C_j(gamma_C_i, psi_i_j, alpha)
+            else:
+                eta_C_i = heatbridge.get_eta_dash_C_j(gamma_C_i, psi_i_j)
         else:
             eta_C_i = 0.0
 
@@ -546,6 +566,7 @@ def calc_H_byKey(adjacent_type, region):
         'Open': '外気に通じる空間',
         'Connected': '外気・外気に通じる空間',
         'Close': '外気に通じていない空間・外気に通じる床裏',
+        'SeparatorZero': '住戸（温度差係数を0とする要件を満たす場合）',
         'Separator': '住戸及び住戸と同様の熱的環境の空間・外気に通じていない床裏'
         }
     
