@@ -6,20 +6,21 @@
 
 import pyhees.section3_2_8 as detail
 import pyhees.section3_2_9 as simple
+import pyhees.section3_2_10 as spec
 
 
-
-
-def calc_insulation_performance(method, A_env=None, A_A=None, U_A=None, eta_A_H=None, eta_A_C=None,
+def calc_insulation_performance(tatekata, method, A_env=None, A_A=None, U_A=None, eta_A_H=None, eta_A_C=None,
                                 house_insulation_type=None, house_structure_type=None, insulation_structure=None,
-                                U_spec=None,f_H=None,f_C=None,eta_d_H=None,eta_d_C=None,region=None):
+                                U_spec=None, f_H=None, f_C=None, eta_d_H=None, eta_d_C=None, region=None):
     """外皮の断熱性能の計算
      入力方法によって、U_A, eta_A_H, eta_A_C, r_env の計算方法が異なる
      1.当該住宅の外皮面積の合計を用いて評価する => すべて別途計算された結果を用いる
      2.簡易的に求めた外皮面積の合計を用いて評価する => U_A, eta_A_H, eta_A_Cは別途計算された値を用いるが、r_envは簡易計算
      3.当該住戸の外皮の部位の面積等を用いて外皮性能を評価する方法 => すべて簡易計算
+     4.仕様基準又は誘導仕様基準により外皮性能を評価する方法 => すべて簡易計算
 
     Args:
+      tatekata(str): 建て方
       method(str): 入力方法
       A_env(float, optional): 外皮の部位の面積の合計 (m2) (Default value = None)
       A_A(float, optional): 床面積の合計[m^2] (Default value = None)
@@ -112,6 +113,36 @@ def calc_insulation_performance(method, A_env=None, A_A=None, U_A=None, eta_A_H=
         )
 
         house_insulation_type = U['house_insulation_type']
+    elif method == '仕様基準により外皮性能を評価する方法' or method == '誘導仕様基準により外皮性能を評価する方法':
+        # 床面積の合計に対する外皮の部位の面積の合計の比
+        r_env = calc_r_env(
+            method='仕様基準又は誘導仕様基準により外皮性能を評価する方法',
+            tatekata=tatekata
+        )
+
+        # 外皮平均熱貫流率
+        U_A = calc_U_A(
+            method='仕様基準又は誘導仕様基準により外皮性能を評価する方法',
+            env_standard=method,
+            tatekata=tatekata,
+            region=region
+        )
+
+        # 暖房期平均日射熱取得率(ηAH)
+        eta_A_H = calc_eta_A_H(
+            method = '仕様基準又は誘導仕様基準により外皮性能を評価する方法',
+            env_standard=method,
+            tatekata=tatekata,
+            region=region
+        )
+
+        # 冷房期平均日射熱取得率(ηAC)
+        eta_A_C = calc_eta_A_C(
+            method = '仕様基準又は誘導仕様基準により外皮性能を評価する方法',
+            env_standard=method,
+            tatekata=tatekata,
+            region=region
+        )
     else:
         raise ValueError(method)
 
@@ -196,34 +227,18 @@ def calc_U_A(method, **args):
         return detail.get_U_A(**args)
     elif method == '当該住戸の外皮の部位の面積等を用いずに外皮性能を評価する方法':
         return simple.calc_U_A(**args)
+    elif method == '仕様基準又は誘導仕様基準により外皮性能を評価する方法':
+        return spec.get_U_A(**args)
     else:
         raise ValueError(method)
 
 
-def calc_eta_A_H(method, region, house_insulation_type, floor_bath_insulation, U_roof, U_wall, U_door, U_base_etrc, U_base_bath,
-                 U_base_other, Psi_HB_roof, Psi_HB_wall, Psi_HB_floor, Psi_HB_roof_wall, Psi_HB_wall_wall,
-                 Psi_HB_wall_floor, etr_d, f_H):
+def calc_eta_A_H(method, **args):
     """暖房期の平均日射熱取得率
 
     Args:
       method(str): 入力方法
-      region(int): 省エネルギー地域区分
-      house_insulation_type(str): 床断熱住戸'または'基礎断熱住戸'
-      floor_bath_insulation(str): 床断熱'または'基礎断熱'、'浴室の床及び基礎が外気等に面していない'
-      U_roof(float): 屋根又は天井の熱貫流率
-      U_wall(float): 壁の熱貫流率
-      U_door(float): ドアの熱貫流率
-      U_base_etrc(float): 玄関等の基礎の熱貫流率
-      U_base_bath(float): 浴室の基礎の熱貫流率
-      U_base_other(float): その他の基礎の熱貫流率
-      Psi_HB_roof(float): 屋根または天井の熱橋の線熱貫流率
-      Psi_HB_wall(float): 壁の熱橋の線熱貫流率
-      Psi_HB_floor(float): 床の熱橋の線熱貫流率
-      Psi_HB_roof_wall(float): 屋根または天井と壁の熱橋の線熱貫流率
-      Psi_HB_wall_wall(float): 壁と壁の熱橋の線熱貫流率
-      Psi_HB_wall_floor(float): 壁と床の熱橋の線熱貫流率
-      etr_d(float): 暖房期の垂直面日射熱取得率 (-)
-      f_H(float): 暖房期の取得日射熱補正係数 (-)
+      args(args):
 
     Returns:
       float: 暖房期の平均日射熱取得率
@@ -233,59 +248,19 @@ def calc_eta_A_H(method, region, house_insulation_type, floor_bath_insulation, U
     if method == '当該住戸の外皮の部位の面積等を用いて外皮性能を評価する方法':
         return detail.calc_eta_A_H()
     elif method == '当該住戸の外皮の部位の面積等を用いずに外皮性能を評価する方法':
-
-        # 単位日射強度当たりの暖房期の日射熱取得量[W/(W/m2)]
-        m_H = simple.get_m_H(
-            region=region,
-            house_insulation_type=house_insulation_type,
-            floor_bath_insulation=floor_bath_insulation,
-            U_roof=U_roof,
-            U_wall=U_wall,
-            U_door=U_door,
-            U_base_etrc=U_base_etrc,
-            U_base_bath=U_base_bath,
-            U_base_other=U_base_other,
-            Psi_HB_roof=Psi_HB_roof,
-            Psi_HB_wall=Psi_HB_wall,
-            Psi_HB_floor=Psi_HB_floor,
-            Psi_HB_roof_wall=Psi_HB_roof_wall,
-            Psi_HB_wall_wall=Psi_HB_wall_wall,
-            Psi_HB_wall_floor=Psi_HB_wall_floor,
-            etr_d=etr_d,
-            f_H=f_H
-        )
-
-        A_dash_env = simple.get_A_dash_env(house_insulation_type, floor_bath_insulation)
-
-        return simple.get_eta_A_H(m_H=m_H, A_dash_env=A_dash_env)
+        return simple.calc_eta_A_H(**args)
+    elif method == '仕様基準又は誘導仕様基準により外皮性能を評価する方法':
+        return spec.get_eta_A_H(**args)
     else:
         raise ValueError(method)
 
 
-def calc_eta_A_C(method, region, house_insulation_type, floor_bath_insulation, U_roof, U_wall, U_door, U_base_etrc, U_base_bath, U_base_other,
-                 Psi_HB_roof, Psi_HB_wall, Psi_HB_floor, Psi_HB_roof_wall, Psi_HB_wall_wall, Psi_HB_wall_floor,
-                 etr_d, f_C):
+def calc_eta_A_C(method, **args):
     """冷房期の平均日射熱取得率
 
     Args:
       method(str): 入力方法
-      region(int): 省エネルギー地域区分
-      house_insulation_type(str): 床断熱住戸'または'基礎断熱住戸'
-      floor_bath_insulation(str): 床断熱'または'基礎断熱'、'浴室の床及び基礎が外気等に面していない'
-      U_roof(float): 屋根又は天井の熱貫流率
-      U_wall(float): 壁の熱貫流率
-      U_door(float): ドアの熱貫流率
-      U_base_etrc(float): 玄関等の基礎の熱貫流率
-      U_base_bath(float): 浴室の基礎の熱貫流率
-      U_base_other(float): その他の基礎の熱貫流率
-      Psi_HB_roof(float): 屋根または天井の熱橋の線熱貫流率
-      Psi_HB_wall(float): 壁の熱橋の線熱貫流率
-      Psi_HB_floor(float): 床の熱橋の線熱貫流率
-      Psi_HB_roof_wall(float): 屋根または天井と壁の熱橋の線熱貫流率
-      Psi_HB_wall_wall(float): 壁と壁の熱橋の線熱貫流率
-      Psi_HB_wall_floor(float): 壁と床の熱橋の線熱貫流率
-      etr_d(float): 暖房期の垂直面日射熱取得率 (-)
-      f_C(float): 冷房期の取得日射熱補正係数 (-)
+      args(args):
 
     Returns:
       float: 冷房期の平均日射熱取得率
@@ -295,35 +270,14 @@ def calc_eta_A_C(method, region, house_insulation_type, floor_bath_insulation, U
     if method == '当該住戸の外皮の部位の面積等を用いて外皮性能を評価する方法':
         return detail.calc_eta_A_C()
     elif method == '当該住戸の外皮の部位の面積等を用いずに外皮性能を評価する方法':
-
-        # 単位日射強度当たりの冷房期の日射熱取得量[W/(W/m2)]
-        m_C = simple.get_m_C(
-            region=region,
-            house_insulation_type=house_insulation_type,
-            floor_bath_insulation=floor_bath_insulation,
-            U_roof=U_roof,
-            U_wall=U_wall,
-            U_door=U_door,
-            U_base_etrc=U_base_etrc,
-            U_base_bath=U_base_bath,
-            U_base_other=U_base_other,
-            Psi_HB_roof=Psi_HB_roof,
-            Psi_HB_wall=Psi_HB_wall,
-            Psi_HB_floor=Psi_HB_floor,
-            Psi_HB_roof_wall=Psi_HB_roof_wall,
-            Psi_HB_wall_wall=Psi_HB_wall_wall,
-            Psi_HB_wall_floor=Psi_HB_wall_floor,
-            etr_d=etr_d,
-            f_C=f_C)
-
-        A_dash_env = simple.get_A_dash_env(house_insulation_type, floor_bath_insulation)
-
-        return simple.get_eta_A_C(m_C=m_C, A_dash_env=A_dash_env)
+        return simple.calc_eta_A_C(**args)
+    elif method == '仕様基準又は誘導仕様基準により外皮性能を評価する方法':
+        return spec.get_eta_A_C(**args)
     else:
         raise ValueError(method)
 
 
-def calc_r_env(method, A_env=None, A_A=None, house_insulation_type=None, floor_bath_insulation=None):
+def calc_r_env(method, tatekata=None, A_env=None, A_A=None, house_insulation_type=None, floor_bath_insulation=None):
     """床面積の合計に対する外皮の部位の面積の合計の比
 
     Args:
@@ -351,6 +305,17 @@ def calc_r_env(method, A_env=None, A_A=None, house_insulation_type=None, floor_b
         A_dash_A = simple.get_A_dash_A()
 
         return simple.get_r_env(
+            A_dash_env=A_dash_env,
+            A_dash_A=A_dash_A
+        )
+    elif method == '仕様基準又は誘導仕様基準により外皮性能を評価する方法':
+        # 外皮の部位の面積の合計 (m2)
+        A_dash_env = spec.get_A_dash_env(tatekata)
+
+        # 床面積の合計 (m2)
+        A_dash_A = spec.get_A_dash_A(tatekata)
+
+        return spec.get_r_env(
             A_dash_env=A_dash_env,
             A_dash_A=A_dash_A
         )

@@ -15,7 +15,8 @@ import pyhees.section7_1_e as eheatpump
 import pyhees.section7_1_f as eheater
 import pyhees.section7_1_g as hybrid_gas
 import pyhees.section7_1_g_3 as hybrid_gas_3
-import pyhees.section7_1_h as gas_hybrid
+import pyhees.section7_1_h as gas_hybrid_with_tank
+import pyhees.section7_1_n as gas_hybrid_tankless
 import pyhees.section7_1_i as whybrid
 import pyhees.section7_1_j as watersaving
 import pyhees.section7_1_m as schedule
@@ -23,7 +24,7 @@ import pyhees.section7_1_m as schedule
 import pyhees.section9_2 as lss
 import pyhees.section9_3 as ass
 
-from pyhees.section11_1 import load_outdoor, get_Theta_ex
+from pyhees.section11_1 import load_climate, get_Theta_ex
 from pyhees.section11_2 import load_solrad
 from pyhees.section11_3 import load_schedule, get_schedule_hw
 
@@ -89,8 +90,8 @@ def calc_hotwater_load(n_p, region, sol_region, has_bath, bath_function, pipe_di
     schedule_hw = get_schedule_hw(schedule)
 
     # 外部環境
-    outdoor = load_outdoor()
-    Theta_ex_d_t = get_Theta_ex(region, outdoor)
+    climate = load_climate(region)
+    Theta_ex_d_t = get_Theta_ex(climate)
 
     # ----- 14. 夜間平均外気温度 -----
 
@@ -373,7 +374,8 @@ def calc_E_E_W_d_t(n_p, L_HWH, heating_flag_d, region, sol_region, HW, SHC):
         theta_ex_d_Ave_d=hotwater_load['theta_ex_d_Ave_d'],
         Theta_ex_Nave_d=hotwater_load['Theta_ex_Nave_d'],
         L_HWH=L_HWH,
-        CO2HP=HW['CO2HP'] if 'CO2HP' in HW else None
+        CO2HP=HW['CO2HP'] if 'CO2HP' in HW else None,
+        daytime_heating=HW['daytime_heating'] if 'daytime_heating' in HW else False,
     )
 
     # 太陽利用設備の補機の消費電力量
@@ -683,7 +685,7 @@ def calc_E_E_hs_d_t(hw_type, bath_function, package_id, hybrid_param, hybrid_cat
                     W_dash_b1_d_t,
                     W_dash_b2_d_t, W_dash_ba1_d_t, theta_ex_d_Ave_d, L_dashdash_k_d_t, L_dashdash_s_d_t, L_dashdash_w_d_t,
                     L_dashdash_b1_d_t,
-                    L_dashdash_b2_d_t, L_dashdash_ba1_d_t, L_dashdash_ba2_d_t, L_HWH, CO2HP):
+                    L_dashdash_b2_d_t, L_dashdash_ba1_d_t, L_dashdash_ba2_d_t, L_HWH, CO2HP, daytime_heating):
     """1時間当たりの給湯機の消費電力量 (kWh/h)
 
     Args:
@@ -711,6 +713,7 @@ def calc_E_E_hs_d_t(hw_type, bath_function, package_id, hybrid_param, hybrid_cat
       L_dashdash_ba2_d_t(ndarray): 1時間当たりの浴槽追焚時における太陽熱補正給湯熱負荷 (MJ/d)
       L_HWH(ndarray): 1日当たりの温水暖房の熱負荷 (MJ/d)
       CO2HP(dict): CO2HPのパラメーター
+      daytime_heating(bool): 昼間沸上げを評価するかのフラグ
 
     Returns:
       ndarray: 1時間当たりの給湯機の消費電力量 (MJ/h)
@@ -743,6 +746,7 @@ def calc_E_E_hs_d_t(hw_type, bath_function, package_id, hybrid_param, hybrid_cat
             L_dashdash_b2_d_t=L_dashdash_b2_d_t,
             L_dashdash_ba1_d_t=L_dashdash_ba1_d_t,
             L_dashdash_ba2_d_t=L_dashdash_ba2_d_t,
+            daytime_heating=daytime_heating,
             e_rtd=e_rtd,
             theta_ex_d_Ave_d=theta_ex_d_Ave_d,
             theta_ex_Nave_d=Theta_ex_Nave_d,
@@ -786,8 +790,19 @@ def calc_E_E_hs_d_t(hw_type, bath_function, package_id, hybrid_param, hybrid_cat
             L_dashdash_ba1_d_t=L_dashdash_ba1_d_t,
             L_dashdash_ba2_d_t=L_dashdash_ba2_d_t
         )
-    elif hw_type == '電気ヒートポンプ・ガス瞬間式併用型給湯温水暖房機(給湯熱源：ガス瞬間式、暖房熱源：電気ヒートポンプ・ガス瞬間式併用)':
-        return gas_hybrid.get_E_E_hs(
+    elif hw_type == '電気ヒートポンプ・ガス瞬間式併用型給湯温水暖房機(給湯熱源：ガス瞬間式、暖房熱源：電気ヒートポンプ・ガス瞬間式併用、タンクユニット：あり)':
+        return gas_hybrid_with_tank.get_E_E_hs(
+            W_dash_k_d_t=W_dash_k_d_t,
+            W_dash_s_d_t=W_dash_s_d_t,
+            W_dash_w_d_t=W_dash_w_d_t,
+            W_dash_b1_d_t=W_dash_b1_d_t,
+            W_dash_b2_d_t=W_dash_b2_d_t,
+            W_dash_ba1_d_t=W_dash_ba1_d_t,
+            theta_ex_d_Ave_d=theta_ex_d_Ave_d,
+            L_dashdash_ba2_d_t=L_dashdash_ba2_d_t
+        )
+    elif hw_type == '電気ヒートポンプ・ガス瞬間式併用型給湯温水暖房機(給湯熱源：ガス瞬間式、暖房熱源：電気ヒートポンプ・ガス瞬間式併用、タンクユニット：なし)':
+        return gas_hybrid_tankless.get_E_E_hs(
             W_dash_k_d_t=W_dash_k_d_t,
             W_dash_s_d_t=W_dash_s_d_t,
             W_dash_w_d_t=W_dash_w_d_t,
@@ -904,8 +919,20 @@ def calc_E_G_hs_d(hw_type, hybrid_category, e_rtd, e_dash_rtd, bath_function, pa
             W_dash_ba1_d_t=W_dash_ba1_d_t,
             hybrid_param=hybrid_param
         )
-    elif hw_type == '電気ヒートポンプ・ガス瞬間式併用型給湯温水暖房機(給湯熱源：ガス瞬間式、暖房熱源：電気ヒートポンプ・ガス瞬間式併用)':
-        return gas_hybrid.get_E_G_hs(
+    elif hw_type == '電気ヒートポンプ・ガス瞬間式併用型給湯温水暖房機(給湯熱源：ガス瞬間式、暖房熱源：電気ヒートポンプ・ガス瞬間式併用、タンクユニット：あり)':
+        return gas_hybrid_with_tank.get_E_G_hs(
+            Theta_ex_Ave=Theta_ex_Ave,
+            L_dashdash_k=L_dashdash_k_d_t,
+            L_dashdash_s=L_dashdash_s_d_t,
+            L_dashdash_w=L_dashdash_w_d_t,
+            L_dashdash_b1=L_dashdash_b1_d_t,
+            L_dashdash_b2=L_dashdash_b2_d_t,
+            L_dashdash_ba1=L_dashdash_ba1_d_t,
+            L_dashdash_ba2=L_dashdash_ba2_d_t,
+            bath_function=bath_function
+        )
+    elif hw_type == '電気ヒートポンプ・ガス瞬間式併用型給湯温水暖房機(給湯熱源：ガス瞬間式、暖房熱源：電気ヒートポンプ・ガス瞬間式併用、タンクユニット：なし)':
+        return gas_hybrid_tankless.get_E_G_hs(
             Theta_ex_Ave=Theta_ex_Ave,
             L_dashdash_k=L_dashdash_k_d_t,
             L_dashdash_s=L_dashdash_s_d_t,
@@ -981,12 +1008,14 @@ def calc_E_K_hs_d_t(hw_type, e_rtd, e_dash_rtd, bath_function, theta_ex_d_Ave_d,
         return eheater.get_E_K_hs()
     elif hw_type == '電気ヒートポンプ・ガス瞬間式併用型給湯温水暖房機(給湯熱源：電気ヒートポンプ・ガス瞬間式併用、暖房熱源：ガス瞬間式)(仕様による)' \
             or hw_type == '電気ヒートポンプ・ガス併用型給湯機(仕様による)':
-        return gas_hybrid.get_E_K_hs()
+        return hybrid_gas.get_E_K_hs_d_t()
     elif hw_type == '電気ヒートポンプ・ガス瞬間式併用型給湯温水暖房機(給湯熱源：電気ヒートポンプ・ガス瞬間式併用、暖房熱源：ガス瞬間式)(試験された値を用いる)' \
             or hw_type == '電気ヒートポンプ・ガス併用型給湯機(試験された値を用いる)':
         return hybrid_gas.get_E_K_hs_d_t()
-    elif hw_type == '電気ヒートポンプ・ガス瞬間式併用型給湯温水暖房機(給湯熱源：ガス瞬間式、暖房熱源：電気ヒートポンプ・ガス瞬間式併用)':
-        return hybrid_gas.get_E_K_hs_d_t()
+    elif hw_type == '電気ヒートポンプ・ガス瞬間式併用型給湯温水暖房機(給湯熱源：ガス瞬間式、暖房熱源：電気ヒートポンプ・ガス瞬間式併用、タンクユニット：あり)':
+        return gas_hybrid_with_tank.get_E_K_hs()
+    elif hw_type == '電気ヒートポンプ・ガス瞬間式併用型給湯温水暖房機(給湯熱源：ガス瞬間式、暖房熱源：電気ヒートポンプ・ガス瞬間式併用、タンクユニット：なし)':
+        return gas_hybrid_tankless.get_E_K_hs()
     elif hw_type == '電気ヒートポンプ・ガス瞬間式併用型給湯温水暖房機(給湯熱源：電気ヒートポンプ・ガス瞬間式併用、暖房熱源：電気ヒートポンプ・ガス瞬間式併用)':
         return whybrid.get_E_K_hs_d_t()
     elif hw_type == 'コージェネレーションを使用する':
@@ -1022,7 +1051,8 @@ def get_normalized_bath_function(hw_type, bath_function):
             or hw_type == '電気ヒートポンプ・ガス併用型給湯機(試験された値を用いる)' \
             or hw_type == '電気ヒートポンプ・ガス併用型給湯機(仕様による)':
         return "ふろ給湯機(追焚あり)"
-    elif hw_type == '電気ヒートポンプ・ガス瞬間式併用型給湯温水暖房機(給湯熱源：ガス瞬間式、暖房熱源：電気ヒートポンプ・ガス瞬間式併用)':
+    elif hw_type == '電気ヒートポンプ・ガス瞬間式併用型給湯温水暖房機(給湯熱源：ガス瞬間式、暖房熱源：電気ヒートポンプ・ガス瞬間式併用、タンクユニット：あり)' \
+            or hw_type == '電気ヒートポンプ・ガス瞬間式併用型給湯温水暖房機(給湯熱源：ガス瞬間式、暖房熱源：電気ヒートポンプ・ガス瞬間式併用、タンクユニット：なし)':
         return "ふろ給湯機(追焚あり)"
     elif hw_type == '電気ヒートポンプ・ガス瞬間式併用型給湯温水暖房機(給湯熱源：電気ヒートポンプ・ガス瞬間式併用、暖房熱源：電気ヒートポンプ・ガス瞬間式併用)':
         return "ふろ給湯機(追焚あり)"
@@ -1256,8 +1286,8 @@ def calc_L_sun_d_t(region, sol_region=None, solar_device=None, ls_type=None, P_a
         solrad = load_solrad(region, sol_region)
 
         # 外気温度
-        outdoor = load_outdoor()
-        Theta_ex_d_t = get_Theta_ex(region, outdoor)
+        climate = load_climate(region)
+        Theta_ex_d_t = get_Theta_ex(climate)
 
         return lss.calc_L_sun_lss_d_t(
             ls_type=ls_type,
@@ -1282,8 +1312,8 @@ def calc_L_sun_d_t(region, sol_region=None, solar_device=None, ls_type=None, P_a
         )
     elif solar_device == '空気集熱式':
         if hotwater_use == True:
-            outdoor = load_outdoor()
-            Theta_ex_d_t = get_Theta_ex(region, outdoor)
+            climate = load_climate(region)
+            Theta_ex_d_t = get_Theta_ex(climate)
             Theta_col_nonopg_d_t, Theta_col_opg_d_t = ass.calc_Theta_col(A_col, P_alpha, P_beta, V_fan_P0, d0, d1,
                                                                          m_fan_test, region, sol_region, Theta_ex_d_t)
             t_fan_d_t = ass.get_t_fan_d_t(Theta_col_nonopg_d_t, Theta_col_opg_d_t)

@@ -7,8 +7,74 @@
 import os
 import numpy as np
 import pandas as pd
-from numpy import exp, log
 from functools import lru_cache
+from pyhees.section11_5 import \
+    calc_h_ex
+
+# ============================================================================
+# 4. 外気条件
+# ============================================================================
+
+
+@lru_cache()
+def load_climate(region):
+    """
+
+    Args:
+      region: 
+
+    Returns:
+
+    """
+    csvpath =  os.path.join(os.path.dirname(__file__), 'data', 'climate', 'climateData_{}.csv'.format(region))
+    return pd.read_csv(csvpath, nrows=24 * 365, encoding="SHIFT-JIS")
+
+
+def get_Theta_ex(climate):
+    """外気温度[℃]
+
+    Args:
+      climate(DateFrame): 外気条件
+
+    Returns:
+      ndarray: 1時間ごとの外気温度[℃]
+
+    """
+    return climate["外気温[℃]"].values
+
+
+def get_X_ex(climate):
+    """外気絶対湿度 [kg/kgDA]
+
+    Args:
+      climate(DateFrame): 外気条件
+
+    Returns:
+      ndarray: 1時間ごとの外気絶対湿度 [kg/kgDA]
+
+    """
+    return climate["外気絶対湿度 [kg/kgDA]"].values
+
+
+def get_climate_df(climate):
+    """
+
+    Args:
+      climate(DateFrame): 外気条件
+
+    Returns:
+      climate(DataFrame): 11_2のcalc_I_s_d_tで使用するDataFrame（法線面直達日射量、水平面全天日射量、太陽高度、太陽方位角）
+    
+    
+    """
+    df = pd.DataFrame({
+            'I_DN': climate["法線面直達日射量 [W/m2]"].values,
+            'I_Sky': climate["水平面天空日射量 [W/m2]"].values,
+            'h': climate["太陽高度角[度]"].values,
+            'A': climate["太陽方位角[度]"].values
+        })
+    
+    return df
 
 
 # ============================================================================
@@ -33,146 +99,6 @@ def load_outdoor():
     return pd.read_csv(csvpath, skiprows=4, nrows=24 * 365, names=(
     'day', 'hour', 'holiday', 'Theta_ex_1', 'X_ex_1', 'Theta_ex_2', 'X_ex_2', 'Theta_ex_3', 'X_ex_3', 'Theta_ex_4',
     'X_ex_4', 'Theta_ex_5', 'X_ex_5', 'Theta_ex_6', 'X_ex_6', 'Theta_ex_7', 'X_ex_7', 'Theta_ex_8', 'X_ex_8'))
-
-@lru_cache()
-def load_climate(region):
-    """
-
-    Args:
-      region: 
-
-    Returns:
-
-    """
-    csvpath =  os.path.join(os.path.dirname(__file__), 'data', 'climate', 'climateData_{}.csv'.format(region))
-    return pd.read_csv(csvpath, nrows=24 * 365, encoding="SHIFT-JIS")
-
-# 日射量
-def get_J(climate):
-    """
-
-    Args:
-      climate: 
-
-    Returns:
-
-    """
-    return climate["水平面天空日射量 [W/m2]"].values
-
-def get_Theta_ex(region, df):
-    """気温[℃]
-
-    Args:
-      region(int): 省エネルギー地域区分
-      df(DateFrame): 気温[℃],絶湿[g/kg']
-
-    Returns:
-      ndarray: 気温[℃]
-
-    """
-    return df['Theta_ex_' + str(region)].values
-
-
-def get_T_ex(Theta_ex):
-    """外気絶対温度[K]
-
-    Args:
-      Theta_ex(ndarray): 気温[℃]
-
-    Returns:
-      ndarray: 外気絶対温度[K]
-
-    """
-    return Theta_ex + 273.16
-
-
-def get_X_ex(region, df):
-    """絶湿[g/kg']
-
-    Args:
-      region(int): 省エネルギー地域区分
-      df(DateFrame): 気温[℃],絶湿[g/kg']
-
-    Returns:
-      ndarray: 絶湿[g/kg']
-
-    """
-    return df['X_ex_' + str(region)].values
-
-
-def calc_h_ex(X_ex, Theta_ex):
-    """外気相対湿度 式（１）
-
-    Args:
-      X_ex(ndarray): 絶湿[g/kg']
-      Theta_ex(ndarray): 外気絶対温度[K]
-
-    Returns:
-      ndarray: 外気相対温度
-
-    """
-    P_v = get_P_v(X_ex)
-    P_vs = calc_P_vs(Theta_ex)
-    return P_v / P_vs * 100
-
-
-def get_P_v(X_ex):
-    """外気の水蒸気圧　式（２）
-
-    Args:
-      X_ex(ndarray): 絶湿[g/kg']
-
-    Returns:
-      ndarray: 外気の水蒸気圧
-
-    """
-    return 101325 * (X_ex / (622 + X_ex))
-
-
-def calc_P_vs(Theta_ex):
-    """外気の飽和水蒸気圧　式（3a）
-
-    Args:
-      Theta_ex(ndarray): 外気絶対温度[K]
-
-    Returns:
-      ndarray: 外気の飽和水蒸気圧
-
-    """
-    k = get_k(Theta_ex)
-    return exp(k)
-
-
-def get_k(Theta_ex):
-    """指数k 式(3b)
-
-    Args:
-      Theta_ex(ndarray): 外気絶対温度[K]
-
-    Returns:
-      ndarray: 指数k
-
-    """
-    T_ex = get_T_ex(Theta_ex)
-
-    a1 = -6096.9385
-    a2 = 21.2409642
-    a3 = -0.02711193
-    a4 = 0.00001673952
-    a5 = 2.433502
-    b1 = -6024.5282
-    b2 = 29.32707
-    b3 = 0.010613863
-    b4 = -0.000013198825
-    b5 = -0.49382577
-
-    # Theta_ex > 0
-    k_a = a1 / T_ex + a2 + a3 * T_ex + a4 * T_ex ** 2 + a5 * log(T_ex)
-
-    # Theta_ex <= 0
-    k_b = b1 / T_ex + b2 + b3 * T_ex + b4 * T_ex ** 2 + b5 * log(T_ex)
-
-    return k_a * (Theta_ex > 0) + k_b * (Theta_ex <= 0)
 
 
 # ============================================================================
@@ -288,10 +214,11 @@ if __name__ == '__main__':
 
     for region in range(1, 9):
         # 外気温
-        Theta_ex = get_Theta_ex(region, df)
+        climate = load_climate(region)
+        Theta_ex = get_Theta_ex(climate)
 
         # 絶対湿度
-        X_ex = get_X_ex(region, df)
+        X_ex = get_X_ex(climate)
 
         # 相対湿度
         h_ex = calc_h_ex(X_ex, Theta_ex)

@@ -20,7 +20,7 @@ import pyhees.section3_1_d as uf
 # 空気集熱式太陽熱利用設備による負荷削減量
 import pyhees.section9_3 as ass
 
-from pyhees.section11_1 import load_outdoor, get_Theta_ex
+from pyhees.section11_1 import load_climate, get_Theta_ex
 
 
 # ============================================================================
@@ -75,8 +75,8 @@ def calc_L_H_d_t_i(region, A_A, A_MR, A_OR, mode_H, mode_C, TS, Q, mu_H, mu_C, N
     """
     L_H_d_t_i = np.zeros((12, 24 * 365))
 
-    outdoor = load_outdoor()
-    Theta_ex_d_t = get_Theta_ex(region, outdoor)
+    climate = load_climate(region)
+    Theta_ex_d_t = get_Theta_ex(climate)
 
     # 負荷補正前の暖房負荷
     L_dash_H_d_t_i, L_dash_H_R_d_t_i = calc_L_dash_H_d_t_i(
@@ -317,9 +317,9 @@ def calc_L_CS_d_t_i(region, A_A, A_MR, A_OR, mode_H, mode_C, NV_MR, NV_OR, Q, mu
       ndarray: 暖冷房区画iの 1 時間当たりの冷房顕熱負荷
 
     """
-    from pyhees.section11_1 import load_outdoor, get_Theta_ex
-    outdoor = load_outdoor()
-    Theta_ex_d_t = get_Theta_ex(region, outdoor)
+    from pyhees.section11_1 import load_climate, get_Theta_ex
+    climate = load_climate(region)
+    Theta_ex_d_t = get_Theta_ex(climate)
 
     L_CS_d_t_i = calc_L_dash_CS_d_t_i(region, A_A, A_MR, A_OR, mode_H, mode_C, NV_MR, NV_OR, Q, mu_H, mu_C, TS,
                                       etr_dash_t, hex, r_A_ufvnt,

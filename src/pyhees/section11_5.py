@@ -4,25 +4,40 @@
 # ============================================================================
 
 import numpy as np
+from numpy import exp, log
+
+
+# 日射量
+def get_J(climate):
+    """
+
+    Args:
+      climate:
+
+    Returns:
+
+    """
+    return climate["水平面天空日射量 [W/m2]"].values
 
 
 # ============================================================================
 # 5. 相対湿度
 # ============================================================================
 
-def get_h(Theta):
-    """(1)
+def calc_h_ex(X_ex, Theta_ex):
+    """相対湿度 式（１）
 
     Args:
-      Theta: 空気温度（℃）
+      X_ex(ndarray): 絶対湿度(kg/kg(DA))
+      Theta_ex(ndarray): 外気絶対温度(℃)
 
     Returns:
-      相対湿度（%）
+      ndarray: 相対温度
 
     """
-    P_v = get_P_v()
-    P_vs = get_P_vs(Theta)
-    return (P_v / P_vs) * 100
+    P_v = calc_P_v(X_ex)
+    P_vs = calc_P_vs(Theta_ex)
+    return P_v / P_vs * 100
 
 
 # ============================================================================
@@ -40,7 +55,7 @@ def get_X(Theta):
 
     """
     F = get_F()
-    P_v = get_P_v()
+    P_v = calc_P_v(Theta)
 
     return 0.622 * (P_v / (F - P_v))
 
@@ -56,7 +71,7 @@ def get_X_s(Theta):
 
     """
     F = get_F()
-    P_vs = get_P_vs(Theta)
+    P_vs = calc_P_vs(Theta)
 
     return 0.622 * (P_vs / (F - P_vs))
 
@@ -65,11 +80,11 @@ def get_X_s(Theta):
 # 7. 水蒸気圧
 # ============================================================================
 
-def get_P_v(Theta):
-    """(4)
+def calc_P_v(X):
+    """水蒸気圧 (4)
 
     Args:
-      Theta: 空気温度（℃）
+      X: 絶対湿度(kg/kg(DA))
 
     Returns:
       水蒸気圧（Pa）
@@ -77,7 +92,7 @@ def get_P_v(Theta):
     """
 
     F = get_F()
-    X = get_X(Theta)
+
     return F * (X / (0.622 + X))
 
 
@@ -85,18 +100,32 @@ def get_P_v(Theta):
 # 8. 飽和水蒸気圧
 # ============================================================================
 
-def get_P_vs(Theta):
-    """(5a)(5b)
+def calc_P_vs(Theta_ex):
+    """外気の飽和水蒸気圧　式（3a）
 
     Args:
-      Theta: 空気温度（℃）
+      Theta_ex(ndarray): 外気絶対温度[K]
 
     Returns:
-      飽和水蒸気圧（Pa）
+      ndarray: 外気の飽和水蒸気圧
 
     """
+    k = get_k(Theta_ex)
+    return exp(k)
 
-    # 表1 式(5b)中の係数
+
+def get_k(Theta_ex):
+    """指数k 式(5b)
+
+    Args:
+      Theta_ex(ndarray): 外気温 (℃)
+
+    Returns:
+      ndarray: 指数k
+
+    """
+    T = get_T(Theta_ex)
+
     a1 = -6096.9385
     a2 = 21.2409642
     a3 = -0.02711193
@@ -108,16 +137,15 @@ def get_P_vs(Theta):
     b4 = -0.000013198825
     b5 = -0.49382577
 
-    T = get_T(Theta)
+    k = np.zeros(24 * 365)
 
-    # (5b)
-    if Theta > 0:
-        k = a1 / T + a2 + a3 * T + a4 * T ** 2 + a5 * np.log(T)
-    else:
-        k = b1 / T + b2 + b3 * T + b4 * T ** 2 + b5 * np.log(T)
+    f1 = Theta_ex > 0
+    k[f1] = a1 / T[f1] + a2 + a3 * T[f1] + a4 * T[f1] ** 2 + a5 * np.log(T[f1])
 
-    # (5a)
-    return np.exp(k)
+    f2 = Theta_ex <= 0
+    k[f2] = b1 / T[f2] + b2 + b3 * T[f2] + b4 * T[f2] ** 2 + b5 * np.log(T[f2])
+
+    return k
 
 
 # ============================================================================
@@ -125,13 +153,13 @@ def get_P_vs(Theta):
 # ============================================================================
 
 def get_T(Theta):
-    """(6)
+    """絶対温度(K) (6)
 
     Args:
-      Theta: 空気温度（℃）
+      Theta(ndarray): 空気温度（℃）
 
     Returns:
-      絶対温度（K）
+      ndarray: 絶対温度(K) 
 
     """
     return Theta + 273.16
@@ -141,7 +169,13 @@ def get_T(Theta):
 # 10. その他
 # ============================================================================
 
-# 大気圧 (Pa)
 def get_F():
-    """ """
+    """大気圧(Pa)
+
+    Args:
+
+    Returns:
+      int: 大気圧(Pa)
+
+    """
     return 101325

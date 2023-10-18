@@ -20,7 +20,7 @@ import pyhees.section4_7_l as hwfloor
 from pyhees.section4_8_a import calc_e_ref_H_th
 
 # 地域の区分と外気条件
-from pyhees.section11_1 import load_outdoor, get_Theta_ex, get_X_ex, calc_h_ex
+from pyhees.section11_1 import load_outdoor, load_climate, get_Theta_ex, get_X_ex, calc_h_ex
 
 
 # ============================================================================
@@ -89,9 +89,9 @@ def calc_Q_max_H_RAC_d_t(region, A_HCZ):
 
     """
     # 外気温度・湿度の取得
-    outdoor = load_outdoor()
-    Theta_ex_d_t = get_Theta_ex(region, outdoor)
-    X_ex = get_X_ex(region, outdoor)
+    climate = load_climate(region)
+    Theta_ex_d_t = get_Theta_ex(climate)
+    X_ex = get_X_ex(climate)
     h_ex = calc_h_ex(X_ex, Theta_ex_d_t)
 
     # 定格冷房能力
@@ -270,9 +270,9 @@ def calc_E_E_hs_d_t(region, A_A_act, i, A_HCZ, r_Af, r_up, pipe_insulation, Thet
     #:param h_ex_d_t: 外気相対湿度
 
     # 外気温度湿度
-    outdoor = load_outdoor()
-    Theta_ex_d_t = get_Theta_ex(region, outdoor)
-    X_ex = get_X_ex(region, outdoor)
+    climate = load_climate(region)
+    Theta_ex_d_t = get_Theta_ex(climate)
+    X_ex = get_X_ex(climate)
     h_ex_d_t = calc_h_ex(X_ex, Theta_ex_d_t)
 
     # 温水床暖房の最大暖房出力
@@ -353,9 +353,9 @@ def calc_E_comp_hs_d_t(region, A_HCZ, r_Af, Theta_SW_d_t, q_max_H_hs, Q_dmd_H_hs
 
     """
     # 外気温度湿度を取得
-    outdoor = load_outdoor()
-    Theta_ex_d_t = get_Theta_ex(region, outdoor)
-    X_ex = get_X_ex(region, outdoor)
+    climate = load_climate(region)
+    Theta_ex_d_t = get_Theta_ex(climate)
+    X_ex = get_X_ex(climate)
     h_ex_d_t = calc_h_ex(X_ex, Theta_ex_d_t)
 
     # 熱源機の最大暖房出力 (15)

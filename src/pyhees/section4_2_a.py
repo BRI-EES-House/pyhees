@@ -35,11 +35,8 @@ from pyhees.section4_8_a import \
     calc_e_ref_H_th
 
 from pyhees.section11_1 import \
-    load_outdoor, \
-    get_T_ex, \
-    get_Theta_ex, \
-    get_X_ex, \
-    calc_h_ex
+    load_climate, \
+    get_Theta_ex
 
 import numpy as np
 
@@ -83,8 +80,8 @@ def calc_E_E_H_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply_d_t, V_hs_vent
     """
 
     # 外気条件
-    outdoor = load_outdoor()
-    Theta_ex_d_t = get_Theta_ex(region, outdoor)
+    climate = load_climate(region)
+    Theta_ex_d_t = get_Theta_ex(climate)
 
     # (3)
     q_hs_H_d_t = get_q_hs_H_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply_d_t, C_df_H_d_t, region)
@@ -156,8 +153,8 @@ def get_E_E_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t,  X_hs_out_d_t, X_hs_in_d_t,
     """
 
     # 外気条件
-    outdoor = load_outdoor()
-    Theta_ex_d_t = get_Theta_ex(region, outdoor)
+    climate = load_climate(region)
+    Theta_ex_d_t = get_Theta_ex(climate)
 
     # (4)
     q_hs_C_d_t = get_q_hs_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, region)

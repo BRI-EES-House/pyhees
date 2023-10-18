@@ -186,11 +186,16 @@ def calc_Wood_Simple1_a_i_k(portion_i, part_k):
     """
 
     portion_Type = portion_i['Type']
+    # 床（軸組工法（剛床工法）)
+    # 床のうち剛床工法の場合は断熱箇所の指定によらず面積比率が決定される
+    if portion_Type == 'Floor' and portion_i['ConstructionMethod'] == 'FrameRigidFloor':
+        a_i_k_dict = {'HeatBridge':0.15,'GeneralPart':0.85}
+        return a_i_k_dict[part_k['part_Name']]
     # 床
-    if portion_Type == 'Floor':
+    elif portion_Type == 'Floor':
         return get_table_3_1(portion_i['ConstructionMethod'], portion_i['InsulationPlace'], part_k)
-    # 外壁
-    elif portion_Type == 'ExternalWall':
+    # 外壁または界壁
+    elif portion_Type == 'ExternalWall' or portion_Type == 'BoundaryWall':
         return get_table_4(portion_i['ConstructionMethod'], portion_i['InsulationPlace'], part_k)
     # 天井
     elif portion_Type == 'Ceiling':
@@ -247,10 +252,6 @@ def get_table_3_1(ConstructionMethod, InsulationPlace, part_k):
             return get_table_3_2(part_k)
         else:
             raise ValueError("invalid value in ['InsulationPlace']")
-    # 軸組構法（剛床工法）
-    elif ConstructionMethod == 'FrameRigidFloor':
-        a_i_k_dict = {'HeatBridge':0.15,'GeneralPart':0.85}
-        return a_i_k_dict[part_type]
     # 軸組構法（床梁土台同面工法）
     elif ConstructionMethod == 'FrameSameLevel':
         # 根太間に断熱する
@@ -677,13 +678,13 @@ def calc_OpeningPart_U_i(opening_part, opening_type):
 
     """
 
-    # 付属部材が付与されずかつ風除室に面しない場合
-    if 'Attachment' not in opening_part or opening_part['Attachment'] == 'No':
+    # 付属部材が付与されない場合（熱貫流率の計算では付属部材として外付けブラインドを考慮しないため付属部材が付与されないとして扱います）
+    if 'Attachment' not in opening_part or opening_part['Attachment'] == 'No' or opening_part['Attachment'] == 'ExteriorBlind':
         return calc_No_Attachment_U_i(opening_part, opening_type)
     # 風除室に面する場合
     elif opening_part['Attachment'] == 'WindbreakSpace':
         return calc_Windbreak_U_i(opening_part, opening_type)
-    # 付属部材が付与される場合
+    # 付属部材が付与される場合（シャッターまたは障子が付与される場合）
     else:
         return calc_Attachment_U_i(opening_part, opening_type)
 

@@ -291,6 +291,61 @@ def get_q(house_insulation_type, floor_bath_insulation,
 # 9.4 暖房期の平均日射熱取得率及び冷房期の平均日射熱取得率
 # ============================================================================
 
+def calc_eta_A_H(region, house_insulation_type, floor_bath_insulation, U_roof, U_wall, U_door, U_base_etrc, U_base_bath,
+                 U_base_other, Psi_HB_roof, Psi_HB_wall, Psi_HB_floor, Psi_HB_roof_wall, Psi_HB_wall_wall,
+                 Psi_HB_wall_floor, etr_d, f_H):
+    """暖房期の平均日射熱取得率
+
+    Args:
+      method(str): 入力方法
+      region(int): 省エネルギー地域区分
+      house_insulation_type(str): 床断熱住戸'または'基礎断熱住戸'
+      floor_bath_insulation(str): 床断熱'または'基礎断熱'、'浴室の床及び基礎が外気等に面していない'
+      U_roof(float): 屋根又は天井の熱貫流率
+      U_wall(float): 壁の熱貫流率
+      U_door(float): ドアの熱貫流率
+      U_base_etrc(float): 玄関等の基礎の熱貫流率
+      U_base_bath(float): 浴室の基礎の熱貫流率
+      U_base_other(float): その他の基礎の熱貫流率
+      Psi_HB_roof(float): 屋根または天井の熱橋の線熱貫流率
+      Psi_HB_wall(float): 壁の熱橋の線熱貫流率
+      Psi_HB_floor(float): 床の熱橋の線熱貫流率
+      Psi_HB_roof_wall(float): 屋根または天井と壁の熱橋の線熱貫流率
+      Psi_HB_wall_wall(float): 壁と壁の熱橋の線熱貫流率
+      Psi_HB_wall_floor(float): 壁と床の熱橋の線熱貫流率
+      etr_d(float): 暖房期の垂直面日射熱取得率 (-)
+      f_H(float): 暖房期の取得日射熱補正係数 (-)
+
+    Returns:
+      float: 暖房期の平均日射熱取得率
+
+    """
+    # 単位日射強度当たりの暖房期の日射熱取得量[W/(W/m2)]
+    m_H = get_m_H(
+        region=region,
+        house_insulation_type=house_insulation_type,
+        floor_bath_insulation=floor_bath_insulation,
+        U_roof=U_roof,
+        U_wall=U_wall,
+        U_door=U_door,
+        U_base_etrc=U_base_etrc,
+        U_base_bath=U_base_bath,
+        U_base_other=U_base_other,
+        Psi_HB_roof=Psi_HB_roof,
+        Psi_HB_wall=Psi_HB_wall,
+        Psi_HB_floor=Psi_HB_floor,
+        Psi_HB_roof_wall=Psi_HB_roof_wall,
+        Psi_HB_wall_wall=Psi_HB_wall_wall,
+        Psi_HB_wall_floor=Psi_HB_wall_floor,
+        etr_d=etr_d,
+        f_H=f_H
+    )
+
+    A_dash_env = get_A_dash_env(house_insulation_type, floor_bath_insulation)
+    
+    return get_eta_A_H(m_H=m_H, A_dash_env=A_dash_env)
+
+
 def get_eta_A_H(m_H, A_dash_env):
     """暖房期の平均日射熱取得率 (10a)
 
@@ -485,6 +540,60 @@ def get_m_H(region, house_insulation_type, floor_bath_insulation, U_roof, U_wall
     m_H = sum(m_H_list)
 
     return m_H
+
+
+def calc_eta_A_C(region, house_insulation_type, floor_bath_insulation, U_roof, U_wall, U_door, U_base_etrc, U_base_bath,
+                 U_base_other, Psi_HB_roof, Psi_HB_wall, Psi_HB_floor, Psi_HB_roof_wall, Psi_HB_wall_wall,
+                 Psi_HB_wall_floor, etr_d, f_C):
+    """暖房期の平均日射熱取得率
+
+    Args:
+      method(str): 入力方法
+      region(int): 省エネルギー地域区分
+      house_insulation_type(str): 床断熱住戸'または'基礎断熱住戸'
+      floor_bath_insulation(str): 床断熱'または'基礎断熱'、'浴室の床及び基礎が外気等に面していない'
+      U_roof(float): 屋根又は天井の熱貫流率
+      U_wall(float): 壁の熱貫流率
+      U_door(float): ドアの熱貫流率
+      U_base_etrc(float): 玄関等の基礎の熱貫流率
+      U_base_bath(float): 浴室の基礎の熱貫流率
+      U_base_other(float): その他の基礎の熱貫流率
+      Psi_HB_roof(float): 屋根または天井の熱橋の線熱貫流率
+      Psi_HB_wall(float): 壁の熱橋の線熱貫流率
+      Psi_HB_floor(float): 床の熱橋の線熱貫流率
+      Psi_HB_roof_wall(float): 屋根または天井と壁の熱橋の線熱貫流率
+      Psi_HB_wall_wall(float): 壁と壁の熱橋の線熱貫流率
+      Psi_HB_wall_floor(float): 壁と床の熱橋の線熱貫流率
+      etr_d(float): 暖房期の垂直面日射熱取得率 (-)
+      f_H(float): 暖房期の取得日射熱補正係数 (-)
+
+    Returns:
+      float: 暖房期の平均日射熱取得率
+
+    """
+    # 単位日射強度当たりの冷房期の日射熱取得量[W/(W/m2)]
+    m_C = get_m_C(
+        region=region,
+        house_insulation_type=house_insulation_type,
+        floor_bath_insulation=floor_bath_insulation,
+        U_roof=U_roof,
+        U_wall=U_wall,
+        U_door=U_door,
+        U_base_etrc=U_base_etrc,
+        U_base_bath=U_base_bath,
+        U_base_other=U_base_other,
+        Psi_HB_roof=Psi_HB_roof,
+        Psi_HB_wall=Psi_HB_wall,
+        Psi_HB_floor=Psi_HB_floor,
+        Psi_HB_roof_wall=Psi_HB_roof_wall,
+        Psi_HB_wall_wall=Psi_HB_wall_wall,
+        Psi_HB_wall_floor=Psi_HB_wall_floor,
+        etr_d=etr_d,
+        f_C=f_C)
+
+    A_dash_env = get_A_dash_env(house_insulation_type, floor_bath_insulation)
+
+    return get_eta_A_C(m_C=m_C, A_dash_env=A_dash_env)
 
 
 def get_eta_A_C(m_C, A_dash_env):

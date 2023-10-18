@@ -23,13 +23,13 @@ def calc_L_sun_lss_d_t(ls_type, A_stcp, b0, b1, c_p_htm, eta_r_tank, g_htm, Gs_h
     Args:
       ls_type(str): 液体集熱式太陽熱利用設備の種類 (密閉形太陽熱温水器（直圧式）,ソーラーシステム)
       A_stcp(float): 集熱部の有効集熱面積(m2)
-      b0(float): 集熱器の集熱効率特性線図一次近似式の切片（-）
-      b1(float): 集熱器の集熱効率特性線図一次近似式の傾き（W/(m2・K)）
-      c_p_htm(float): 熱媒の定圧比熱
-      eta_r_tank(float): 有効出湯効率
+      b0(float): 集熱器の集熱効率特性線図一次近似式の切片 (-)
+      b1(float): 集熱器の集熱効率特性線図一次近似式の傾き (W/(m2・K))
+      c_p_htm(float): 熱媒の定圧比熱 (kJ/(kg･K)) 
+      eta_r_tank(float): 有効出湯効率 (%)
       g_htm(float): 単位日射量当たりの循環流量((kg/h)/(W/m2))
       Gs_htm(float): 熱媒の基準循環流量(kg/h)
-      hw_connection_type(str): 給湯接続方式の種類
+      hw_connection_type(str): 給湯接続方式の種類 (-)
       P_alpha_sp(float): ソーラーシステムの太陽熱集熱部の方位角 (°)
       P_beta_sp(float): ソーラーシステムの太陽熱集熱部の傾斜角 (°)
       Theta_wtr_d(ndarray): 日平均給水温度 (℃)
@@ -37,14 +37,15 @@ def calc_L_sun_lss_d_t(ls_type, A_stcp, b0, b1, c_p_htm, eta_r_tank, g_htm, Gs_h
       UA_stp(float): 集熱配管の放熱係数 (W/(m.K)
       UA_hx(float): 熱交換器の伝熱係数 (-)
       V_tank(float): タンク容量 (L),
-      solrad(ndarray): 日射量データ
+      solrad(ndarray): 日射量データ (W/m2)
       Q_W_dmd_excl_ba2_d_t(ndarray): 1時間当たりの給湯熱需要（浴槽追焚を除く） (MJ/h)
-      Theta_ex_d_t(ndarray): 外気温度
+      Theta_ex_d_t(ndarray): 外気温度 (℃)
 
     Returns:
       ndarray: 1時間当たりの液体集熱式太陽熱利用設備による補正集熱量 (MJ/h)
 
     """
+    # 作業領域の確保
     M_w_tank_upper_d_t = np.zeros(24 * 365)
     M_w_tank_lower_d_t = np.zeros(24 * 365)
     M_w_tank_out_d_t = np.zeros(24 * 365)
@@ -57,6 +58,7 @@ def calc_L_sun_lss_d_t(ls_type, A_stcp, b0, b1, c_p_htm, eta_r_tank, g_htm, Gs_h
     Gamma_wu_tank_upper_d_t = np.zeros(24 * 365)
     delta_tau_w_tank_out_d_t = np.zeros(24 * 365)
 
+    # 仕様
     b0 = calc_b0(ls_type, b0)
     b1 = calc_b1(ls_type, b1)
     c_p_htm = calc_c_p_htm(ls_type, c_p_htm)
@@ -66,65 +68,64 @@ def calc_L_sun_lss_d_t(ls_type, A_stcp, b0, b1, c_p_htm, eta_r_tank, g_htm, Gs_h
 
     if ls_type == "密閉形太陽熱温水器（直圧式）":
       g_htm = lss1.calc_g_htm(g_htm)
-
-      # 当該時刻を含む過去6時間の平均外気温度
-      Theta_ex_p6h_Ave_d_t = lss1.calc_Theta_ex_p6h_Ave_d_t(Theta_ex_d_t)
-
     elif ls_type == "ソーラーシステム":
       Gs_htm = lss2.calc_Gs_htm(Gs_htm)
       UA_stp = lss2.calc_UA_stp(UA_stp)
 
-    # 貯湯タンク全体の水の質量 
+    # 貯湯タンク全体の水の質量 (23)
     M_w_tank_total = calc_M_w_tank_total(V_tank)
 
-    # 集熱器の単位面積当たりの平均日射量 (W/m2)
+    # 集熱器の単位面積当たりの平均日射量 第十一章第二節
     I_s_d_t = calc_I_s_d_t(P_alpha_sp, P_beta_sp, solrad)
 
-    # 集熱開始時刻
+    # 集熱開始時刻 付録A (8)または付録B (7)
     t_hc_start_d = calc_t_hc_start_d(ls_type, I_s_d_t)
 
-    # 1時間当たりの集熱時間数
+    # 1時間当たりの集熱時間数 付録A (7)または付録B (6)
     delta_tau_hc_d_t = calc_delta_tau_hc_d_t(ls_type, I_s_d_t)
 
-    # 1時間当たりの熱媒の循環量
+    # 1時間当たりの熱媒の循環量 付録A (6)または付録B (5)
     G_htm_d_t = calc_G_htm_d_t(ls_type, g_htm, Gs_htm, I_s_d_t, delta_tau_hc_d_t)
 
-    # 集熱配管の温度効率
+    # 集熱配管の温度効率 付録A (5)または付録B (4)
     Epsilon_t_stp_d_t = calc_Epsilon_t_stp_d_t(ls_type, c_p_htm, UA_stp, G_htm_d_t)
 
-    # 集熱器の温度効率
+    # 集熱器の温度効率 付録A (4)または付録B (3)
     Epsilon_t_stc_d_t = calc_Epsilon_t_stc_d_t(ls_type, A_stcp, b1, c_p_htm, G_htm_d_t)
 
-    # 集熱経路の総合温度効率
+    # 集熱経路の総合温度効率 (34)
     e_t_stcs_d_t = calc_e_t_stcs_d_t(Epsilon_t_stp_d_t, Epsilon_t_stc_d_t)
 
     # 日平均給水温度を時間ごとに拡張
     Theta_wtr_d_t = np.repeat(Theta_wtr_d, 24)
 
-    # 給湯熱需要のうちの太陽熱利用設備の分担分
+    # 給湯熱需要のうちの太陽熱利用設備の分担分 (28)
     Q_W_dmd_sun_d_t = calc_Q_W_dmd_sun_d_t(Q_W_dmd_excl_ba2_d_t)
 
-    # 熱的平衡状態を仮定した場合の集熱経路における熱媒温度
+    # 熱的平衡状態を仮定した場合の集熱経路における熱媒温度 (32)
     Theta_htm_stcs_d_t = calc_Theta_htm_stcs_d_t(b0, b1, I_s_d_t, Theta_ex_d_t, Epsilon_t_stp_d_t, Epsilon_t_stc_d_t, e_t_stcs_d_t)
 
-    # 熱交換器の温度効率
+    # 熱交換器の温度効率 付録A (1)または付録B (1)
     Epsilon_t_hx_d_t = calc_Epsilon_t_hx_d_t(ls_type, c_p_htm, UA_hx, G_htm_d_t)
 
-    # 集熱配管還り熱媒温度の算定に係る貯湯タンクの下層部の水の温度に対する案分比率
+    # 集熱配管還り熱媒温度の算定に係る貯湯タンクの下層部の水の温度に対する案分比率 (35)
     Beta_htm_tank_d_t = calc_Beta_htm_tank_d_t(e_t_stcs_d_t, Epsilon_t_hx_d_t)
 
-    # 集熱配管還り熱媒温度の算定に係る集熱経路に対して熱的平衡状態を仮定した場合の集熱経路における熱媒温度に対する案分比率
+    # 集熱配管還り熱媒温度の算定に係る集熱経路に対して熱的平衡状態を仮定した場合の集熱経路における熱媒温度に対する案分比率 (36)
     Beta_htm_stcs_d_t = calc_Beta_htm_stcs_d_t(e_t_stcs_d_t, Epsilon_t_hx_d_t)
+
+    # 当該時刻を含む過去6時間の平均外気温度 付録A (3)
+    Theta_ex_p6h_Ave_d_t = lss1.calc_Theta_ex_p6h_Ave_d_t(Theta_ex_d_t)
 
     for dt in range(24 * 365):
       # 日時が1月1日0時である場合の一時刻前における計算
       if dt == 0:
-          # 貯湯タンク上層部の水の質量
+          # 一時刻前における貯湯タンク上層部の水の質量 (30)
           M_w_tank_upper_d_t[-1] = calc_M_w_tank_upper_prev(V_tank)
 
           M_w_tank_lower_d_t[-1] = M_w_tank_total - M_w_tank_upper_d_t[-1]
 
-          # 入水・出水後の貯湯タンク上層部の水の温度
+          # 一時刻前における貯湯タンク上層部の水の質量 (31)
           Theta_w_tank_upper_d_t[-1] = calc_Theta_w_tank_upper_prev(Theta_wtr_d)
 
           # 一時刻前における貯湯タンク下層部の水の温度は定義しない
@@ -133,41 +134,43 @@ def calc_L_sun_lss_d_t(ls_type, A_stcp, b0, b1, c_p_htm, eta_r_tank, g_htm, Gs_h
           # 入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比 
           Gamma_w_tank_d_t[-1] = M_w_tank_lower_d_t[-1] / M_w_tank_total
 
-      # 完全混合を仮定した場合の入水・出水後の貯湯タンクの水の温度
+      # 完全混合を仮定した場合の入水・出水後の貯湯タンクの水の温度 (17)
       Theta_w_tank_mixed_d_t[dt-1] = calc_Theta_w_tank_mixed(Gamma_w_tank_d_t[dt-1], Theta_w_tank_upper_d_t[dt-1], Theta_w_tank_lower_d_t[dt-1])
 
-      # 貯湯タンクからの出水時間数
-      Theta_ex_p6h_Ave = Theta_ex_p6h_Ave_d_t[dt] if ls_type == "密閉形太陽熱温水器（直圧式）" else None
-      delta_tau_w_tank_out_d_t[dt] = calc_delta_tau_w_tank_out(ls_type, Theta_wtr_d_t[dt], Theta_ex_p6h_Ave, Q_W_dmd_sun_d_t[dt], Theta_w_tank_mixed_d_t[dt-1], Theta_w_tank_upper_d_t[dt-1], t_hc_start_d[dt])
+      # 貯湯タンクからの出水時間数 (29)
+      d = dt // 24
+      dt_p6h = 24 * d + 5 # 当該日の６時のインデックスを取得
+      delta_tau_w_tank_out_d_t[dt] = calc_delta_tau_w_tank_out(ls_type, Theta_wtr_d_t[dt], Theta_ex_p6h_Ave_d_t[dt_p6h], Q_W_dmd_sun_d_t[dt], Theta_w_tank_mixed_d_t[dt-1], Theta_w_tank_upper_d_t[dt-1], t_hc_start_d[dt])
 
-      # 貯湯タンク上層部の水の使用率
+      # 貯湯タンク上層部の水の使用率 (25)
       Gamma_wu_tank_upper_d_t[dt] = calc_Gamma_wu_tank_upper(ls_type, hw_connection_type,
                                   Theta_wtr_d_t[dt], Q_W_dmd_sun_d_t[dt], M_w_tank_total, M_w_tank_upper_d_t[dt-1], Theta_w_tank_mixed_d_t[dt-1], Theta_w_tank_upper_d_t[dt-1], 
                                   delta_tau_w_tank_out_d_t[dt], t_hc_start_d[dt])
 
-      # 貯湯タンクから出水する水の質量
+      # 貯湯タンクから出水する水の質量 (5)
       M_w_tank_out_d_t[dt] = calc_M_w_tank_out(Gamma_wu_tank_upper_d_t[dt], M_w_tank_upper_d_t[dt-1])
 
-      # 入水・出水後の貯湯タンク上層部の水の質量
+      # 入水・出水後の貯湯タンク上層部の水の質量 (18)
       M_w_tank_upper_d_t[dt] = calc_M_w_tank_upper(M_w_tank_total, Gamma_wu_tank_upper_d_t[dt], M_w_tank_out_d_t[dt], M_w_tank_upper_d_t[dt-1], M_w_tank_lower_d_t[dt-1], Gamma_w_tank_d_t[dt-1], t_hc_start_d[dt])
 
-      # 入水・出水後の貯湯タンク下層部の水の質量
+      # 入水・出水後の貯湯タンク下層部の水の質量 (19)
       M_w_tank_lower_d_t[dt] = calc_M_w_tank_lower(M_w_tank_total, M_w_tank_upper_d_t[dt])
 
-      # 入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比
+      # 入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比 (22)
       Gamma_w_tank_d_t[dt] = calc_Gamma_w_tank(M_w_tank_total,  M_w_tank_lower_d_t[dt])
 
-      # 入水・出水後の貯湯タンク上層部の水の温度
+      # 入水・出水後の貯湯タンク上層部の水の温度 (6)
+      # 入水・出水後の貯湯タンク下層部の水の温度 (7)
       Theta_w_tank_upper_d_t[dt], Theta_w_tank_lower_d_t[dt] = calc_Theta_w_tank(c_p_htm, eta_r_tank, 
                       Theta_wtr_d_t[dt], UA_tank, M_w_tank_total, Gamma_w_tank_d_t[dt], Gamma_w_tank_d_t[dt-1], M_w_tank_upper_d_t[dt], 
                       M_w_tank_out_d_t[dt], M_w_tank_lower_d_t[dt], M_w_tank_lower_d_t[dt-1], Theta_w_tank_mixed_d_t[dt-1], Theta_w_tank_upper_d_t[dt-1],
                       Theta_w_tank_lower_d_t[dt-1], Gamma_wu_tank_upper_d_t[dt], delta_tau_w_tank_out_d_t[dt], t_hc_start_d[dt],
                       Theta_htm_stcs_d_t[dt], Beta_htm_stcs_d_t[dt], Beta_htm_tank_d_t[dt], Epsilon_t_hx_d_t[dt], G_htm_d_t[dt], Theta_ex_d_t[dt], delta_tau_hc_d_t[dt])
 
-    # 貯湯タンクから補助熱源機までの給湯配管の熱損失率
+    # 貯湯タンクから補助熱源機までの給湯配管の熱損失率 (38)
     f_pipe_loss_tank_boiler = calc_f_pipe_loss_tank_boiler(ls_type, hw_connection_type, M_w_tank_out_d_t)
 
-    # 1時間当たりの貯湯タンク出湯熱量
+    # 1時間当たりの貯湯タンク出湯熱量 (3)
     Q_tank_d_t = calc_Q_tank_d_t(Theta_wtr_d_t, delta_tau_w_tank_out_d_t, M_w_tank_out_d_t, Theta_w_tank_mixed_d_t, Theta_w_tank_upper_d_t, t_hc_start_d)
 
     L_sun_lss_d_t = (1 - f_pipe_loss_tank_boiler) * Q_tank_d_t
@@ -183,8 +186,8 @@ def calc_E_E_lss_aux_d_t(region, sol_region, ls_type, P_pump_hc, P_pump_non_hc, 
     """1時間当たりの補機の消費電力量 (2)
 
     Args:
-      region(int): 省エネルギー地域区分
-      sol_region(int): 年間の日射地域区分
+      region(int): 省エネルギー地域区分 (-)
+      sol_region(int): 年間の日射地域区分 (-)
       ls_type(str): 液体集熱式太陽熱利用設備の種類 (密閉形太陽熱温水器（直圧式）,ソーラーシステム)
       P_pump_hc(float): 集熱時における循環ポンプの消費電力量 (W) [入力/固定]
       P_pump_non_hc(float): 非集熱時における循環ポンプの消費電力量 (W) [入力/固定]
@@ -196,7 +199,7 @@ def calc_E_E_lss_aux_d_t(region, sol_region, ls_type, P_pump_hc, P_pump_non_hc, 
 
     """
     if ls_type == '密閉形太陽熱温水器（直圧式）' or ls_type == 'ソーラーシステム':
-        # 1時間当たりの循環ポンプの消費電力量
+        # 1時間当たりの循環ポンプの消費電力量 (37)
         E_E_lss_aux_d_t = calc_E_pump_d_t(region, sol_region, ls_type, P_pump_hc, P_pump_non_hc, P_alpha_sp, P_beta_sp)
         return E_E_lss_aux_d_t
     else:
@@ -220,7 +223,7 @@ def calc_Q_tank_d_t(Theta_wtr_d_t, delta_tau_w_tank_out_d_t, M_w_tank_out_d_t, T
       M_w_tank_out_d_t(ndarray): 集熱配管の放熱係数 (W/(m.K)
       Theta_w_tank_mixed_d_t(ndarray): 熱交換器の伝熱係数 (-)
       Theta_w_tank_upper_d_t(ndarray): タンク容量 (L)
-      t_hc_start_d(ndarray): 集熱開始時刻
+      t_hc_start_d(ndarray): 集熱開始時刻 (-)
 
     Returns:
       ndarray: 1時間当たりの貯湯タンク出湯熱量( MJ/h)
@@ -257,7 +260,7 @@ def calc_Theta_w_tank_out_d_t(delta_tau_w_tank_out_d_t, Theta_w_tank_mixed_d_t, 
       delta_tau_w_tank_out_d_t(ndarray): 貯湯タンクの放熱係数(W/K)
       Theta_w_tank_mixed_d_t(ndarray): 熱交換器の伝熱係数 (-)
       Theta_w_tank_upper_d_t(ndarray): タンク容量 (L)
-      t_hc_start_d(ndarray): 集熱開始時刻 (L)
+      t_hc_start_d(ndarray): 集熱開始時刻  (-)
 
     Returns:
       ndarray: 貯湯タンクから出水する水の温度( ℃)
@@ -292,8 +295,8 @@ def calc_M_w_tank_out(Gamma_wu_tank_upper, M_w_tank_upper_prev):
     """貯湯タンクから出水する水の質量 (kg/h) (5)
 
     Args:
-      Gamma_wu_tank_upper(float): 貯湯タンク上層部の水の使用率
-      M_w_tank_upper_prev(float): 1時間前の貯湯タンク上層部の水の質量
+      Gamma_wu_tank_upper(float): 貯湯タンク上層部の水の使用率 (-)
+      M_w_tank_upper_prev(float): 1時間前の貯湯タンク上層部の水の質量 (kg)
 
     Returns:
       float: 貯湯タンクから出水する水の質量 (kg/h)
@@ -316,33 +319,33 @@ def calc_Theta_w_tank(c_p_htm, eta_r_tank, Theta_wtr, UA_tank,
     """貯湯タンクの水の温度 (6) (7)
 
     Args:
-      c_p_htm(float): 熱媒の定圧比熱
-      eta_r_tank(float): 有効出湯効率
+      c_p_htm(float): 熱媒の定圧比熱 (kJ/(kg･K)) 
+      eta_r_tank(float): 有効出湯効率 (%)
       Theta_wtr(float): 日平均給水温度 (℃)
       UA_tank(float): 貯湯タンクの放熱係数(W/K)
-      M_w_tank_total(float): 貯湯タンク全体の水の質量 
-      Gamma_w_tank(float): 入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比
-      Gamma_w_tank_prev(float): 1時間前の入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比
-      M_w_tank_upper(float): 入水・出水後の貯湯タンク上層部の水の質量
-      M_w_tank_out(float): 貯湯タンクから出水する水の質量
-      M_w_tank_lower(float): 入水・出水後の貯湯タンク下層部の水の質量
-      M_w_tank_lower_prev(float): 1時間前の入水・出水後の貯湯タンク下層部の水の質量
-      Theta_w_tank_mixed_prev(float): 1時間前の完全混合を仮定した場合の入水・出水後の貯湯タンクの水の温度
-      Theta_w_tank_upper_prev(float): 1時間前の入水・出水後の貯湯タンク上層部の水の温度
-      Theta_w_tank_lower_prev(float): 1時間前の入水・出水後の貯湯タンク下層部の水の温度
-      Gamma_wu_tank_upper(float): 貯湯タンク上層部の水の使用率
-      delta_tau_w_tank_out(float): 貯湯タンクからの出水時間数
-      t_hc_start_d(float): 集熱開始時刻
-      Theta_htm_stcs(float): 熱的平衡状態を仮定した場合の集熱経路における熱媒温度
-      Beta_htm_stcs(float): 集熱配管還り熱媒温度の算定に係る集熱経路に対して熱的平衡状態を仮定した場合の集熱経路における熱媒温度に対する案分比率
-      Beta_htm_tank(float): 集熱配管還り熱媒温度の算定に係る貯湯タンクの下層部の水の温度に対する案分比率
-      Epsilon_t_hx(float): 熱交換器の温度効率
-      G_htm(float): 熱媒の循環量
-      Theta_ex(float): 外気温度
-      delta_tau_hc(int): 集熱時間数
+      M_w_tank_total(float): 貯湯タンク全体の水の質量  (kg)
+      Gamma_w_tank(float): 入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比 (-)
+      Gamma_w_tank_prev(float): 1時間前の入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比 (-)
+      M_w_tank_upper(float): 入水・出水後の貯湯タンク上層部の水の質量 (kg)
+      M_w_tank_out(float): 貯湯タンクから出水する水の質量 (kg)
+      M_w_tank_lower(float): 入水・出水後の貯湯タンク下層部の水の質量 (kg)
+      M_w_tank_lower_prev(float): 1時間前の入水・出水後の貯湯タンク下層部の水の質量 (kg)
+      Theta_w_tank_mixed_prev(float): 1時間前の完全混合を仮定した場合の入水・出水後の貯湯タンクの水の温度 (℃)
+      Theta_w_tank_upper_prev(float): 1時間前の入水・出水後の貯湯タンク上層部の水の温度 (℃)
+      Theta_w_tank_lower_prev(float): 1時間前の入水・出水後の貯湯タンク下層部の水の温度 (℃)
+      Gamma_wu_tank_upper(float): 貯湯タンク上層部の水の使用率 (-)
+      delta_tau_w_tank_out(float): 貯湯タンクからの出水時間数 (h/h)
+      t_hc_start_d(float): 集熱開始時刻 (-)
+      Theta_htm_stcs(float): 熱的平衡状態を仮定した場合の集熱経路における熱媒温度 (℃)
+      Beta_htm_stcs(float): 集熱配管還り熱媒温度の算定に係る集熱経路に対して熱的平衡状態を仮定した場合の集熱経路における熱媒温度に対する案分比率 (-)
+      Beta_htm_tank(float): 集熱配管還り熱媒温度の算定に係る貯湯タンクの下層部の水の温度に対する案分比率 (-)
+      Epsilon_t_hx(float): 熱交換器の温度効率 (-)
+      G_htm(float): 熱媒の循環量 (kg/h)
+      Theta_ex(float): 外気温度 (℃)
+      delta_tau_hc(int): 集熱時間数 (h/h)
 
     Returns:
-      tuple: 入水・出水後の貯湯タンク上層部の水の温度( ℃), 入水・出水後の貯湯タンク下層部の水の温度（℃）
+      tuple: 入水・出水後の貯湯タンク上層部の水の温度 (℃), 入水・出水後の貯湯タンク下層部の水の温度 (℃)
 
     """
     Theta_w_tank_upper_dt = 0
@@ -425,17 +428,17 @@ def calc_at(c_p_htm, UA_tank, M_w_tank_mix, Gamma_w_tank, M_w_tank_upper, M_w_ta
     """連立方程式を行列表現した場合の日付の時刻における係数行列の逆行列の要素 (-) (9) (10) (11) (12)
 
     Args:
-      c_p_htm(float): 熱媒の定圧比熱
-      UA_tank(float): 貯湯タンクの放熱係数(W/K)
-      M_w_tank_mix(float): 貯湯タンクから出水する水の質量
-      Gamma_w_tank(float): 入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比
-      M_w_tank_upper(float): 入水・出水後の貯湯タンク上層部の水の質量
-      Gamma_hx_tank(float): 集熱量のうち貯湯タンク下層部で熱交換される割合
-      G_htm(float): 1時間当たりの熱媒の循環量
-      Epsilon_t_hx(float): 熱交換器の温度効率
-      Beta_htm_tank(float): 集熱配管還り熱媒温度の算定に係る貯湯タンクの下層部の水の温度に対する案分比率
-      c_p_water(float): 水の定圧比熱
-      Delta_t_calc(float): 計算タイムステップ
+      c_p_htm(float): 熱媒の定圧比熱 (kJ/(kg･K)) 
+      UA_tank(float): 貯湯タンクの放熱係数 (W/K)
+      M_w_tank_mix(float): 貯湯タンクから出水する水の質量 (kg/h)
+      Gamma_w_tank(float): 入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比 (-)
+      M_w_tank_upper(float): 入水・出水後の貯湯タンク上層部の水の質量 (kg)
+      Gamma_hx_tank(float): 集熱量のうち貯湯タンク下層部で熱交換される割合 (-)
+      G_htm(float): 1時間当たりの熱媒の循環量 (kg/h)
+      Epsilon_t_hx(float): 熱交換器の温度効率 (-)
+      Beta_htm_tank(float): 集熱配管還り熱媒温度の算定に係る貯湯タンクの下層部の水の温度に対する案分比率 (-)
+      c_p_water(float): 水の定圧比熱 (kJ/(kg･K))
+      Delta_t_calc(float): 計算タイムステップ (-)
 
     Returns:
       tuple: 連立方程式を行列表現した場合の日付の時刻における係数行列の逆行列の要素 at_11, at_12, at_21, at_22 (-) 
@@ -462,28 +465,28 @@ def calc_bt(c_p_htm, Theta_wtr, UA_tank, Gamma_w_tank, Gamma_w_tank_prev, M_w_ta
     """連立方程式を行列表現した場合の日付の時刻における定数項ベクトルの要素 (-) (13) (14)
 
     Args:
-      c_p_htm(float): 熱媒の定圧比熱
+      c_p_htm(float): 熱媒の定圧比熱 (kJ/(kg･K)) 
       Theta_wtr(float): 日平均給水温度 (℃)
-      UA_tank(float): 貯湯タンクの放熱係数(W/K)
-      Gamma_w_tank(float): 入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比
-      Gamma_w_tank_prev(float): 1時間前の入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比
-      M_w_tank_upper(float): 入水・出水後の貯湯タンク上層部の水の質量
-      M_w_tank_out(float): 貯湯タンクから出水する水の質量
-      M_w_tank_lower(float): 入水・出水後の貯湯タンク下層部の水の質量
-      M_w_tank_lower_prev(float): 1時間前の入水・出水後の貯湯タンク下層部の水の質量
-      Theta_w_tank_mixed_prev(float): 1時間前の完全混合を仮定した場合の入水・出水後の貯湯タンクの水の温度
-      Theta_w_tank_upper_prev(float): 1時間前の入水・出水後の貯湯タンク上層部の水の温度
-      Theta_w_tank_lower_prev(float): 1時間前の入水・出水後の貯湯タンク下層部の水の温度
-      Gamma_wu_tank_upper(float): 貯湯タンク上層部の水の使用率
-      Gamma_hx_tank(float): 集熱量のうち貯湯タンク下層部で熱交換される割合
-      G_htm(float): 1時間当たりの熱媒の循環量
-      Epsilon_t_hx(float): 熱交換器の温度効率
-      Theta_htm_stcs(float): 熱的平衡状態を仮定した場合の集熱経路における熱媒温度
-      Beta_htm_stcs(float): 集熱配管還り熱媒温度の算定に係る集熱経路に対して熱的平衡状態を仮定した場合の集熱経路における熱媒温度に対する案分比率
-      c_p_water(float): 水の定圧比熱
-      Delta_t_calc(float): 計算タイムステップ
-      t_hc_start_d(float): 集熱開始時刻
-      Theta_ex(float): 外気温度
+      UA_tank(float): 貯湯タンクの放熱係数 (W/K)
+      Gamma_w_tank(float): 入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比 (-)
+      Gamma_w_tank_prev(float): 1時間前の入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比 (-)
+      M_w_tank_upper(float): 入水・出水後の貯湯タンク上層部の水の質量 (kg)
+      M_w_tank_out(float): 貯湯タンクから出水する水の質量 (kg/h)
+      M_w_tank_lower(float): 入水・出水後の貯湯タンク下層部の水の質量 (kg)
+      M_w_tank_lower_prev(float): 1時間前の入水・出水後の貯湯タンク下層部の水の質量 (kg)
+      Theta_w_tank_mixed_prev(float): 1時間前の完全混合を仮定した場合の入水・出水後の貯湯タンクの水の温度 (℃)
+      Theta_w_tank_upper_prev(float): 1時間前の入水・出水後の貯湯タンク上層部の水の温度 (℃)
+      Theta_w_tank_lower_prev(float): 1時間前の入水・出水後の貯湯タンク下層部の水の温度 (℃)
+      Gamma_wu_tank_upper(float): 貯湯タンク上層部の水の使用率 (-)
+      Gamma_hx_tank(float): 集熱量のうち貯湯タンク下層部で熱交換される割合 (-)
+      G_htm(float): 1時間当たりの熱媒の循環量 (kg/h)
+      Epsilon_t_hx(float): 熱交換器の温度効率 (-)
+      Theta_htm_stcs(float): 熱的平衡状態を仮定した場合の集熱経路における熱媒温度 (℃)
+      Beta_htm_stcs(float): 集熱配管還り熱媒温度の算定に係る集熱経路に対して熱的平衡状態を仮定した場合の集熱経路における熱媒温度に対する案分比率 (-)
+      c_p_water(float): 水の定圧比熱 (kJ/(kg･K))
+      Delta_t_calc(float): 計算タイムステップ (-)
+      t_hc_start_d(float): 集熱開始時刻 (-)
+      Theta_ex(float): 外気温度 (℃)
 
     Returns:
       tuple: 連立方程式を行列表現した場合の日付の時刻における定数項ベクトルの要素 bt_1, bt_2 (-) 
@@ -511,19 +514,19 @@ def calc_Q_star_w_tank(Theta_wtr, M_w_tank_upper, M_w_tank_out, M_w_tank_lower, 
 
     Args:
     Theta_wtr(float): 日平均給水温度 (℃)
-    M_w_tank_upper(float): 入水・出水後の貯湯タンク上層部の水の質量
-    M_w_tank_out(float): 貯湯タンクから出水する水の質量
-    M_w_tank_lower(float): 入水・出水後の貯湯タンク下層部の水の質量
-    M_w_tank_lower_prev(float): 1時間前の入水・出水後の貯湯タンク下層部の水の質量
-    Theta_w_tank_mixed_prev(float): 1時間前の完全混合を仮定した場合の入水・出水後の貯湯タンクの水の温度
-    Theta_w_tank_upper_prev(float): 1時間前の入水・出水後の貯湯タンク上層部の水の温度
-    Theta_w_tank_lower_prev(float): 1時間前の入水・出水後の貯湯タンク下層部の水の温度
-    Gamma_w_tank(float): 入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比
-    Gamma_w_tank_prev(float): 1時間前の入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比
-    Gamma_wu_tank_upper(float): 貯湯タンク上層部の水の使用率
-    t_hc_start_d(float): 集熱開始時刻
-    c_p_water(float): 水の定圧比熱
-    Delta_t_calc(float): 熱交換器の温度効率
+    M_w_tank_upper(float): 入水・出水後の貯湯タンク上層部の水の質量 (kg)
+    M_w_tank_out(float): 貯湯タンクから出水する水の質量 (kg/h)
+    M_w_tank_lower(float): 入水・出水後の貯湯タンク下層部の水の質量 (kg)
+    M_w_tank_lower_prev(float): 1時間前の入水・出水後の貯湯タンク下層部の水の質量 (kg)
+    Theta_w_tank_mixed_prev(float): 1時間前の完全混合を仮定した場合の入水・出水後の貯湯タンクの水の温度 (℃)
+    Theta_w_tank_upper_prev(float): 1時間前の入水・出水後の貯湯タンク上層部の水の温度 (℃)
+    Theta_w_tank_lower_prev(float): 1時間前の入水・出水後の貯湯タンク下層部の水の温度 (℃)
+    Gamma_w_tank(float): 入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比 (-)
+    Gamma_w_tank_prev(float): 1時間前の入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比 (-)
+    Gamma_wu_tank_upper(float): 貯湯タンク上層部の水の使用率 (-)
+    t_hc_start_d(float): 集熱開始時刻 (-)
+    c_p_water(float): 水の定圧比熱 (kJ/(kg･K))
+    Delta_t_calc(float): 熱交換器の温度効率 (-)
 
     Returns:
       (float, float): 入水・出水後に熱的平衡状態となる前の貯湯タンク上層部の水が有する熱量 (kJ), 入水・出水後に熱的平衡状態となる前の貯湯タンク下層部の水が有する熱量 (kJ) 
@@ -577,9 +580,9 @@ def calc_Theta_w_tank_mixed(Gamma_w_tank, Theta_w_tank_upper, Theta_w_tank_lower
     """完全混合を仮定した場合の入水・出水後の貯湯タンクの水の温度 (℃) (17)
 
     Args:
-      Gamma_w_tank(float): 入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比
-      Theta_w_tank_upper(float): 入水・出水後の貯湯タンク上層部の水の温度
-      Theta_w_tank_lower(float): 入水・出水後の貯湯タンク下層部の水の温度
+      Gamma_w_tank(float): 入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比 (-)
+      Theta_w_tank_upper(float): 入水・出水後の貯湯タンク上層部の水の温度 (℃)
+      Theta_w_tank_lower(float): 入水・出水後の貯湯タンク下層部の水の温度 (℃)
 
     Returns:
       float: 完全混合を仮定した場合の入水・出水後の貯湯タンクの水の温度 (℃)
@@ -601,13 +604,13 @@ def calc_M_w_tank_upper(M_w_tank_total, Gamma_wu_tank_upper, M_w_tank_out, M_w_t
     """入水・出水後の貯湯タンク上層部の水の質量 (kg) (18)
 
     Args:
-      M_w_tank_total(int): 貯湯タンク上層部の水の使用率
-      Gamma_wu_tank_upper(float): 貯湯タンク上層部の水の使用率
-      M_w_tank_out(float): 貯湯タンクから出水する水の質量
-      M_w_tank_upper_prev(float): 1時間前の入水・出水後の貯湯タンク上層部の水の質量
-      M_w_tank_lower_prev(float): 1時間前の入水・出水後の貯湯タンク下層部の水の質量
-      Gamma_w_tank_prev(float): 1時間前の入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比
-      t_hc_start_d(int): 集熱開始時刻
+      M_w_tank_total(int): 貯湯タンク上層部の水の使用率 (-)
+      Gamma_wu_tank_upper(float): 貯湯タンク上層部の水の使用率 (-)
+      M_w_tank_out(float): 貯湯タンクから出水する水の質量 (kg/h)
+      M_w_tank_upper_prev(float): 1時間前の入水・出水後の貯湯タンク上層部の水の質量 (kg)
+      M_w_tank_lower_prev(float): 1時間前の入水・出水後の貯湯タンク下層部の水の質量 (kg)
+      Gamma_w_tank_prev(float): 1時間前の入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比 (-)
+      t_hc_start_d(int): 集熱開始時刻 (-)
 
     Returns:
       float: 入水・出水後の貯湯タンク上層部の水の質量 (kg)
@@ -640,8 +643,8 @@ def calc_M_w_tank_lower(M_w_tank_total, M_w_tank_upper):
     """入水・出水後の貯湯タンク下層部の水の質量 (kg) (19)
 
     Args:
-      M_w_tank_total(float): 貯湯タンク全体の水の質量
-      M_w_tank_upper(float): 入水・出水後の貯湯タンク上層部の水の質量
+      M_w_tank_total(float): 貯湯タンク全体の水の質量 (kg)
+      M_w_tank_upper(float): 入水・出水後の貯湯タンク上層部の水の質量 (kg)
 
     Returns:
       float: 入水・出水後の貯湯タンク下層部の水の質量 (kg) 
@@ -654,11 +657,11 @@ def calc_M_w_tank_mix(eta_r_tank, M_w_tank_total, Gamma_w_tank, delta_tau_w_tank
     """貯湯タンク全体の水の質量 (kg) (20)
 
     Args:
-      eta_r_tank(float): 有効出湯効率
-      M_w_tank_total(float): 貯湯タンク全体の水の質量
-      Gamma_w_tank(float): 入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比
-      delta_tau_w_tank_out(float): 貯湯タンクからの出水時間数
-      delta_tau_hc(int): 集熱時間数
+      eta_r_tank(float): 有効出湯効率 (%)
+      M_w_tank_total(float): 貯湯タンク全体の水の質量 (kg)
+      Gamma_w_tank(float): 入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比 (-)
+      delta_tau_w_tank_out(float): 貯湯タンクからの出水時間数 (h/h)
+      delta_tau_hc(int): 集熱時間数 (h/h)
 
     Returns:
       ndarray: 貯湯タンク全体の水の質量 (kg) 
@@ -674,10 +677,10 @@ def calc_n_w_tank_mix(eta_r_tank, Gamma_w_tank, delta_tau_w_tank_out, delta_tau_
     """1時間当たりの貯湯タンクの上層部・下層部間での混合回数 (回/h) (21)
 
     Args:
-      eta_r_tank(float): 有効出湯効率
-      Gamma_w_tank(float): 入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比
-      delta_tau_w_tank_out(float): 貯湯タンクからの出水時間数
-      delta_tau_hc(int): 集熱時間数
+      eta_r_tank(float): 有効出湯効率 (%)
+      Gamma_w_tank(float): 入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比 (-)
+      delta_tau_w_tank_out(float): 貯湯タンクからの出水時間数 (h/h)
+      delta_tau_hc(int): 集熱時間数 (h/h)
 
     Returns:
       ndarray: 1時間当たりの貯湯タンクの上層部・下層部間での混合回数 (回/h)
@@ -744,7 +747,7 @@ def get_n_w_tank_mix_non_hc_out(eta_r_tank):
     """非集熱時であって貯湯タンクからの出水がある場合の混合回数 (回/h) (21-4b)
 
     Args:
-      eta_r_tank(float): 有効出湯効率
+      eta_r_tank(float): 有効出湯効率 (%)
 
     Returns:
       float: 非集熱時であって貯湯タンクからの出水がある場合の混合回数 (回/h)
@@ -757,8 +760,8 @@ def calc_Gamma_w_tank(M_w_tank_total, M_w_tank_lower):
     """入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比 (-) (22)
 
     Args:
-      M_w_tank_total(float): 貯湯タンク全体の水の質量
-      M_w_tank_lower(float): 入水・出水後の貯湯タンク下層部の水の質量
+      M_w_tank_total(float): 貯湯タンク全体の水の質量 (kg)
+      M_w_tank_lower(float): 入水・出水後の貯湯タンク下層部の水の質量 (kg)
 
     Returns:
       float: 入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比 (-) 
@@ -791,7 +794,7 @@ def calc_Gamma_hx_tank(Gamma_w_tank):
     """集熱量のうち貯湯タンク下層部で熱交換される割合 (-) (24)
 
     Args:
-      Gamma_w_tank(float): 入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比
+      Gamma_w_tank(float): 入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比 (-)
 
     Returns:
       float: 集熱量のうち貯湯タンク下層部で熱交換される割合 (-)
@@ -815,11 +818,11 @@ def calc_Gamma_hx_tank(Gamma_w_tank):
 
 
 def get_Gamma_limw_tank():
-    """集熱量のうち貯湯タンク下層部で熱交換される割合を表す関係式を切り替える、入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比の値
+    """集熱量のうち貯湯タンク下層部で熱交換される割合を表す関係式を切り替える、入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比の値 (-)
     Args:
 
     Returns:
-      float: 集熱量のうち貯湯タンク下層部で熱交換される割合を表す関係式を切り替える、入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比の値
+      float: 集熱量のうち貯湯タンク下層部で熱交換される割合を表す関係式を切り替える、入水・出水後の貯湯タンク全体の水の質量に対する下層部の水の質量の比の値 (-)
 
     """
     return 0.5
@@ -835,15 +838,15 @@ def calc_Gamma_wu_tank_upper(ls_type, hw_connection_type, Theta_wtr, Q_W_dmd_sun
 
     Args:
       ls_type(str): 液体集熱式太陽熱利用設備の種類 (密閉形太陽熱温水器（直圧式）,ソーラーシステム)
-      hw_connection_type(str): 給湯接続方式の種類
+      hw_connection_type(str): 給湯接続方式の種類 (-)
       Theta_wtr(float): 日平均給水温度 (℃)
       Q_W_dmd_sun(float): 給湯熱需要（浴槽追焚を除く） (MJ/h)
       M_w_tank_total(float): 貯湯タンクの放熱係数(W/K)
-      M_w_tank_upper_prev(float): 貯湯タンク上層部の水の質量
-      Theta_w_tank_mixed_prev(float): 一時間前の入水・出水後の貯湯タンク上層部の水の温度
-      Theta_w_tank_upper_prev(float): 一時間前の入水・出水後の貯湯タンク下層部の水の温度
-      delta_tau_w_tank_out(float): 貯湯タンクからの出水時間数
-      t_hc_start_d(int): 集熱開始時刻
+      M_w_tank_upper_prev(float): 貯湯タンク上層部の水の質量 (kg)
+      Theta_w_tank_mixed_prev(float): 一時間前の入水・出水後の貯湯タンク上層部の水の温度 (℃)
+      Theta_w_tank_upper_prev(float): 一時間前の入水・出水後の貯湯タンク下層部の水の温度 (℃)
+      delta_tau_w_tank_out(float): 貯湯タンクからの出水時間数 (h/h)
+      t_hc_start_d(int): 集熱開始時刻 (-)
 
     Returns:
       float: 貯湯タンク上層部の水の使用率 (-)
@@ -868,12 +871,12 @@ def calc_M_reqw_tank_upper(ls_type, hw_connection_type, Theta_wtr, Q_W_dmd_sun, 
 
     Args:
       ls_type(str): 液体集熱式太陽熱利用設備の種類 (密閉形太陽熱温水器（直圧式）,ソーラーシステム)
-      hw_connection_type(str): 給湯接続方式の種類
+      hw_connection_type(str): 給湯接続方式の種類 (-)
       Theta_wtr(float): 日平均給水温度 (℃)
       Q_W_dmd_sun(float): 給湯熱需要（浴槽追焚を除く） (MJ/h)
-      Theta_w_tank_mixed_prev(float): 一時間前の入水・出水後の貯湯タンク上層部の水の温度
-      Theta_w_tank_upper_prev(float): 一時間前の入水・出水後の貯湯タンク下層部の水の温度
-      t_hc_start_d(int): 集熱開始時刻
+      Theta_w_tank_mixed_prev(float): 一時間前の入水・出水後の貯湯タンク上層部の水の温度 (℃)
+      Theta_w_tank_upper_prev(float): 一時間前の入水・出水後の貯湯タンク下層部の水の温度 (℃)
+      t_hc_start_d(int): 集熱開始時刻 (-)
     
     Returns:
       float: 給湯熱需要を満たすために必要となる貯湯タンク上層部の水の質量 (kg)
@@ -897,9 +900,9 @@ def calc_M_reqw_tank_out(Theta_wtr, Q_W_dmd_sun, Theta_w_tank_mixed_prev, Theta_
     Args:
       Theta_wtr(float): 日平均給水温度 (℃)
       Q_W_dmd_sun(float): 給湯熱需要（浴槽追焚を除く） (MJ/h)
-      Theta_w_tank_mixed_prev(float): 一時間前の入水・出水後の貯湯タンク上層部の水の温度
-      Theta_w_tank_upper_prev(float): 一時間前の入水・出水後の貯湯タンク下層部の水の温度
-      t_hc_start_d(int): 集熱開始時刻
+      Theta_w_tank_mixed_prev(float): 一時間前の入水・出水後の貯湯タンク上層部の水の温度 (℃)
+      Theta_w_tank_upper_prev(float): 一時間前の入水・出水後の貯湯タンク下層部の水の温度 (℃)
+      t_hc_start_d(int): 集熱開始時刻 (-)
     
     Returns:
       float: 給湯熱需要を満たすために必要となる貯湯タンクから出水する水の質量 (kg/h)
@@ -919,8 +922,8 @@ def calc_M_reqw_tank(M_w_tank_total, M_w_tank_upper_prev, t_hc_start_d):
 
     Args:
       M_w_tank_total(float): 貯湯タンクの放熱係数(W/K)
-      M_w_tank_upper_prev(float): 貯湯タンク上層部の水の質量
-      t_hc_start_d(int): 集熱開始時刻
+      M_w_tank_upper_prev(float): 貯湯タンク上層部の水の質量 (kg)
+      t_hc_start_d(int): 集熱開始時刻 (-)
 
     Returns:
       float: 給湯熱需要を満たすために必要となる貯湯タンク上層部の水の質量を算出する際に基準となる貯湯タンク上層部の水の質量 (kg)
@@ -940,9 +943,9 @@ def calc_Theta_reqw_tank(Theta_w_tank_mixed_prev, Theta_w_tank_upper_prev, t_hc_
     """給湯熱需要を満たすために必要となる貯湯タンク上層部の水の質量を算出する際に基準となる貯湯タンク上層部の水の温度 (℃) (27)
 
     Args:
-      Theta_w_tank_mixed_prev(float): 一時間前の入水・出水後の貯湯タンク上層部の水の温度
-      Theta_w_tank_upper_prev(float): 一時間前の入水・出水後の貯湯タンク下層部の水の温度
-      t_hc_start_d(int): 集熱開始時刻
+      Theta_w_tank_mixed_prev(float): 一時間前の入水・出水後の貯湯タンク上層部の水の温度 (℃)
+      Theta_w_tank_upper_prev(float): 一時間前の入水・出水後の貯湯タンク下層部の水の温度 (℃)
+      t_hc_start_d(int): 集熱開始時刻 (-)
 
     Returns:
       float: 給湯熱需要を満たすために必要となる貯湯タンク上層部の水の質量を算出する際に基準となる貯湯タンク上層部の水の温度 (℃)
@@ -981,16 +984,13 @@ def calc_delta_tau_w_tank_out(ls_type, Theta_wtr, Theta_ex_p6h_Ave, Q_W_dmd_sun,
     """貯湯タンクからの出水時間数 (h/h) (29)
 
     Args:
-      region(int): 省エネルギー地域区分
-      sol_region(int): 年間の日射地域区分
       ls_type(str): 液体集熱式太陽熱利用設備の種類 (密閉形太陽熱温水器（直圧式）,ソーラーシステム)
-      A_stcp(float): 集熱部の有効集熱面積(m2)
-      b0(float): 集熱器の集熱効率特性線図一次近似式の切片（-）
-      b1(float): 集熱器の集熱効率特性線図一次近似式の傾き（W/(m2・K)）
+      Theta_wtr(float): 日平均給水温度 (℃)
+      Theta_ex_p6h_Ave(float): 過去6時間の平均外気温度 (℃)
       Q_W_dmd_sun(float): 給湯熱需要（浴槽追焚を除く） (MJ/h)
-      Theta_w_tank_mixed_prev(float): 完全混合を仮定した場合の入水・出水後の貯湯タンクの水の温度
-      Theta_w_tank_upper_prev(float): 入水・出水後の貯湯タンク上層部の水の温度
-      dt(int): 時間
+      Theta_w_tank_mixed_prev(float): 完全混合を仮定した場合の入水・出水後の貯湯タンクの水の温度 (℃)
+      Theta_w_tank_upper_prev(float): 入水・出水後の貯湯タンク上層部の水の温度 (℃)
+      t_hc_start_d(int): 集熱開始時刻 (-)
 
     Returns:
       float: 貯湯タンクからの出水時間数 (h/h)
@@ -1058,13 +1058,13 @@ def calc_Theta_htm_stcs_d_t(b0, b1, I_s_d_t, Theta_ex_d_t, Epsilon_t_stp_d_t, Ep
     """熱的平衡状態を仮定した場合の集熱経路における熱媒温度 (℃) (32)
 
     Args:
-      b0(float): 集熱器の集熱効率特性線図一次近似式の切片（-）
-      b1(float): 集熱器の集熱効率特性線図一次近似式の傾き（W/(m2・K)）
+      b0(float): 集熱器の集熱効率特性線図一次近似式の切片 (-)
+      b1(float): 集熱器の集熱効率特性線図一次近似式の傾き (W/(m2・K))
       I_s_d_t(ndarray): 集熱器の単位面積当たりの平均日射量 (W/m2)
-      Theta_ex_d_t(ndarray): 外気温度
-      Epsilon_t_stp_d_t(ndarray): 集熱配管の温度効率
-      Epsilon_t_stc_d_t(ndarray): 集熱器の温度効率
-      e_t_stcs_d_t(ndarray): 集熱経路の総合温度効率
+      Theta_ex_d_t(ndarray): 外気温度 (℃)
+      Epsilon_t_stp_d_t(ndarray): 集熱配管の温度効率 (-)
+      Epsilon_t_stc_d_t(ndarray): 集熱器の温度効率 (-)
+      e_t_stcs_d_t(ndarray): 集熱経路の総合温度効率 (-)
 
     Returns:
       ndarray: 熱的平衡状態を仮定した場合の集熱経路における熱媒温度 (℃)
@@ -1080,10 +1080,10 @@ def calc_Theta_htm_stc_d_t(b0, b1, I_s_d_t, Theta_ex_d_t):
     """集熱器のみに対して熱的平衡状態を仮定した場合の集熱器における熱媒温度 (℃) (33)
 
     Args:
-      b0(float): 集熱器の集熱効率特性線図一次近似式の切片（-）
-      b1(float): 集熱器の集熱効率特性線図一次近似式の傾き（W/(m2・K)）
+      b0(float): 集熱器の集熱効率特性線図一次近似式の切片 (-)
+      b1(float): 集熱器の集熱効率特性線図一次近似式の傾き (W/(m2・K))
       I_s_d_t(ndarray): 集熱器の単位面積当たりの平均日射量 (W/m2)
-      Theta_ex_d_t(ndarray): 外気温度
+      Theta_ex_d_t(ndarray): 外気温度 (℃)
 
     Returns:
       ndarray: 集熱器のみに対して熱的平衡状態を仮定した場合の集熱器における熱媒温度 (℃)
@@ -1118,8 +1118,8 @@ def calc_Beta_htm_tank_d_t(e_stcs_d_t, Epsilon_t_hx_d_t):
     """集熱配管還り熱媒温度の算定に係る貯湯タンクの下層部の水の温度に対する案分比率 (-) (35)
 
     Args:
-      e_stcs_d_t(ndarray): 集熱経路の総合温度効率
-      Epsilon_t_hx_d_t(ndarray): 熱交換器の温度効率
+      e_stcs_d_t(ndarray): 集熱経路の総合温度効率 (-)
+      Epsilon_t_hx_d_t(ndarray): 熱交換器の温度効率 (-)
 
     Returns:
       ndarray: 集熱配管還り熱媒温度の算定に係る貯湯タンクの下層部の水の温度に対する案分比率 (-)
@@ -1133,7 +1133,7 @@ def calc_Beta_htm_stcs_d_t(e_stcs_d_t, Epsilon_t_hx_d_t):
 
     Args:
       e_stcs_d_t(ndarray): 集熱経路の総合温度効率
-      Epsilon_t_hx_d_t(ndarray): 熱交換器の温度効率
+      Epsilon_t_hx_d_t(ndarray): 熱交換器の温度効率 (-)
 
     Returns:
       ndarray: 集熱配管還り熱媒温度の算定に係る集熱経路に対して熱的平衡状態を仮定した場合の集熱経路における熱媒温度に対する案分比率 (-)
@@ -1150,8 +1150,8 @@ def calc_E_pump_d_t(region, sol_region, ls_type, P_pump_hc, P_pump_non_hc, P_alp
     """1時間当たりの循環ポンプの消費電力量 (37)
 
     Args:
-      region(int): 省エネルギー地域区分
-      sol_region(int): 年間の日射地域区分
+      region(int): 省エネルギー地域区分 (-)
+      sol_region(int): 年間の日射地域区分 (-)
       ls_type(str): 液体集熱式太陽熱利用設備の種類 (密閉形太陽熱温水器（直圧式）,ソーラーシステム)
       P_pump_hc(float): 集熱時における循環ポンプの消費電力量 (W) [入力/固定]
       P_pump_non_hc(float): 非集熱時における循環ポンプの消費電力量 (W) [入力/固定]
@@ -1193,7 +1193,7 @@ def calc_f_pipe_loss_tank_boiler(ls_type, hw_connection_type, M_w_pipe):
 
     Args:
       ls_type(str): 液体集熱式太陽熱利用設備の種類 (密閉形太陽熱温水器（直圧式）,ソーラーシステム)
-      hw_connection_type(str): 給湯接続方式の種類
+      hw_connection_type(str): 給湯接続方式の種類 (-)
       M_w_tank_out_d_t(ndarray): 集熱部の有効集熱面積(m2)
 
     Returns:
@@ -1211,8 +1211,8 @@ def calc_f_pipe_loss_tank_boiler(ls_type, hw_connection_type, M_w_pipe):
     if hw_connection_type == "接続ユニット方式":
           if ls_type == '密閉形太陽熱温水器（直圧式）':
               # (38-1)
-              f_pipe_loss_tank_boiler[f1] =  0.187
-              f_pipe_loss_tank_boiler[f2] =  0.064
+              f_pipe_loss_tank_boiler[f1] =  0.174
+              f_pipe_loss_tank_boiler[f2] =  0.059
           elif ls_type == 'ソーラーシステム':
               # (38-2)
               f_pipe_loss_tank_boiler[f1] =  0.040
@@ -1225,8 +1225,8 @@ def calc_f_pipe_loss_tank_boiler(ls_type, hw_connection_type, M_w_pipe):
           f_pipe_loss_tank_boiler[f2] = 0.017
     elif hw_connection_type == "給水予熱方式":
           # (42)
-          f_pipe_loss_tank_boiler[f1] =  0.174
-          f_pipe_loss_tank_boiler[f2] =  0.059
+          f_pipe_loss_tank_boiler[f1] =  0.187
+          f_pipe_loss_tank_boiler[f2] =  0.064
     else:
         raise ValueError(hw_connection_type)
 
@@ -1238,8 +1238,8 @@ def calc_f_loss_pipe_tank_valve(ls_type, hw_connection_type, M_w_pipe):
 
     Args:
       ls_type(str): 液体集熱式太陽熱利用設備の種類 (密閉形太陽熱温水器（直圧式）,ソーラーシステム)
-      hw_connection_type(str): 給湯接続方式の種類
-      M_reqw_tank_out(float): 給湯配管内を流れる1時間当たりの水の質量
+      hw_connection_type(str): 給湯接続方式の種類 (-)
+      M_reqw_tank_out(float): 給湯配管内を流れる1時間当たりの水の質量 (kg/h)
 
     Returns:
       float: 貯湯タンクから給水混合弁までの給湯配管の熱損失率 (-)
@@ -1255,9 +1255,9 @@ def calc_f_loss_pipe_tank_valve(ls_type, hw_connection_type, M_w_pipe):
           if ls_type == '密閉形太陽熱温水器（直圧式）':
               # (39-1)
               if f1:
-                  return 0.187
+                  return 0.159
               elif f2:
-                  return 0.064
+                  return 0.054
           elif ls_type == 'ソーラーシステム':
               # (39-2)
               if f1:
@@ -1275,9 +1275,9 @@ def calc_f_loss_pipe_tank_valve(ls_type, hw_connection_type, M_w_pipe):
     elif hw_connection_type == "給水予熱方式":
         # (43)
         if f1:
-            return 0.159
+            return 0.187
         elif f2:
-            return 0.054
+            return 0.064
     else:
         raise ValueError(hw_connection_type)
 
@@ -1340,7 +1340,7 @@ def calc_c_p_htm(ls_type, c_p_htm):
 
     Args:
       ls_type(str): 液体集熱式太陽熱利用設備の種類 (密閉形太陽熱温水器（直圧式）,ソーラーシステム)
-      c_p_htm(float): 熱媒の定圧比熱
+      c_p_htm(float): 熱媒の定圧比熱 (kJ/(kg･K)) 
 
     Returns: 熱媒の定圧比熱 (kJ/(kg.K)
 
@@ -1356,7 +1356,7 @@ def calc_UA_hx(ls_type, UA_hx):
 
     Args:
       ls_type(str): 液体集熱式太陽熱利用設備の種類 (密閉形太陽熱温水器（直圧式）,ソーラーシステム)
-      UA_hx(float): 熱交換器の伝熱係数
+      UA_hx(float): 熱交換器の伝熱係数 (-)
 
     Returns: 熱交換器の伝熱係数 (W/K)
 
@@ -1402,14 +1402,14 @@ def calc_P_pump_non_hc(ls_type, P_pump_non_hc):
 
 
 def calc_eta_r_tank(ls_type, eta_r_tank):
-    """有効出湯効率 (W/K)
+    """有効出湯効率  (%)
 
     Args:
       ls_type(str): 液体集熱式太陽熱利用設備の種類 (密閉形太陽熱温水器（直圧式）,ソーラーシステム)
-      eta_r_tank(float): 有効出湯効率
+      eta_r_tank(float): 有効出湯効率 (%)
 
     Returns:
-      float: 有効出湯効率 (W/K)
+      float: 有効出湯効率  (%)
 
     """
     if ls_type == '密閉形太陽熱温水器（直圧式）':
@@ -1423,7 +1423,7 @@ def calc_UA_tank(ls_type, UA_tank):
 
     Args:
       ls_type(str): 液体集熱式太陽熱利用設備の種類 (密閉形太陽熱温水器（直圧式）,ソーラーシステム)
-      UA_tank(float): 有効出湯効率
+      UA_tank(float): 有効出湯効率 (%)
 
     Returns:
       float: 熱交換器の伝熱係数 (W/K)
@@ -1468,12 +1468,12 @@ def get_Rho_w():
 # ============================================================================
 
 def get_Delta_t_calc():
-    """計算タイムステップ (h)
+    """計算タイムステップ (-)
     
     Args:
 
     Returns:
-      int: 計算タイムステップ (h)
+      int: 計算タイムステップ (-)
     """
     return 1
 
@@ -1486,7 +1486,7 @@ def calc_G_htm_d_t(ls_type, g_htm, Gs_htm, I_s_d_t, delta_tau_hc_d_t):
       g_htm(float): 単位日射量当たりの循環流量((kg/h)/(W/m2))
       Gs_htm(float): 熱媒の基準循環流量(kg/h)
       I_s_d_t(ndarray): 集熱器の単位面積当たりの平均日射量 (W/m2)
-      delta_tau_hc_d_t(ndarray): 1時間当たりの集熱時間数(-)
+      delta_tau_hc_d_t(ndarray): 1時間当たりの集熱時間数 (h/h)
 
     Returns:
       ndarray: 1時間当たりの熱媒の循環量 (kg/h)
@@ -1519,14 +1519,12 @@ def calc_isAvailable_w_tank(ls_type, Theta_wtr, Theta_ex_p6h_Ave, Theta_w_tank_m
     """貯湯タンク内の水の利用可否 (-)
 
     Args:
-      region(int): 省エネルギー地域区分
-      sol_region(int): 年間の日射地域区分
       ls_type(str): 液体集熱式太陽熱利用設備の種類 (密閉形太陽熱温水器（直圧式）,ソーラーシステム)
       Theta_wtr(float): 日平均給水温度 (℃)
-      Theta_w_tank_mixed_prev(float): 完全混合を仮定した場合の入水・出水後の貯湯タンクの水の温度
-      Theta_w_tank_upper_prev(float): 入水・出水後の貯湯タンク上層部の水の温度
-      t_hc_start_d(int): 集熱開始時刻
-      dt(int): 時間
+      Theta_ex_p6h_Ave(float): 過去6時間の平均外気温度 (℃)
+      Theta_w_tank_mixed_prev(float): 完全混合を仮定した場合の入水・出水後の貯湯タンクの水の温度 (℃)
+      Theta_w_tank_upper_prev(float): 入水・出水後の貯湯タンク上層部の水の温度 (℃)
+      t_hc_start_d(int): 集熱開始時刻 (-)
 
     Returns:
       bool: 貯湯タンク内の水の利用可否 (-)
@@ -1542,8 +1540,8 @@ def calc_delta_tau_pump_hc_d_t(ls_type, delta_tau_hc_d_t):
     """1時間当たりの集熱時における循環ポンプの稼働時間数 (h/h)
 
     Args:
-      region(int): 省エネルギー地域区分
-      sol_region(int): 年間の日射地域区分
+      region(int): 省エネルギー地域区分 (-)
+      sol_region(int): 年間の日射地域区分 (-)
       ls_type(str): 液体集熱式太陽熱利用設備の種類 (密閉形太陽熱温水器（直圧式）,ソーラーシステム)
       P_alpha_sp(float): ソーラーシステムの太陽熱集熱部の方位角 (°)
       P_beta_sp(float): ソーラーシステムの太陽熱集熱部の傾斜角 (°)
@@ -1564,7 +1562,7 @@ def calc_delta_tau_pump_non_hc_d_t(ls_type, I_s_d_t, delta_tau_hc_d_t):
     Args:
       ls_type(str): 液体集熱式太陽熱利用設備の種類 (密閉形太陽熱温水器（直圧式）,ソーラーシステム)
       I_s_d_t(ndarray): 集熱器の単位面積当たりの平均日射量 (W/m2)
-      delta_tau_hc_d_t(ndarray): 1時間当たりの集熱時間数(-)
+      delta_tau_hc_d_t(ndarray): 1時間当たりの集熱時間数 (h/h)
 
     Returns:
       ndarray: 1時間当たりの非集熱時における循環ポンプの稼働時間数 (h/h)
@@ -1581,9 +1579,9 @@ def calc_Epsilon_t_hx_d_t(ls_type, c_p_htm, UA_hx, G_htm_d_t):
 
     Args:
       ls_type(str): 液体集熱式太陽熱利用設備の種類 (密閉形太陽熱温水器（直圧式）,ソーラーシステム)
-      c_p_htm(float): 熱媒の定圧比熱
+      c_p_htm(float): 熱媒の定圧比熱 (kJ/(kg･K)) 
       UA_hx(float): 熱交換器の伝熱係数 (-)
-      G_htm_d_t(ndarray): 1時間当たりの熱媒の循環量
+      G_htm_d_t(ndarray): 1時間当たりの熱媒の循環量 (kg/h)
 
     Returns:
       ndarray: 熱交換器の温度効率 (-)
@@ -1601,9 +1599,9 @@ def calc_Epsilon_t_stc_d_t(ls_type, A_stcp, b1, c_p_htm, G_htm_d_t):
     Args:
       ls_type(str): 液体集熱式太陽熱利用設備の種類 (密閉形太陽熱温水器（直圧式）,ソーラーシステム)
       A_stcp(float): 集熱部の有効集熱面積(m2)
-      b1(float): 集熱器の集熱効率特性線図一次近似式の傾き（W/(m2・K)）
-      c_p_htm(float): 熱媒の定圧比熱
-      G_htm_d_t(ndarray): 1時間当たりの熱媒の循環量
+      b1(float): 集熱器の集熱効率特性線図一次近似式の傾き (W/(m2・K))
+      c_p_htm(float): 熱媒の定圧比熱 (kJ/(kg･K)) 
+      G_htm_d_t(ndarray): 1時間当たりの熱媒の循環量 (kg/h)
 
     Returns:
       ndarray: 集熱器の温度効率
@@ -1620,9 +1618,9 @@ def calc_Epsilon_t_stp_d_t(ls_type, c_p_htm, UA_stp, G_htm_d_t):
 
     Args:
       ls_type(str): 液体集熱式太陽熱利用設備の種類 (密閉形太陽熱温水器（直圧式）,ソーラーシステム)
-      c_p_htm(float): 熱媒の定圧比熱
-      UA_stp(float): 集熱配管の放熱係数
-      G_htm_d_t(ndarray): 1時間当たりの熱媒の循環量
+      c_p_htm(float): 熱媒の定圧比熱 (kJ/(kg･K)) 
+      UA_stp(float): 集熱配管の放熱係数 (W/(m.K)
+      G_htm_d_t(ndarray): 1時間当たりの熱媒の循環量 (kg/h)
 
     Returns:
       float: 集熱配管の温度効率 (-)

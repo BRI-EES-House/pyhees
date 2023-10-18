@@ -116,7 +116,7 @@ class StandardPrimaryEnergyDetail(TypedDict):
         E_SV (float): 1年当たりの機械換気設備の基準一次エネルギー消費量 (MJ/年)
         E_SL (float): 1年当たりの照明設備の基準一次エネルギー消費量 (MJ/年)
         E_SW (float): 1年当たりの給湯設備(コージェネレーション設備を含む)の基準一次エネルギー消費量 (MJ/年)
-        E_SM (float): 1年当たりのその他の基準一次エネルギー消費量 (MJ/年) 
+        E_SM (float): 1年当たりのその他の基準一次エネルギー消費量 (MJ/年)
     """
 
     E_SH: float
@@ -973,7 +973,7 @@ def calc_E_SH(type, tatekata, region, sol_region, A_A, A_MR, A_OR, ENV, mode_H, 
     mode_H, H_A, H_MR, H_OR, H_HS, mode_MR, mode_OR = calc_heating_reference_spec(region, mode_H, H_MR, H_OR)
 
     # 外皮の基準値計算用仕様の取得
-    Q, eta_H, eta_C = calc_env_reference_spec(type, tatekata, region, A_A, ENV)
+    Q, eta_H, eta_C, r_env = calc_env_reference_spec(type, tatekata, region, A_A, ENV)
 
     # 暖房負荷の取得
     L_T_H_d_t_i, L_dash_H_R_d_t_i = calc_heating_load(
@@ -988,12 +988,7 @@ def calc_E_SH(type, tatekata, region, sol_region, A_A, A_MR, A_OR, ENV, mode_H, 
         Q, eta_H, eta_C, NV_MR, NV_OR, None, None,
         mode_C, mode_H, mode_MR, mode_OR, None, None)
 
-    if (ENV != None) and ('A_env' in ENV):
-        A_env = ENV['A_env']
-    else:
-        A_env = None
-
-    E_SH = calc_E_H(region, sol_region, A_A, A_MR, A_OR, A_env, eta_H, eta_C, Q, mode_H,
+    E_SH = calc_E_H(region, sol_region, A_A, A_MR, A_OR, r_env, eta_H, eta_C, Q, mode_H,
                   H_A, H_MR, H_OR, H_HS, mode_MR, mode_OR, None, None, None,
                   None, L_T_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i)
 
@@ -1160,7 +1155,7 @@ def calc_env_reference_spec(type, tatekata, region, A_A, ENV):
     from pyhees.section3_1 import get_Q
 
     if ENV is None:
-        return None, None, None
+        return None, None, None, None
 
     if type != '行政庁認定住宅':
         from pyhees.section2_3_a import get_U_A, get_etr_A_H, get_etr_A_C
@@ -1190,10 +1185,18 @@ def calc_env_reference_spec(type, tatekata, region, A_A, ENV):
             U_spec = ENV['U_spec']
             floor_bath_insulation = U_spec['floor_bath_insulation']
 
-            _, _, _, _, _, _, _, house_insulation_type = calc_insulation_performance(**ENV)
+            _, _, _, _, _, _, _, house_insulation_type = calc_insulation_performance(tatekata, **ENV)
             A_dash_env = get_A_dash_env(house_insulation_type, floor_bath_insulation)
             A_dash_A = get_A_dash_A()
             r_env = get_r_env(A_dash_env, A_dash_A)
+        elif ENV['method'] == '仕様基準により外皮性能を評価する方法' or ENV['method'] == '誘導仕様基準により外皮性能を評価する方法':
+            from pyhees.section3_2_10 import get_A_dash_env, get_A_dash_A, get_r_env
+
+            A_dash_env = get_A_dash_env(tatekata)
+            A_dash_A = get_A_dash_A(tatekata)
+            r_env = get_r_env(A_dash_env, A_dash_A)
+        else:
+            raise ValueError(ENV['method'])
 
         Q_dash = get_Q_dash(U_A, r_env)
 
@@ -1201,11 +1204,11 @@ def calc_env_reference_spec(type, tatekata, region, A_A, ENV):
         mu_C = get_mu_C(etr_A_C, r_env)
     else:
         from pyhees.section3_2 import calc_insulation_performance
-        U_A, r_env, eta_A_H, eta_A_C, Q_dash, mu_H, mu_C,_ = calc_insulation_performance(**ENV)
+        U_A, r_env, eta_A_H, eta_A_C, Q_dash, mu_H, mu_C,_ = calc_insulation_performance(tatekata, **ENV)
 
     Q = get_Q(Q_dash)
 
-    return Q, mu_H, mu_C
+    return Q, mu_H, mu_C, r_env
 
 
 # ============================================================================
@@ -1232,7 +1235,7 @@ def calc_E_SC(type, tatekata, region, A_A, A_MR, A_OR, ENV, mode_C, mode_H, H_MR
         HEX(dict): 熱交換器型設備仕様辞書
         sol_region: param NV_MR:
         NV_OR: returns: 1 年当たりの冷房設備の設計一次エネルギー消費量
-        NV_MR: 
+        NV_MR:
 
     Returns:
         float: 1 年当たりの冷房設備の設計一次エネルギー消費量
@@ -1276,7 +1279,7 @@ def calc_E_SC(type, tatekata, region, A_A, A_MR, A_OR, ENV, mode_C, mode_H, H_MR
     mode_H, H_A, H_MR, H_OR, H_HS, mode_MR, mode_OR = calc_heating_reference_spec(region, mode_H, H_MR, H_OR)
 
     # 外皮の基準値計算用仕様の取得
-    Q, eta_H, eta_C = calc_env_reference_spec(type, tatekata, region, A_A, ENV)
+    Q, eta_H, eta_C, r_env = calc_env_reference_spec(type, tatekata, region, A_A, ENV)
 
     # 暖房負荷の取得
     L_T_H_d_t_i, L_dash_H_R_d_t_i = calc_heating_load(
@@ -1309,13 +1312,8 @@ def calc_E_SC(type, tatekata, region, A_A, A_MR, A_OR, ENV, mode_C, mode_H, H_MR
         HEX=HEX
     )
 
-    if 'A_env' in ENV:
-        A_env = ENV['A_env']
-    else:
-        A_env = None
-
     # 1 年当たりの冷房設備の設計一次エネルギー消費量
-    E_SC = calc_E_C(region, A_A, A_MR, A_OR, A_env, eta_H, eta_C, Q, C_A, C_MR, C_OR, L_T_H_d_t_i, L_CS_d_t, L_CL_d_t, mode_C)
+    E_SC = calc_E_C(region, A_A, A_MR, A_OR, r_env, eta_H, eta_C, Q, C_A, C_MR, C_OR, L_T_H_d_t_i, L_CS_d_t, L_CL_d_t, mode_C)
 
     return E_SC
 

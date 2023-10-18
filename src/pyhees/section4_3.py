@@ -19,6 +19,7 @@ from pyhees.section4_3_a import \
 
 from pyhees.section11_1 import \
     load_outdoor, \
+    load_climate, \
     get_Theta_ex, \
     get_X_ex, \
     calc_h_ex
@@ -198,9 +199,9 @@ def calc_E_E_H_d_t(region, q_rtd_C, q_rtd_H, e_rtd_H, dualcompressor, L_H_d_t):
 
     """
     # 外気条件
-    outdoor = load_outdoor()
-    Theta_ex = get_Theta_ex(region, outdoor)
-    X_ex = get_X_ex(region, outdoor)
+    climate = load_climate(region)
+    Theta_ex = get_Theta_ex(climate)
+    X_ex = get_X_ex(climate)
     h_ex = calc_h_ex(X_ex, Theta_ex)
 
     # 最大暖房能力
@@ -246,9 +247,9 @@ def calc_Q_UT_H_d_t(region, q_rtd_C, q_rtd_H, e_rtd_H, L_H_d_t):
 
     """
     # 外気条件
-    outdoor = load_outdoor()
-    Theta_ex = get_Theta_ex(region, outdoor)
-    X_ex = get_X_ex(region, outdoor)
+    climate = load_climate(region)
+    Theta_ex = get_Theta_ex(climate)
+    X_ex = get_X_ex(climate)
     h_ex = calc_h_ex(X_ex, Theta_ex)
 
     # 最大暖房能力
@@ -899,9 +900,9 @@ def calc_E_E_C_d_t(region, q_rtd_C, e_rtd_C, dualcompressor, L_CS_d_t, L_CL_d_t)
 
     """
     # 外気条件
-    outdoor = load_outdoor()
-    Theta_ex = get_Theta_ex(region, outdoor)
-    X_ex = get_X_ex(region, outdoor)
+    climate = load_climate(region)
+    Theta_ex = get_Theta_ex(climate)
+    X_ex = get_X_ex(climate)
     h_ex = calc_h_ex(X_ex, Theta_ex)
 
     # 最大冷房能力

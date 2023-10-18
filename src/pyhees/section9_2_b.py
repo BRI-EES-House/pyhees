@@ -2,6 +2,7 @@
 # 付録B ソーラーシステム
 # ============================================================================
 
+import math
 import numpy as np
 
 # ============================================================================
@@ -11,7 +12,7 @@ def calc_Epsilon_t_hx_d_t(c_p_htm, UA_hx, G_htm_d_t):
     """熱交換器の温度効率(-) (1)
 
     Args:
-      c_p_htm(float): 熱媒の定圧比熱
+      c_p_htm(float): 熱媒の定圧比熱 (kJ/(kg･K))
       UA_hx(float): 熱交換器の伝熱係数 (-)
       G_htm_d_t(ndarray): 1時間当たりの熱媒の循環量 (kg/h)
 
@@ -36,13 +37,13 @@ def calc_Epsilon_t_hx_d_t(c_p_htm, UA_hx, G_htm_d_t):
 # ============================================================================
 
 def calc_isAvailable_w_tank(Theta_wtr, Theta_w_tank_mixed_prev, Theta_w_tank_upper_prev, t_hc_start_d):
-    """貯湯タンク内の水の利用可否
+    """貯湯タンク内の水の利用可否 (-)
 
     Args:
       Theta_wtr(float): 日平均給水温度 (℃)
-      Theta_w_tank_mixed_prev(float): 完全混合を仮定した場合の入水・出水後の貯湯タンクの水の温度
-      Theta_w_tank_upper_prev(float): 入水・出水後の貯湯タンク上層部の水の温度
-      t_hc_start_d(int): 集熱開始時刻
+      Theta_w_tank_mixed_prev(float): 完全混合を仮定した場合の入水・出水後の貯湯タンクの水の温度 (℃)
+      Theta_w_tank_upper_prev(float): 入水・出水後の貯湯タンク上層部の水の温度 (℃)
+      t_hc_start_d(int): 集熱開始時刻 (-)
 
     Returns:
       bool: 貯湯タンク内の水の利用可否 (-)
@@ -52,7 +53,7 @@ def calc_isAvailable_w_tank(Theta_wtr, Theta_w_tank_mixed_prev, Theta_w_tank_upp
     isAvailable_w_tank_d_t = False
 
     if t_hc_start_d == 1:
-        f1 = Theta_w_tank_mixed_prev <= Theta_wtr
+        f1 = Theta_w_tank_mixed_prev < Theta_wtr or math.isclose(Theta_w_tank_mixed_prev, Theta_wtr)
         if f1:
           isAvailable_w_tank_d_t = False
 
@@ -61,7 +62,7 @@ def calc_isAvailable_w_tank(Theta_wtr, Theta_w_tank_mixed_prev, Theta_w_tank_upp
           isAvailable_w_tank_d_t = True
     
     else:
-        f1 = Theta_w_tank_upper_prev <= Theta_wtr
+        f1 = Theta_w_tank_upper_prev < Theta_wtr or math.isclose(Theta_w_tank_upper_prev, Theta_wtr)
         if f1:
         
           isAvailable_w_tank_d_t = False
@@ -82,8 +83,8 @@ def calc_Epsilon_t_stc_d_t(A_stcp, b1, c_p_htm, G_htm_d_t):
 
     Args:
       A_stcp(float): 集熱部の有効集熱面積(m2)
-      b1(float): 集熱器の集熱効率特性線図一次近似式の傾き（W/(m2・K)）
-      c_p_htm(float): 熱媒の定圧比熱
+      b1(float): 集熱器の集熱効率特性線図一次近似式の傾き (W/(m2・K))
+      c_p_htm(float): 熱媒の定圧比熱 (kJ/(kg･K))
       G_htm_d_t(ndarray): 1時間当たりの熱媒の循環量 (kg/h)
 
     Returns:
@@ -106,7 +107,7 @@ def calc_Epsilon_t_stp_d_t(c_p_htm, UA_stp, G_htm_d_t):
     """集熱配管の温度効率 (-) (4)
 
     Args:
-      c_p_htm(float): 熱媒の定圧比熱
+      c_p_htm(float): 熱媒の定圧比熱 (kJ/(kg･K))
       UA_stp(float): 集熱配管の放熱係数 (W/(m.K)
       G_htm_d_t(ndarray): 1時間当たりの熱媒の循環量 (kg/h)
 
@@ -146,8 +147,8 @@ def calc_G_htm_d_t(Gs_htm, delta_tau_hc_d_t):
     """1時間当たりの熱媒の循環量 (kg/h) (5)
 
     Args:
-      Gs_htm(float): 熱媒の基準循環流量(kg/h)
-      delta_tau_hc_d_t(ndarray): 1時間当たりの集熱時間数(-)
+      Gs_htm(float): 熱媒の基準循環流量 (kg/h)
+      delta_tau_hc_d_t(ndarray): 1時間当たりの集熱時間数 (-)
 
     Returns:
       ndarray: 1時間当たりの熱媒の循環量 (kg/h)
@@ -229,7 +230,7 @@ def get_I_s_lmt():
 # ============================================================================
 
 def calc_delta_tau_pump_hc_d_t(delta_tau_hc_d_t):
-    """1時間当たりの集熱時における循環ポンプの稼働時間数 (8)
+    """1時間当たりの集熱時における循環ポンプの稼働時間数 (h/h) (8)
 
     Args:
       delta_tau_hc_d_t(ndarray): 1時間当たりの集熱時間数 (-)
@@ -253,7 +254,7 @@ def calc_delta_tau_pump_hc_d_t(delta_tau_hc_d_t):
 
 
 def calc_delta_tau_pump_non_hc_d_t(I_s_d_t, delta_tau_hc_d_t):
-    """1時間当たりの非集熱時における循環ポンプの稼働時間数 (9)
+    """1時間当たりの非集熱時における循環ポンプの稼働時間数 (h/h) (9)
 
     Args:
       I_s_d_t(ndarray): 集熱器の単位面積当たりの平均日射量 (W/m2)
@@ -339,7 +340,7 @@ def calc_c_p_htm(c_p_htm):
     """熱媒の定圧比熱 kJ/(kg･K)
 
     Args:
-      c_p_htm(float): 熱媒の定圧比熱
+      c_p_htm(float): 熱媒の定圧比熱 kJ/(kg･K)
 
     Returns:
       float: 熱媒の定圧比熱 kJ/(kg･K)
@@ -357,7 +358,7 @@ def calc_UA_stp(UA_stp):
     """集熱配管の放熱係数 W/(m・K)
 
     Args:
-      UA_stp(float): 集熱配管の放熱係数
+      UA_stp(float): 集熱配管の放熱係数 W/(m・K)
 
     Returns:
       float: 集熱配管の放熱係数 W/(m・K)
@@ -375,7 +376,7 @@ def calc_UA_hx(UA_hx):
     """熱交換器の伝熱係数 (W/K)
 
     Args:
-      UA_hx(float): 熱交換器の伝熱係数
+      UA_hx(float): 熱交換器の伝熱係数 (W/K)
 
     Returns:
       float: 熱交換器の伝熱係数 (W/K)
@@ -390,7 +391,7 @@ def calc_UA_hx(UA_hx):
 
 
 def get_P_pump_hc(P_pump_hc):
-    """集熱時における循環ポンプの消費電力量
+    """集熱時における循環ポンプの消費電力量 (W)
 
     Args:
       P_pump_hc(float): 集熱時における循環ポンプの消費電力量 (W) [入力/固定]
@@ -408,7 +409,7 @@ def get_P_pump_hc(P_pump_hc):
 
 
 def get_P_pump_non_hc(P_pump_non_hc):
-    """非集熱時における循環ポンプの消費電力量
+    """非集熱時における循環ポンプの消費電力量 (W)
 
     Args:
       P_pump_non_hc(float): 非集熱時における循環ポンプの消費電力量 (W) [入力/固定]
@@ -429,10 +430,10 @@ def calc_eta_r_tank(eta_r_tank):
     """有効出湯効率 (%)
 
     Args:
-      eta_r_tank(float): 有効出湯効率
+      eta_r_tank(float): 有効出湯効率 (%)
 
     Returns:
-      float: 有効出湯効率 (W/K)
+      float: 有効出湯効率 (%)
 
     """
     if eta_r_tank is not None:
@@ -444,13 +445,13 @@ def calc_eta_r_tank(eta_r_tank):
 
 
 def calc_UA_tank(UA_tank):
-    """熱交換器の伝熱係数 (W/K)
+    """熱交換器の伝熱係数 (-)
 
     Args:
-      UA_tank(float): 熱交換器の伝熱係数
+      UA_tank(float): 熱交換器の伝熱係数 (-)
 
     Returns:
-      float: 熱交換器の伝熱係数 (W/K)
+      float: 熱交換器の伝熱係数 (-)
 
     """
     if UA_tank is not None:

@@ -431,9 +431,9 @@ def calc_E_E_W_aux_ass_d_t(hotwater_use, heating_flag_d, region, sol_region, P_a
 
     """
 
-    from pyhees.section11_1 import load_outdoor, get_Theta_ex
-    outdoor = load_outdoor()
-    Theta_ex_d_t = get_Theta_ex(region, outdoor)
+    from pyhees.section11_1 import load_climate, get_Theta_ex
+    climate = load_climate(region)
+    Theta_ex_d_t = get_Theta_ex(climate)
 
     # ----- 10 集熱部 -----
 
@@ -496,9 +496,9 @@ def calc_E_E_H_aux_ass_d_t(hotwater_use, heating_flag_d, region, sol_region, P_a
       ndarray: 1時間当たりの補機の消費電力量のうち暖房設備への付加分 (kWh/h)
 
     """
-    from pyhees.section11_1 import load_outdoor, get_Theta_ex
-    outdoor = load_outdoor()
-    Theta_ex_d_t = get_Theta_ex(region, outdoor)
+    from pyhees.section11_1 import load_climate, get_Theta_ex
+    climate = load_climate(region)
+    Theta_ex_d_t = get_Theta_ex(climate)
 
     # ----- 10 集熱部 -----
 

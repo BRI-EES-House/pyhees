@@ -356,6 +356,7 @@ def calc_etr_g_byKey(glass_type, attachment):
 
     attachment_dict = {
         'No':'付属部材なし',
+        'WindbreakSpace':'風除室',
         'Shoji':'和障子',
         'ExteriorBlind':'外付けブラインド'
     }

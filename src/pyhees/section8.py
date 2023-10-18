@@ -11,7 +11,7 @@ import pyhees.section8_a as spec
 import pyhees.section8_d as bb_dhw
 import pyhees.section8_e as bb_hwh
 
-from pyhees.section11_1 import load_outdoor, get_Theta_ex
+from pyhees.section11_1 import load_climate, get_Theta_ex
 
 
 # ============================================================================
@@ -244,8 +244,8 @@ def calc_E_G_CG_d_t(bath_function, CG, E_E_dmd_d_t,
         r_WS_HWH_d_t = np.zeros(24 * 365)
 
     # 外気温度の取得
-    outdoor = load_outdoor()
-    Theta_ex_d_t = get_Theta_ex(region, outdoor)
+    climate = load_climate(region)
+    Theta_ex_d_t = get_Theta_ex(climate)
     Theta_ex_Ave = dhw.get_theta_ex_d_Ave_d(Theta_ex_d_t)
 
     # ----- 16. その他 -----

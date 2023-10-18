@@ -137,15 +137,15 @@ def get_table_10(ExteriorThermalResistance, BeamInterval):
     """
 
     Over1_7_dict = {'Over400': 0.0, 'Under400': 0.0, 'Under200': 0.0}
-    Under1_7_dict = {'Over400': 0.15, 'Under400': 0.12, 'Under200': 0.05}
-    Under1_5_dict = {'Over400': 0.18, 'Under400': 0.14, 'Under200': 0.06}
-    Under1_3_dict = {'Over400': 0.20, 'Under400': 0.16, 'Under200': 0.07}
-    Under1_1_dict = {'Over400': 0.25, 'Under400': 0.18, 'Under200': 0.08}
-    Under0_9_dict = {'Over400': 0.30, 'Under400': 0.22, 'Under200': 0.11}
-    Under0_7_dict = {'Over400': 0.35, 'Under400': 0.27, 'Under200': 0.12}
-    Under0_5_dict = {'Over400': 0.43, 'Under400': 0.32, 'Under200': 0.15}
-    Under0_3_dict = {'Over400': 0.60, 'Under400': 0.40, 'Under200': 0.18}
-    Under0_1_dict = {'Over400': 0.80, 'Under400': 0.55, 'Under200': 0.25}
+    Under1_7_dict = {'Over400': 0.35, 'Under400': 0.20, 'Under200': 0.10}
+    Under1_5_dict = {'Over400': 0.45, 'Under400': 0.30, 'Under200': 0.15}
+    Under1_3_dict = {'Over400': 0.50, 'Under400': 0.35, 'Under200': 0.20}
+    Under1_1_dict = {'Over400': 0.55, 'Under400': 0.40, 'Under200': 0.25}
+    Under0_9_dict = {'Over400': 0.60, 'Under400': 0.45, 'Under200': 0.30}
+    Under0_7_dict = {'Over400': 0.65, 'Under400': 0.50, 'Under200': 0.35}
+    Under0_5_dict = {'Over400': 0.75, 'Under400': 0.60, 'Under200': 0.40}
+    Under0_3_dict = {'Over400': 1.00, 'Under400': 0.75, 'Under200': 0.45}
+    Under0_1_dict = {'Over400': 1.20, 'Under400': 1.10, 'Under200': 0.60}
 
     psi_j_dict = {'Over1.7': Over1_7_dict, 'Under1.7': Under1_7_dict, 'Under1.5': Under1_5_dict, 'Under1.3': Under1_3_dict, 'Under1.1': Under1_1_dict,
                   'Under0.9': Under0_9_dict, 'Under0.7': Under0_7_dict, 'Under0.5': Under0_5_dict, 'Under0.3': Under0_3_dict, 'Under0.1': Under0_1_dict}

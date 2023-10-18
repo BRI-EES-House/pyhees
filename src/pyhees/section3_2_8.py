@@ -115,13 +115,13 @@ def calc_U_A(envelope):
         
 
     A_env = get_A_env(envelope)
-    U_A = (sigma_A_i_U_i_H_i + sigma_L_j_psi_j_H_j) / A_env
+    U_A_raw = (sigma_A_i_U_i_H_i + sigma_L_j_psi_j_H_j) / A_env
 
-    U_A_ceil = math.ceil(U_A * 10 ** 2) / (10 ** 2)
+    U_A = math.ceil(U_A_raw * 10 ** 2) / (10 ** 2)
 
-    envelope['U_A'] = U_A_ceil
+    envelope['U_A'] = U_A
 
-    return U_A_ceil, envelope
+    return U_A_raw, U_A, envelope
 
 
 # ============================================================================
@@ -143,7 +143,7 @@ def calc_eta_A_H(envelope):
     Region = envelope['Region']
 
     if Region in [8, '8']:
-        return None, envelope
+        return None, None, envelope
 
     A_i_eta_H_i_nu_H_i = 0.0
     L_j_eta_H_i_nu_H_i = 0.0
@@ -153,7 +153,13 @@ def calc_eta_A_H(envelope):
     for i in range(len(wall_list)):
         wall_i = wall_list[i]
         A_i = wall_i['Area']
-        
+
+        if 'SolarGain' in wall_i:
+            Solar_Gain = wall_i['SolarGain'] 
+        else:
+            # デフォルト値・Yes
+            Solar_Gain = 'Yes'
+
         if wall_i['Method'] == 'Direct':
             U_i, wall_i  = get_Wood_Direct_U_i(wall_i)
         elif wall_i['Method'] == 'Accurate':
@@ -169,7 +175,7 @@ def calc_eta_A_H(envelope):
 
         
         # 日射熱取得率を計算
-        if 'SolarGain' in wall_i and wall_i['SolarGain'] != 'No':
+        if Solar_Gain != 'No':
             gamma_H_i = wall_i['GammaH']
             # 外気側表⾯の日射吸収率を指定する場合
             if ('SolarAbsorptance' in wall_i):
@@ -195,9 +201,15 @@ def calc_eta_A_H(envelope):
     for i in range(len(window_list)):
         window_i = window_list[i]
         A_i = window_i['WindowPart']['Area']
-        
+
+        if 'SolarGain' in window_i:
+            Solar_Gain = window_i['SolarGain'] 
+        else:
+            # デフォルト値・Yes
+            Solar_Gain = 'Yes'
+
         # 日射熱取得率
-        if 'SolarGain' in window_i and window_i['SolarGain'] == 'No':
+        if Solar_Gain == 'No':
             eta_H_i = 0.0
         else:
             eta_H_i = window.calc_eta_H_i_byDict(Region, window_i['Direction'], window_i['WindowPart'])
@@ -219,8 +231,14 @@ def calc_eta_A_H(envelope):
         door_i = door_list[i]
         A_i = door_i['DoorPart']['Area']
 
+        if 'SolarGain' in door_i:
+            Solar_Gain = door_i['SolarGain'] 
+        else:
+            # デフォルト値・Yes
+            Solar_Gain = 'Yes'
+
         # 日射熱取得率
-        if 'SolarGain' in door_i and door_i['SolarGain'] == 'No':
+        if Solar_Gain == 'No':
             eta_H_i = 0.0
         else:
             eta_H_i = door.calc_eta_H_i_byDict(Region, door_i['DoorPart'])
@@ -242,6 +260,12 @@ def calc_eta_A_H(envelope):
     for j in range(len(heatbridge_list)):
         heatbridge_j = heatbridge_list[j]
 
+        if 'SolarGain' in heatbridge_j:
+            Solar_Gain = heatbridge_j['SolarGain'] 
+        else:
+            # デフォルト値・Yes
+            Solar_Gain = 'Yes'
+
         eta_H_i_sum = 0.0
         nu_H_i_sum = 0.0
 
@@ -260,16 +284,10 @@ def calc_eta_A_H(envelope):
         L_i_j = heatbridge_j['Length']
 
 
-        
-        gamma_H_i_sum = 0
         nu_H_i_sum = 0
         for i in range(len(heatbridge_j['ComponentNames'])):
             component_i_name = heatbridge_j['ComponentNames'][i]
             component_i = get_component_byName(wall_list, component_i_name)
-            
-            # 熱橋の日除けの効果係数は熱橋jが接する一般部位の値
-            # 複数の一般部位に接するときは平均値をとる
-            gamma_H_i_sum += component_i['GammaH']
 
             # 方位係数(付録C)
             # 方位の異なる外皮の部位（一般部位又は開口部）に接する熱橋等の方位係数は、異なる方位の方位係数の平均値とする
@@ -280,9 +298,9 @@ def calc_eta_A_H(envelope):
             else:
                 nu_H_i_sum += 0.0
 
-        gamma_H_i = gamma_H_i_sum / len(heatbridge_j['ComponentNames'])
         # 日射熱取得率を計算
-        if 'SolarGain' in heatbridge_j and heatbridge_j['SolarGain'] != 'No':
+        if Solar_Gain != 'No':
+            gamma_H_i = heatbridge_j['GammaH']
             # 外気側表⾯の日射吸収率を指定する場合
             if ('SolarAbsorptance' in heatbridge_j):
                 alpha = heatbridge_j['SolarAbsorptance']
@@ -302,13 +320,13 @@ def calc_eta_A_H(envelope):
 
     A_env = get_A_env(envelope)
 
-    eta_A_H = (A_i_eta_H_i_nu_H_i + L_j_eta_H_i_nu_H_i) / A_env * 100
+    eta_A_H_raw = (A_i_eta_H_i_nu_H_i + L_j_eta_H_i_nu_H_i) / A_env * 100
 
-    eta_A_H_floor = math.floor(eta_A_H * 10 ** 1) / (10 ** 1)
+    eta_A_H = math.floor(eta_A_H_raw * 10 ** 1) / (10 ** 1)
 
-    envelope['eta_A_H'] = eta_A_H_floor
+    envelope['eta_A_H'] = eta_A_H
 
-    return eta_A_H_floor, envelope
+    return eta_A_H_raw, eta_A_H, envelope
 
 
 
@@ -336,7 +354,13 @@ def calc_eta_A_C(envelope):
     for i in range(len(wall_list)):
         wall_i = wall_list[i]
         A_i = wall_i['Area']
-        
+
+        if 'SolarGain' in wall_i:
+            Solar_Gain = wall_i['SolarGain'] 
+        else:
+            # デフォルト値・Yes
+            Solar_Gain = 'Yes'
+
         if wall_i['Method'] == 'Direct':
             U_i, wall_i  = get_Wood_Direct_U_i(wall_i)
         elif wall_i['Method'] == 'Accurate':
@@ -353,7 +377,7 @@ def calc_eta_A_C(envelope):
         # 日除けの効果係数
 
         # 日射熱取得率を計算
-        if 'SolarGain' in wall_i and wall_i['SolarGain'] != 'No':
+        if Solar_Gain != 'No':
             gamma_C_i = wall_i['GammaC']
             # 外気側表⾯の日射吸収率を指定する場合
             if ('SolarAbsorptance' in wall_i):
@@ -379,9 +403,15 @@ def calc_eta_A_C(envelope):
     for i in range(len(window_list)):
         window_i = window_list[i]
         A_i = window_i['WindowPart']['Area']
-        
+
+        if 'SolarGain' in window_i:
+            Solar_Gain = window_i['SolarGain'] 
+        else:
+            # デフォルト値・Yes
+            Solar_Gain = 'Yes'
+
         # 日射熱取得率
-        if 'SolarGain' in window_i and window_i['SolarGain'] == 'No':
+        if Solar_Gain == 'No':
             eta_C_i = 0.0
         else:
             eta_C_i = window.calc_eta_C_i_byDict(Region, window_i['Direction'], window_i['WindowPart'])
@@ -401,9 +431,15 @@ def calc_eta_A_C(envelope):
     for i in range(len(door_list)):
         door_i = door_list[i]
         A_i = door_i['DoorPart']['Area']
-        
+
+        if 'SolarGain' in door_i:
+            Solar_Gain = door_i['SolarGain'] 
+        else:
+            # デフォルト値・Yes
+            Solar_Gain = 'Yes'
+
         # 日射熱取得率 7
-        if 'SolarGain' in door_i and door_i['SolarGain'] == 'No':
+        if Solar_Gain == 'No':
             eta_C_i = 0.0
         else:
             eta_C_i = door.calc_eta_C_i_byDict(Region, door_i['DoorPart'])
@@ -425,6 +461,12 @@ def calc_eta_A_C(envelope):
     for j in range(len(heatbridge_list)):
         heatbridge_j = heatbridge_list[j]
 
+        if 'SolarGain' in heatbridge_j:
+            Solar_Gain = heatbridge_j['SolarGain'] 
+        else:
+            # デフォルト値・Yes
+            Solar_Gain = 'Yes'
+
         eta_C_i_sum = 0
         nu_C_i_sum = 0
 
@@ -442,15 +484,10 @@ def calc_eta_A_C(envelope):
 
         L_i_j = heatbridge_j['Length']
 
-        gamma_C_i_sum = 0
         nu_C_i_sum = 0
         for i in range(len(heatbridge_j['ComponentNames'])):
             component_i_name = heatbridge_j['ComponentNames'][i]
             component_i = get_component_byName(wall_list, component_i_name)    
-            
-            # 熱橋の日除けの効果係数は熱橋jが接する一般部位の値
-            # 複数の一般部位に接するときは平均値をとる
-            gamma_C_i_sum += component_i['GammaC']
 
             # 方位係数(付録C)
             # 方位の異なる外皮の部位（一般部位又は開口部）に接する熱橋等の方位係数は、異なる方位の方位係数の平均値とする
@@ -461,10 +498,9 @@ def calc_eta_A_C(envelope):
             else:
                 nu_C_i_sum += 0.0
 
-        gamma_C_i = gamma_C_i_sum / len(heatbridge_j['ComponentNames'])
-
         # 日射熱取得率を計算
-        if 'SolarGain' in heatbridge_j and heatbridge_j['SolarGain'] != 'No':
+        if Solar_Gain != 'No':
+            gamma_C_i = heatbridge_j['GammaC']
             # 外気側表⾯の日射吸収率を指定する場合
             if ('SolarAbsorptance' in heatbridge_j):
                 alpha = heatbridge_j['SolarAbsorptance']
@@ -483,13 +519,13 @@ def calc_eta_A_C(envelope):
 
     A_env = get_A_env(envelope)
 
-    eta_A_C = (A_i_eta_C_i_nu_C_i + L_j_eta_C_i_nu_C_i) / A_env * 100
+    eta_A_C_raw = (A_i_eta_C_i_nu_C_i + L_j_eta_C_i_nu_C_i) / A_env * 100
 
-    eta_A_C_ceil = math.ceil(eta_A_C * 10 ** 1) / (10 ** 1)
+    eta_A_C = math.ceil(eta_A_C_raw * 10 ** 1) / (10 ** 1)
 
-    envelope['eta_A_C'] = eta_A_C_ceil
+    envelope['eta_A_C'] = eta_A_C
 
-    return eta_A_C_ceil, envelope
+    return eta_A_C_raw, eta_A_C, envelope
 
 
 # ============================================================================

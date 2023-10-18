@@ -15,27 +15,35 @@ import pyhees.section3_1 as ld
 from pyhees.section3_2_8 import \
     get_r_env
 
-from pyhees.section11_1 import \
-    load_outdoor, \
-    get_T_ex, \
-    get_Theta_ex, \
-    get_X_ex, \
-    calc_h_ex, \
-    load_climate, \
-    get_J
-
 from pyhees.section3_1 import \
     get_A_NR
 
 from pyhees.section4_7_i import \
     get_A_A_R
 
+from pyhees.section11_1 import \
+    load_outdoor, \
+    get_Theta_ex, \
+    get_X_ex, \
+    load_climate, \
+    get_climate_df
+
+from pyhees.section11_2 import \
+    calc_I_s_d_t
+
 from pyhees.section11_3 import \
     load_schedule, \
     get_schedule_ac
 
+from pyhees.section11_5 import \
+    calc_h_ex, \
+    get_J
+
+from pyhees.section11_6 import \
+    get_table_7
+
 # 未処理負荷と機器の計算に必要な変数を取得
-def calc_Q_UT_A(A_A, A_MR, A_OR, A_env, mu_H, mu_C, q_hs_rtd_H, q_hs_rtd_C, V_hs_dsgn_H, V_hs_dsgn_C, Q,
+def calc_Q_UT_A(A_A, A_MR, A_OR, r_env, mu_H, mu_C, q_hs_rtd_H, q_hs_rtd_C, V_hs_dsgn_H, V_hs_dsgn_C, Q,
              VAV, general_ventilation, duct_insulation, region, L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i):
     """
 
@@ -49,26 +57,25 @@ def calc_Q_UT_A(A_A, A_MR, A_OR, A_env, mu_H, mu_C, q_hs_rtd_H, q_hs_rtd_C, V_hs
       general_ventilation: param duct_insulation:
       region: param L_H_d_t_i:
       L_CS_d_t_i: param L_CL_d_t_i:
-      A_MR: 
-      A_env: 
-      mu_C: 
-      q_hs_rtd_C: 
-      V_hs_dsgn_C: 
-      VAV: 
-      duct_insulation: 
-      L_H_d_t_i: 
-      L_CL_d_t_i: 
+      A_MR:
+      r_env(float): 床面積の合計に対する外皮の部位の面積の合計の比 (-)
+      mu_C:
+      q_hs_rtd_C:
+      V_hs_dsgn_C:
+      VAV:
+      duct_insulation:
+      L_H_d_t_i:
+      L_CL_d_t_i:
 
     Returns:
 
     """
 
     # 外気条件
-    outdoor = load_outdoor()
-    Theta_ex_d_t = get_Theta_ex(region, outdoor)
-    X_ex_d_t = get_X_ex(region, outdoor)
     climate = load_climate(region)
-    J_d_t = get_J(climate)
+    X_ex_d_t = get_X_ex(climate)
+    Theta_ex_d_t = get_Theta_ex(climate)
+    J_d_t = calc_I_s_d_t(0, 0, get_climate_df(climate))
     h_ex_d_t = calc_h_ex(X_ex_d_t, Theta_ex_d_t)
 
     A_HCZ_i = np.array([ld.get_A_HCZ_i(i, A_A, A_MR, A_OR) for i in range(1, 6)])
@@ -133,7 +140,6 @@ def calc_Q_UT_A(A_A, A_MR, A_OR, A_env, mu_H, mu_C, q_hs_rtd_H, q_hs_rtd_C, V_hs
     U_prt = get_U_prt()
 
     # (60)
-    r_env = get_r_env(A_env, A_A)
     A_prt_i = get_A_prt_i(A_HCZ_i, r_env, A_MR, A_NR, A_OR)
 
     # (59)
@@ -753,7 +759,7 @@ def get_Theta_hs_out_d_t(VAV, Theta_req_d_t_i, V_dash_supply_d_t_i, L_star_H_d_t
       region: 地域区分
       Theta_NR_d_t: 日付dの時刻tにおける非居室の室温(℃)
       Theta_hs_out_max_H_d_t: param Theta_hs_out_min_C_d_t:
-      Theta_hs_out_min_C_d_t: 
+      Theta_hs_out_min_C_d_t:
 
     Returns:
 
@@ -1913,8 +1919,8 @@ def get_X_star_NR_d_t(X_star_HBR_d_t, L_CL_d_t_i, L_wtr, V_vent_l_NR_d_t, V_dash
       L_wtr: param V_vent_l_NR_d_t:
       V_dash_supply_d_t_i: param region:
       L_CL_d_t_i: param V_vent_l_NR_d_t:
-      region: 
-      V_vent_l_NR_d_t: 
+      region:
+      V_vent_l_NR_d_t:
 
     Returns:
 
@@ -2614,7 +2620,7 @@ def get_n_p_d_t(n_p_MR_d_t, n_p_OR_d_t, n_p_NR_d_t):
       q_gen_NR_d_t: 日付dの時刻tにおける非居室の在室人数（人）
       n_p_MR_d_t: param n_p_OR_d_t:
       n_p_NR_d_t: returns: 日付dの時刻tにおける在室人数（人）
-      n_p_OR_d_t: 
+      n_p_OR_d_t:
 
     Returns:
       日付dの時刻tにおける在室人数（人）
@@ -2760,7 +2766,7 @@ def get_season_array(region):
     """
 
     Args:
-      region: 
+      region:
 
     Returns:
 
@@ -2779,7 +2785,7 @@ def get_season_array_d_t(region):
     """
 
     Args:
-      region: 
+      region:
 
     Returns:
 
@@ -2795,7 +2801,7 @@ def get_season_array_d_t(region):
 
 def get_period_array(p1, p2):
     """指定月日期間のみTrueのndarrayを作成する
-    
+
     指定月日期間のみTrueのndarrayを作成する。
     開始月日が終了月日が逆転する場合は、年をまたいだとみなす。
 
@@ -2827,20 +2833,6 @@ def get_period_array(p1, p2):
         arr[d2+1:d1] = False
 
     return arr
-
-
-def get_table_7():
-    """ """
-    return [
-        ((9, 24), (6, 7), (7, 10), (8, 31)),
-        ((9, 26), (6, 4), (7, 15), (8, 31)),
-        ((9, 30), (5, 31), (7, 10), (8, 31)),
-        ((10, 1), (5, 30), (7, 10), (8, 31)),
-        ((10, 10), (5, 15), (7, 6), (8, 31)),
-        ((11, 4), (4, 21), (5, 30), (9, 23)),
-        ((11, 26), (3, 27), (5, 15), (10, 13)),
-        (None, None, (3, 25), (12, 14)),
-    ]
 
 
 # ============================================================================
@@ -3016,7 +3008,7 @@ if __name__ == '__main__':
 
         # 未処理冷房負荷の一次エネ相当および熱源機の入口における空気温度
         E_C_UT_d_t, _, _, _, Theta_hs_out_d_t, Theta_hs_in_d_t, \
-        X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, _, C_df_H_d_t = get_Q_UT_A(A_A, A_MR, A_OR, A_env, mu_H, mu_C,
+        X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, _, C_df_H_d_t = get_Q_UT_A(A_A, A_MR, A_OR, r_env, mu_H, mu_C,
                                                                                q_hs_rtd_H, q_hs_rtd_C, V_hs_dsgn_H,
                                                                                V_hs_dsgn_C, Q, VAV, general_ventilation,
                                                                                duct_insulation, region, L_H_d_t_i,
@@ -3029,15 +3021,15 @@ if __name__ == '__main__':
         q_hs_C_d_t = get_q_hs_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, region)
 
         # 未処理暖房負荷の一次エネ相当
-        E_UT_H_d_t = calc_E_UT_H_d_t(region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, mode_H, H_A, spec_MR, spec_OR, spec_HS,
+        E_UT_H_d_t = calc_E_UT_H_d_t(region, A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, mode_H, H_A, spec_MR, spec_OR, spec_HS,
                                      mode_MR, mode_OR, CG, L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i)
 
         # 1時間当たりの暖房設備の設計一次エネルギー消費量
-        E_H_d_t = get_E_H_d_t(region, sol_region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, mode_H, H_A, spec_MR, spec_OR,
+        E_H_d_t = get_E_H_d_t(region, sol_region, A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, mode_H, H_A, spec_MR, spec_OR,
                               spec_HS, mode_MR, mode_OR, HW, CG, SHC, heating_flag_d, L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i)
 
         # 1時間当たりの冷房設備の設計一次エネルギー消費量
-        E_C_d_t = get_E_C_d_t(region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, C_A, C_MR, C_OR,
+        E_C_d_t = get_E_C_d_t(region, A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, C_A, C_MR, C_OR,
                               L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i, mode_C)
 
         df = pd.DataFrame({

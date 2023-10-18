@@ -116,7 +116,7 @@ class DesignedPrimaryEnergyDetail(TypedDict):
         E_S (float): 1年当たりのエネルギー利用効率化設備による設計一次エネルギー消費量の削減量 (MJ/年)
         E_S_CG (float): 1年当たりのエネルギー利用効率化設備（コージェネレーション設備に限る）による設計一次エネルギー消費量の削減量 (MJ/年)
         E_R (float): 1年当たりの太陽光発電設備による発電量のうちの自家消費分に係る設計一次エネルギー消費量の削減量 (MJ/年)
-        E_M (float): 1年当たりのその他の設計一次エネルギー消費量 (MJ/年) 
+        E_M (float): 1年当たりのその他の設計一次エネルギー消費量 (MJ/年)
     """
 
     E_H: float
@@ -192,16 +192,14 @@ def calc_E_T(spec) -> Tuple[DesignedPrimaryEnergyTotal, DesignedPrimaryEnergyTot
 
     # ---- 外皮の計算 ----
 
+    U_A, r_env, _, _, Q_dash, mu_H, mu_C, _ = calc_insulation_performance(spec['tatekata'], **spec['ENV'])
     # 外皮の断熱性能の計算
     if spec['ENV'] is not None:
-        U_A, _, _, _, Q_dash, eta_H, eta_C, _ = calc_insulation_performance(**spec['ENV'])
         # 熱損失係数
         Q = get_Q(Q_dash)
-        A_env = spec['ENV'].get('A_env')
     else:
         Q = None
-        eta_H, eta_C = None, None
-        A_env = None
+        mu_H, mu_C = None, None
 
     # ---- 暖房設備 ----
 
@@ -219,7 +217,7 @@ def calc_E_T(spec) -> Tuple[DesignedPrimaryEnergyTotal, DesignedPrimaryEnergyTot
     L_T_H_d_t_i, L_dash_H_R_d_t_i = calc_heating_load(
         spec['region'], spec['sol_region'],
         spec['A_A'], spec['A_MR'], spec['A_OR'],
-        Q, eta_H, eta_C, spec['NV_MR'], spec['NV_OR'], spec['TS'], spec['r_A_ufvnt'], spec['HEX'],
+        Q, mu_H, mu_C, spec['NV_MR'], spec['NV_OR'], spec['TS'], spec['r_A_ufvnt'], spec['HEX'],
         spec['underfloor_insulation'], spec['mode_H'], spec['mode_C'],
         spec_MR, spec_OR, mode_MR, mode_OR, spec['SHC'])
 
@@ -227,7 +225,7 @@ def calc_E_T(spec) -> Tuple[DesignedPrimaryEnergyTotal, DesignedPrimaryEnergyTot
 
     # 冷房負荷の取得
     L_CS_d_t, L_CL_d_t = \
-        calc_cooling_load(spec['region'], spec['A_A'], spec['A_MR'], spec['A_OR'], Q, eta_H, eta_C,
+        calc_cooling_load(spec['region'], spec['A_A'], spec['A_MR'], spec['A_OR'], Q, mu_H, mu_C,
                           spec['NV_MR'], spec['NV_OR'], spec['r_A_ufvnt'], spec['underfloor_insulation'],
                           spec['mode_C'], spec['mode_H'], mode_MR, mode_OR, spec['TS'], spec['HEX'])
 
@@ -235,7 +233,7 @@ def calc_E_T(spec) -> Tuple[DesignedPrimaryEnergyTotal, DesignedPrimaryEnergyTot
 
     # 1 年当たりの冷房設備の設計一次エネルギー消費量
     E_C = calc_E_C(spec['region'], spec['A_A'], spec['A_MR'], spec['A_OR'],
-                  A_env, eta_H, eta_C, Q,
+                  r_env, mu_H, mu_C, Q,
                   spec['C_A'], spec['C_MR'], spec['C_OR'],
                   L_T_H_d_t_i, L_CS_d_t, L_CL_d_t, spec['mode_C'])
 
@@ -256,20 +254,20 @@ def calc_E_T(spec) -> Tuple[DesignedPrimaryEnergyTotal, DesignedPrimaryEnergyTot
         heating_flag_d = None
 
     E_H = calc_E_H(spec['region'], spec['sol_region'], spec['A_A'], spec['A_MR'], spec['A_OR'],
-                  A_env, eta_H, eta_C, Q,
+                  r_env, mu_H, mu_C, Q,
                   spec['mode_H'],
                   spec['H_A'], spec_MR, spec_OR, spec_HS, mode_MR, mode_OR, spec['HW'], spec['CG'], spec['SHC'],
                   heating_flag_d, L_T_H_d_t_i, L_CS_d_t, L_CL_d_t)
 
     # 暖房設備の未処理暖房負荷の設計一次エネルギー消費量相当値
-    UPL = calc_E_UT_H(spec['region'], spec['A_A'], spec['A_MR'], spec['A_OR'], A_env, eta_H, eta_C, Q, spec['mode_H'],
+    UPL = calc_E_UT_H(spec['region'], spec['A_A'], spec['A_MR'], spec['A_OR'], r_env, mu_H, mu_C, Q, spec['mode_H'],
                      spec['H_A'], spec_MR, spec_OR, spec_HS, mode_MR, mode_OR, spec['HW'], spec['CG'],
                      L_T_H_d_t_i, L_CS_d_t, L_CL_d_t)
     UPL = np.sum(UPL)
 
     # 温水暖房負荷の計算
     L_HWH = calc_L_HWH(spec['A_A'], spec['A_MR'], spec['A_OR'], spec['HEX'], spec['H_HS'], spec['H_MR'],
-                           spec['H_OR'], Q, spec['SHC'], spec['TS'], eta_H, eta_C, spec['NV_MR'], spec['NV_OR'],
+                           spec['H_OR'], Q, spec['SHC'], spec['TS'], mu_H, mu_C, spec['NV_MR'], spec['NV_OR'],
                            spec['r_A_ufvnt'], spec['region'], spec['sol_region'], spec['underfloor_insulation'],
                            spec['HW'], spec['CG'])
 
@@ -284,7 +282,7 @@ def calc_E_T(spec) -> Tuple[DesignedPrimaryEnergyTotal, DesignedPrimaryEnergyTot
                       spec['H_A'],
                       spec['H_MR'], spec['H_OR'], spec['H_HS'], spec['C_A'], spec['C_MR'], spec['C_OR'],
                       spec['V'],
-                      spec['L'], spec['A_MR'], spec['A_OR'], A_env, Q, eta_H, eta_C,
+                      spec['L'], spec['A_MR'], spec['A_OR'], r_env, Q, mu_H, mu_C,
                       spec['NV_MR'],
                       spec['NV_OR'], spec['TS'], spec['r_A_ufvnt'], spec['HEX'],
                       spec['underfloor_insulation'],
@@ -306,7 +304,7 @@ def calc_E_T(spec) -> Tuple[DesignedPrimaryEnergyTotal, DesignedPrimaryEnergyTot
     # 1 年当たりの設計消費電力量（kWh/年）
     E_E, E_E_PV_h_d_t, E_E_PV_d_t, E_E_CG_gen_d_t, E_E_CG_h_d_t, E_E_dmd_d_t, E_E_TU_aux_d_t = \
                 calc_E_E(spec['region'], spec['sol_region'], spec['A_A'], spec['A_MR'], spec['A_OR'],
-                        A_env, spec_HW, Q, spec['TS'], eta_H, eta_C, spec['r_A_ufvnt'],
+                        r_env, spec_HW, Q, spec['TS'], mu_H, mu_C, spec['r_A_ufvnt'],
                         spec['underfloor_insulation'], spec['NV_MR'], spec['NV_OR'],
                         spec['mode_H'], spec['mode_C'],
                         spec['V'], spec['L'],
@@ -322,7 +320,7 @@ def calc_E_T(spec) -> Tuple[DesignedPrimaryEnergyTotal, DesignedPrimaryEnergyTot
 
     # 1 年当たりの設計ガス消費量（MJ/年）
     E_G = calc_E_G(spec['region'], spec['sol_region'], spec['A_A'], spec['A_MR'], spec['A_OR'],
-                          A_env, Q, eta_H, eta_C, spec['NV_MR'], spec['NV_OR'], spec['TS'],
+                          r_env, Q, mu_H, mu_C, spec['NV_MR'], spec['NV_OR'], spec['TS'],
                           spec['r_A_ufvnt'], spec['HEX'], spec['underfloor_insulation'],
                           spec['H_A'], spec['H_MR'], spec['H_OR'], spec['H_HS'], spec['C_A'], spec['C_MR'],
                           spec['C_OR'], spec['V'], spec['L'], spec_HW, spec['SHC'],
@@ -394,7 +392,7 @@ def calc_E_T_dict(E_H, E_C, E_V, E_L, E_W, E_S, E_S_CG, E_R, E_M, type) -> Desig
     E_T_lcb_du  = None
     E_T_enh_du  = None
     E_star_T_gn_du = None
-    # NOTE: 
+    # NOTE:
     #   各適合基準のうち、建築物エネルギー消費性能基準（気候風土適応住宅を除く）についてのみ
     #   端数処理前の値(E_star_T_gn_du (MJ/年))を出力する(計算結果比較のため)
 
@@ -857,7 +855,7 @@ def get_E_dash_T_rb_du(E_H, E_C, E_V, E_L, E_W, E_S) -> float:
     Returns:
         float: 特定建築主基準における単位住戸の設計一次エネルギー消費量（その他の設計一次エネルギー消費量を除く） (GJ/年)
     """
-    # 式(20) 
+    # 式(20)
     E_dash_star_T_rb_du = get_E_dash_star_T_rb_du(E_H, E_C, E_V, E_L, E_W, E_S)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
@@ -932,7 +930,7 @@ def get_E_dash_star_T_lcb_du(E_H, E_C, E_V, E_L, E_W, E_S_CG):
 # 7. 暖房設備の設計一次エネルギー消費量
 # ============================================================================
 
-def calc_E_H(region, sol_region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, mode_H, H_A, spec_MR, spec_OR, spec_HS, mode_MR, mode_OR, HW, CG, SHC,
+def calc_E_H(region, sol_region, A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, mode_H, H_A, spec_MR, spec_OR, spec_HS, mode_MR, mode_OR, HW, CG, SHC,
             heating_flag_d, L_T_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i):
     """1 年当たりの暖房設備の設計一次エネルギー消費量（MJ/年） (24)
 
@@ -942,7 +940,7 @@ def calc_E_H(region, sol_region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, mode_H, 
       A_A(float): 床面積の合計 (m2)
       A_MR(float): 主たる居室の床面積 (m2)
       A_OR(float): その他の居室の床面積 (m2)
-      A_env(float): 外皮の部位の面積の合計 (m2)
+      r_env(float): 床面積の合計に対する外皮の部位の面積の合計の比 (-)
       mu_H(float): 当該住戸の暖房期の日射取得係数 ((W/m2)/(W/m2))
       mu_C(float): 当該住戸の冷房期の日射取得係数 ((W/m2)/(W/m2))
       Q(float): 当該住戸の熱損失係数 (W/m2K)
@@ -969,7 +967,7 @@ def calc_E_H(region, sol_region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, mode_H, 
         return 0.0
     elif mode_H is not None:
         # 式(25) 日付dの時刻tにおける1時間当たりの暖房設備の設計一次エネルギー消費量 (MJ/h)
-        E_H_d_t = get_E_H_d_t(region, sol_region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, mode_H, H_A, spec_MR, spec_OR, spec_HS, mode_MR,
+        E_H_d_t = get_E_H_d_t(region, sol_region, A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, mode_H, H_A, spec_MR, spec_OR, spec_HS, mode_MR,
                               mode_OR, HW, CG, SHC, heating_flag_d, L_T_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i)
 
         # 式(24) 1年当たりの暖房設備の設計一次エネルギー消費量 (MJ/年)
@@ -981,7 +979,7 @@ def calc_E_H(region, sol_region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, mode_H, 
 
 
 # 1 時間当たりの暖房設備の設計一次エネルギー消費量
-def get_E_H_d_t(region, sol_region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, mode_H, H_A, spec_MR, spec_OR, spec_HS, mode_MR, mode_OR, HW, CG, SHC,
+def get_E_H_d_t(region, sol_region, A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, mode_H, H_A, spec_MR, spec_OR, spec_HS, mode_MR, mode_OR, HW, CG, SHC,
                 heating_flag_d, L_T_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i):
     """1 時間当たりの暖房設備の設計一次エネルギー消費量 (MJ/h) (25)
 
@@ -991,7 +989,7 @@ def get_E_H_d_t(region, sol_region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, mode_
       A_A(float): 床面積の合計 (m2)
       A_MR(float): 主たる居室の床面積 (m2)
       A_OR(float): その他の居室の床面積 (m2)
-      A_env(float): 外皮の部位の面積の合計 (m2)
+      r_env(float): 床面積の合計に対する外皮の部位の面積の合計の比 (-)
       mu_H(float): 当該住戸の暖房期の日射取得係数 ((W/m2)/(W/m2))
       mu_C(float): 当該住戸の冷房期の日射取得係数 ((W/m2)/(W/m2))
       Q(float): 当該住戸の熱損失係数 (W/m2K)
@@ -1021,7 +1019,7 @@ def get_E_H_d_t(region, sol_region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, mode_
         f_prim = get_f_prim()
 
         # (第四章第一節) 暖房設備の消費電力量（kWh/h）
-        E_E_H_d_t = get_E_E_H_d_t(region, sol_region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, H_A, spec_MR, spec_OR, spec_HS,
+        E_E_H_d_t = get_E_E_H_d_t(region, sol_region, A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, H_A, spec_MR, spec_OR, spec_HS,
                                   mode_MR, mode_OR, HW, CG, SHC, heating_flag_d, L_T_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i)
 
         # (第四章第一節) 暖房設備のガス消費量（MJ/h）
@@ -1036,7 +1034,7 @@ def get_E_H_d_t(region, sol_region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, mode_
         E_M_H_d_t = calc_E_M_H_d_t(region, A_A, A_MR, A_OR, H_A, spec_MR, spec_OR, spec_HS, L_T_H_d_t_i)
 
         # (第四章第一節) 暖房設備の未処理暖房負荷の設計一次エネルギー消費量相当値（MJ/h）
-        E_UT_H_d_t = calc_E_UT_H_d_t(region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, mode_H, H_A, spec_MR, spec_OR, spec_HS, mode_MR, mode_OR,
+        E_UT_H_d_t = calc_E_UT_H_d_t(region, A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, mode_H, H_A, spec_MR, spec_OR, spec_HS, mode_MR, mode_OR,
                                      HW, CG, L_T_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i)
 
         # 式(25) 1時間当たりの暖房設備の設計一次エネルギー消費量 （MJ/h）
@@ -1047,7 +1045,7 @@ def get_E_H_d_t(region, sol_region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, mode_
 # 8. 冷房設備の設計一次エネルギー消費量
 # ============================================================================
 
-def calc_E_C(region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, C_A, C_MR, C_OR, L_H_d_t, L_CS_d_t, L_CL_d_t, mode_C):
+def calc_E_C(region, A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, C_A, C_MR, C_OR, L_H_d_t, L_CS_d_t, L_CL_d_t, mode_C):
     """1 年当たりの冷房設備の設計一次エネルギー消費量 (MJ/年) (26)
 
     Args:
@@ -1055,7 +1053,7 @@ def calc_E_C(region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, C_A, C_MR, C_OR, L_H
       A_A(float): 床面積の合計 (m2)
       A_MR(float): 主たる居室の床面積 (m2)
       A_OR(float): その他の居室の床面積 (m2)
-      A_env(float): 外皮の部位の面積の合計 (m2)
+      r_env(float): 床面積の合計に対する外皮の部位の面積の合計の比 (-)
       mu_H(float): 当該住戸の暖房期の日射取得係数 ((W/m2)/(W/m2))
       mu_C(float): 当該住戸の冷房期の日射取得係数 ((W/m2)/(W/m2))
       Q(float): 当該住戸の熱損失係数 (W/m2K)
@@ -1072,7 +1070,7 @@ def calc_E_C(region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, C_A, C_MR, C_OR, L_H
 
     """
     # 1 時間当たりの冷房設備の設計一次エネルギー消費量 (27)
-    E_C_d_t = get_E_C_d_t(region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, C_A, C_MR, C_OR, L_H_d_t, L_CS_d_t, L_CL_d_t, mode_C)
+    E_C_d_t = get_E_C_d_t(region, A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, C_A, C_MR, C_OR, L_H_d_t, L_CS_d_t, L_CL_d_t, mode_C)
 
     # 1 年当たりの冷房設備の設計一次エネルギー消費量 (26)
     E_C = np.sum(E_C_d_t)
@@ -1080,7 +1078,7 @@ def calc_E_C(region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, C_A, C_MR, C_OR, L_H
     return E_C
 
 
-def get_E_C_d_t(region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, C_A, C_MR, C_OR, L_H_d_t, L_CS_d_t, L_CL_d_t, mode_C):
+def get_E_C_d_t(region, A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, C_A, C_MR, C_OR, L_H_d_t, L_CS_d_t, L_CL_d_t, mode_C):
     """1 時間当たりの冷房設備の設計一次エネルギー消費量 (MJ/h) (27)
 
     Args:
@@ -1088,7 +1086,7 @@ def get_E_C_d_t(region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, C_A, C_MR, C_OR, 
       A_A(float): 床面積の合計 (m2)
       A_MR(float): 主たる居室の床面積 (m2)
       A_OR(float): その他の居室の床面積 (m2)
-      A_env(float): 外皮の部位の面積の合計 (m2)
+      r_env(float): 床面積の合計に対する外皮の部位の面積の合計の比 (-)
       mu_H(float): 当該住戸の暖房期の日射取得係数 ((W/m2)/(W/m2))
       mu_C(float): 当該住戸の冷房期の日射取得係数 ((W/m2)/(W/m2))
       Q(float): 当該住戸の熱損失係数 (W/m2K)
@@ -1108,11 +1106,11 @@ def get_E_C_d_t(region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, C_A, C_MR, C_OR, 
     f_prim = get_f_prim()
 
     # 第四章「暖冷房設備」第一節「全般」
-    E_E_C_d_t = calc_E_E_C_d_t(region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, C_A, C_MR, C_OR, L_H_d_t, L_CS_d_t, L_CL_d_t)
+    E_E_C_d_t = calc_E_E_C_d_t(region, A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, C_A, C_MR, C_OR, L_H_d_t, L_CS_d_t, L_CL_d_t)
     E_G_C_d_t = calc_E_G_C_d_t()
     E_K_C_d_t = calc_E_K_C_d_t()
     E_M_C_d_t = calc_E_M_C_d_t()
-    E_UT_C_d_t = calc_E_UT_C_d_t(region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, C_A, C_MR, C_OR, L_H_d_t, L_CS_d_t, L_CL_d_t, mode_C)
+    E_UT_C_d_t = calc_E_UT_C_d_t(region, A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, C_A, C_MR, C_OR, L_H_d_t, L_CS_d_t, L_CL_d_t, mode_C)
 
     E_C_d_t = E_E_C_d_t * f_prim / 1000 + E_G_C_d_t + E_K_C_d_t + E_M_C_d_t + E_UT_C_d_t  # (27)
 
@@ -1135,7 +1133,7 @@ def calc_E_V(A_A, V, HEX):
       float: 1 年当たりの機械換気設備の設計一次エネルギー消費量 (MJ/年) (28)
 
     """
-    
+
     if V is None:
         return 0.0
 
@@ -1172,7 +1170,7 @@ def calc_E_L(A_A, A_MR, A_OR, L):
       ndarray: 1 年当たりの照明設備の設計一次エネルギー消費量 (MJ/年) (29)
 
     """
-    
+
     if L is None:
         return 0.0
 
@@ -1198,7 +1196,7 @@ def calc_E_L(A_A, A_MR, A_OR, L):
 # 1 年当たりの給湯設備（コージェネレーション設備を含む）の設計一次エネルギー消費量
 def calc_E_W(A_A, region, sol_region, HW, SHC, CG, H_A=None, H_MR=None, H_OR=None, H_HS=None, C_A=None, C_MR=None,
             C_OR=None,
-            V=None, L=None, A_MR=None, A_OR=None, A_env=None, Q=None, mu_H=None, mu_C=None, NV_MR=None, NV_OR=None, TS=None,
+            V=None, L=None, A_MR=None, A_OR=None, r_env=None, Q=None, mu_H=None, mu_C=None, NV_MR=None, NV_OR=None, TS=None,
             r_A_ufvnt=None, HEX=None, underfloor_insulation=None, mode_H=None, mode_C=None):
     """1 年当たりの給湯設備（コージェネレーション設備を含む）の設計一次エネルギー消費量 (MJ/年) (30)
 
@@ -1231,13 +1229,13 @@ def calc_E_W(A_A, region, sol_region, HW, SHC, CG, H_A=None, H_MR=None, H_OR=Non
       underfloor_insulation(bool, optional, optional): 床下空間が断熱空間内である場合はTrue, defaults to None
       mode_H(str, optional, optional): 暖房方式, defaults to None
       mode_C(str, optional, optional): 冷房方式, defaults to None
-      A_env: Default value = None)
+      r_env(float): 床面積の合計に対する外皮の部位の面積の合計の比 (-), Default value = None)
 
     Returns:
       tuple: 1 年当たりの給湯設備（コージェネレーション設備を含む）の設計一次エネルギー消費量 (MJ/年)
 
     """
-    
+
     if HW is None:
         return 0.0, np.zeros(24 * 365), np.zeros(24 * 365), np.zeros(24 * 365), np.zeros(24 * 365), \
                np.zeros(24 * 365), np.zeros(24 * 365), np.zeros(24 * 365)
@@ -1255,7 +1253,7 @@ def calc_E_W(A_A, region, sol_region, HW, SHC, CG, H_A=None, H_MR=None, H_OR=Non
         # 1日当たりのコージェネレーション設備の一次エネルギー消費量
         E_G_CG_d_t, E_E_CG_gen_d_t, E_E_CG_h_d_t, E_E_TU_aux_d_t, E_E_CG_h_d_t, E_G_CG_ded, e_BB_ave, Q_CG_h = \
             calc_E_CG_d_t(A_A, region, sol_region, HW, SHC, CG, H_A, H_MR, H_OR, H_HS, C_A, C_MR, C_OR,
-                          V, L, A_MR, A_OR, A_env, Q, mu_H, mu_C, NV_MR, NV_OR, TS,
+                          V, L, A_MR, A_OR, r_env, Q, mu_H, mu_C, NV_MR, NV_OR, TS,
                                              r_A_ufvnt, HEX, underfloor_insulation, mode_H, mode_C)
 
         # (30b)
@@ -1267,7 +1265,7 @@ def calc_E_W(A_A, region, sol_region, HW, SHC, CG, H_A=None, H_MR=None, H_OR=Non
 # 1日当たりのコージェネレーション設備の一次エネルギー消費量
 def calc_E_CG_d_t(A_A, region, sol_region, HW, SHC, CG, H_A=None, H_MR=None, H_OR=None, H_HS=None, C_A=None, C_MR=None,
                 C_OR=None,
-                V=None, L=None, A_MR=None, A_OR=None, A_env=None, Q=None, mu_H=None, mu_C=None, NV_MR=None, NV_OR=None, TS=None,
+                V=None, L=None, A_MR=None, A_OR=None, r_env=None, Q=None, mu_H=None, mu_C=None, NV_MR=None, NV_OR=None, TS=None,
                 r_A_ufvnt=None, HEX=None, underfloor_insulation=None, mode_H=None, mode_C=None):
     """1時間当たりのコージェネレーション設備の一次エネルギー消費量
 
@@ -1300,7 +1298,7 @@ def calc_E_CG_d_t(A_A, region, sol_region, HW, SHC, CG, H_A=None, H_MR=None, H_O
       underfloor_insulation(bool, optional, optional): 床下空間が断熱空間内である場合はTrue, defaults to None
       mode_H(str, optional, optional): 暖房方式, defaults to None
       mode_C(str, optional, optional): 冷房方式, defaults to None
-      A_env: Default value = None)
+      r_env(float): 床面積の合計に対する外皮の部位の面積の合計の比 (-), Default value = None)
 
     Returns:
       tuple: 1時間当たりのコージェネレーション設備の一次エネルギー消費量
@@ -1309,7 +1307,7 @@ def calc_E_CG_d_t(A_A, region, sol_region, HW, SHC, CG, H_A=None, H_MR=None, H_O
       ValueError: SHC の type が "液体集熱式"、 "空気集熱式"　以外の場合に発生する
 
     """
-    
+
     if HW is None or HW['hw_type'] != 'コージェネレーションを使用する':
         return np.zeros(365), np.zeros(24 * 365), None, None, None, None, None, None
 
@@ -1350,13 +1348,13 @@ def calc_E_CG_d_t(A_A, region, sol_region, HW, SHC, CG, H_A=None, H_MR=None, H_O
         calc_cooling_load(region, A_A, A_MR, A_OR, Q, mu_H, mu_C,
                           NV_MR, NV_OR, r_A_ufvnt, underfloor_insulation,
                           mode_C, mode_H, mode_MR, mode_OR, TS, HEX)
-        
+
     # 暖房
-    E_E_H_d_t = get_E_E_H_d_t(region, sol_region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, H_A, spec_MR, spec_OR, spec_HS, mode_MR, mode_OR,
+    E_E_H_d_t = get_E_E_H_d_t(region, sol_region, A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, H_A, spec_MR, spec_OR, spec_HS, mode_MR, mode_OR,
                               HW, CG, SHC, heating_flag_d, L_T_H_d_t_i, L_CS_d_t, L_CL_d_t)
 
     # 冷房
-    E_E_C_d_t = calc_E_E_C_d_t(region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, C_A, C_MR, C_OR,
+    E_E_C_d_t = calc_E_E_C_d_t(region, A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, C_A, C_MR, C_OR,
                                L_T_H_d_t_i, L_CS_d_t, L_CL_d_t)
 
     # 換気
@@ -1399,10 +1397,20 @@ def calc_E_CG_d_t(A_A, region, sol_region, HW, SHC, CG, H_A=None, H_MR=None, H_O
                 args.update({
                     'type': SHC['type'],
                     'ls_type': SHC['ls_type'],
-                    'A_sp': SHC['A_sp'],
+                    'A_stcp': SHC['A_stcp'],
+                    'b0': SHC['b0'],
+                    'b1': SHC['b1'],
+                    'c_p_htm': SHC['c_p_htm'],
+                    'eta_r_tank': SHC['eta_r_tank'],
+                    'g_htm': SHC['g_htm'],
+                    'Gs_htm': SHC['Gs_htm'],
+                    'hw_connection_type': SHC['hw_connection_type'],
                     'P_alpha_sp': SHC['P_alpha_sp'],
                     'P_beta_sp': SHC['P_beta_sp'],
-                    'W_tnk_ss': SHC['W_tnk_ss']
+                    'UA_hx': SHC['UA_hx'],
+                    'UA_stp': SHC['UA_stp'],
+                    'UA_tank': SHC['UA_tank'],
+                    'W_tnk_ss': SHC['V_tank']
                 })
             elif SHC['type'] == '空気集熱式':
                 args.update({
@@ -1514,7 +1522,7 @@ def calc_E_W_d(A_A, region, sol_region, HW, SHC, H_HS=None, H_MR=None, H_OR=None
       ValueError: コージェネは対象外。HW の hw_type が 'コージェネレーションを使用する' であった場合発生する。
 
     """
-    
+
     # コージェネは対象外
     if HW['hw_type'] == 'コージェネレーションを使用する':
         raise ValueError(HW['hw_type'])
@@ -1580,7 +1588,7 @@ def calc_L_HWH(A_A, A_MR, A_OR, HEX, H_HS, H_MR, H_OR, Q, SHC, TS, mu_H, mu_C, N
       float: 温水暖房負荷
 
     """
-    
+
     if H_HS is not None:
         import pyhees.section4_1 as H
         from pyhees.section4_7 import calc_L_HWH
@@ -1627,7 +1635,7 @@ def calc_heating_flag_d(A_A, A_MR, A_OR, HEX, H_MR, H_OR, Q, SHC, TS, mu_H, mu_C
       ndarray: 暖房日
 
     """
-    
+
     # 暖房日の計算
     if SHC is not None and SHC['type'] == '空気集熱式':
         import pyhees.section4_1 as H
@@ -1659,7 +1667,7 @@ def calc_E_M(A_A):
       float: 1年当たりのその他の設計一次エネルギー消費量（MJ/h） (33)
 
     """
-    
+
     # 想定人数
     n_p = get_n_p(A_A)
 
@@ -1689,7 +1697,7 @@ def calc_E_AP_d_t(n_p):
       ndarray: 1 時間当たりの家電の設計一次エネルギー消費量（MJ/h） (34)
 
     """
-    
+
     # 電気の量 1kWh を熱量に換算する係数
     f_prim = get_f_prim()
     return calc_E_E_AP_d_t(n_p) * f_prim / 1000 + get_E_G_AP_d_t() + get_E_K_AP_d_t() + get_E_M_AP_d_t()  # (34)
@@ -1709,7 +1717,7 @@ def calc_E_CC_d_t(n_p):
       ndarray: 1 時間当たりの調理の設計一次エネルギー消費量
 
     """
-    
+
     # 電気の量 1kWh を熱量に換算する係数
     f_prim = get_f_prim()
 
@@ -1820,7 +1828,7 @@ def get_E_S(E_S_h, E_S_sell):
       float: 1年当たりのエネルギー利用効率化設備による設計一次エネルギー消費量の削減量 (MJ/yr) (36)
 
     """
-    
+
     return E_S_h + E_S_sell
 
 
@@ -1859,7 +1867,7 @@ def calc_E_S_PV_h(E_E_PV_h_d_t):
     Returns:
         float: 1年当たりの太陽光発電設備による発電量のうちの自家消費分に係る設計一次エネルギー消費量の削減量 (MJ/yr)
     """
-    
+
     # 電気の量 1kWh を熱量に換算する係数 (kJ/kWh)
     f_prim = get_f_prim()
 
@@ -1878,7 +1886,7 @@ def calc_E_S_CG_h(E_E_CG_h_d_t):
     Returns:
         float: 1年当たりのコージェネレーション設備による発電量のうちの自家消費分に係る設計一次エネルギー消費量の削減量 (MJ/yr)
     """
-    
+
     # 電気の量 1kWh を熱量に換算する係数 (kJ/kWh)
     f_prim = get_f_prim()
 
@@ -1898,7 +1906,7 @@ def get_E_S_sell(E_G_CG_sell):
       float: 1年当たりのコージェネレーション設備の売電量に係る設計一次エネルギー消費量の控除量 (MJ/yr)
 
     """
-    
+
     return E_G_CG_sell
 
 
@@ -1920,7 +1928,7 @@ def get_E_E_PV_h_d_t(E_E_PV_d_t, E_E_dmd_d_t, E_E_CG_h_d_t, has_PV):
       float: 1 時間当たりの太陽光発電設備による発電炉湯のうちの自家消費分 (kWh/h)
 
     """
-    
+
     if has_PV == False:
         # 太陽光発電設備を採用しない場合 (42-1)
         E_E_PV_h_d_t = np.zeros_like(E_E_PV_d_t)
@@ -1945,7 +1953,7 @@ def get_E_E_CG_h(E_E_CG_h_d_t):
       float: 1年当たりのコージェネレーション設備による発電量のうちの自家消費分 (kWh/yr)
 
     """
-    
+
     return np.sum(E_E_CG_h_d_t)
 
 
@@ -1993,7 +2001,7 @@ def calc_E_G_CG_sell(E_CG_sell, E_E_CG_self, E_E_CG_h, E_G_CG_ded, e_BB_ave, Q_C
       float: 1年当たりのコージェネレーション設備による売電量に係るガス消費量の控除量 (MJ/yr)
 
     """
-    
+
     if has_CG == False:
         # コージェネレーション設備を採用しない場合 (46-1)
         E_G_CG_sell = np.zeros_like(E_CG_sell)
@@ -2059,7 +2067,7 @@ def calc_E_CG_sell(E_E_CG_sell_d_t):
       float: 1年当たりのコージェネレーション設備による売電量（一次エネルギー換算値）(MJ/yr)
 
     """
-    
+
     # 電気の量 1kWh を熱量に換算する係数 (kJ/kWh) (s2-1-b)
     f_prim = get_f_prim()
 
@@ -2113,7 +2121,7 @@ def get_E_R(E_S_PV_h, E_PV_sell):
 # 15.設計二次エネルギー消費量(参考)
 # ============================================================================
 
-def calc_E_E(region, sol_region, A_A, A_MR, A_OR, A_env, HW, Q, TS, mu_H, mu_C, r_A_ufvnt, underfloor_insulation,
+def calc_E_E(region, sol_region, A_A, A_MR, A_OR, r_env, HW, Q, TS, mu_H, mu_C, r_A_ufvnt, underfloor_insulation,
             NV_MR, NV_OR, mode_H, mode_C,
             V, L,
             H_A=None,
@@ -2164,7 +2172,7 @@ def calc_E_E(region, sol_region, A_A, A_MR, A_OR, A_env, HW, Q, TS, mu_H, mu_C, 
       HEX(dict, optional, optional): 熱交換器型設備仕様辞書, defaults to None
       PV(ndarray, optional, optional): 太陽光発電設備のリスト, defaults to None
       solrad(ndarray, optional, optional): load_solrad の返り値, defaults to None
-      A_env: param L_H_d_t:  (Default value = None)
+      r_env(float): 床面積の合計に対する外皮の部位の面積の合計の比 (-)
       L_H_d_t: Default value = None)
 
     Returns:
@@ -2195,12 +2203,12 @@ def calc_E_E(region, sol_region, A_A, A_MR, A_OR, A_env, HW, Q, TS, mu_H, mu_C, 
                                          sol_region, underfloor_insulation)
 
     # 暖房設備の消費電力量
-    E_E_H_d_t = get_E_E_H_d_t(region, sol_region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q,
+    E_E_H_d_t = get_E_E_H_d_t(region, sol_region, A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q,
                               H_A, spec_MR, spec_OR, spec_HS, mode_MR, mode_OR, HW, CG, SHC, heating_flag_d,
                               L_T_H_d_t_i, L_CS_d_t, L_CL_d_t)
 
     # 1時間当たりの冷房設備の消費電力量
-    E_E_C_d_t = calc_E_E_C_d_t(region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, C_A, C_MR, C_OR, L_T_H_d_t_i, L_CS_d_t, L_CL_d_t)
+    E_E_C_d_t = calc_E_E_C_d_t(region, A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, C_A, C_MR, C_OR, L_T_H_d_t_i, L_CS_d_t, L_CL_d_t)
 
     # 1 時間当たりの機械換気設備の消費電力量
     E_E_V_d_t = calc_E_E_V_d_t(n_p, A_A, V, HEX)
@@ -2221,7 +2229,7 @@ def calc_E_E(region, sol_region, A_A, A_MR, A_OR, A_env, HW, Q, TS, mu_H, mu_C, 
     E_CG, E_E_CG_gen_d_t, E_E_CG_h_d_t, E_E_TU_aux_d_t, E_E_CG_h_d_t, E_G_CG_ded, e_BB_ave, Q_CG_h =\
         calc_E_W(A_A, region, sol_region, HW, SHC, CG, H_A, H_MR, H_OR, H_HS, C_A, C_MR,
                 C_OR,
-                                V, L, A_MR, A_OR, A_env, Q, mu_H, mu_C, NV_MR, NV_OR, TS,
+                                V, L, A_MR, A_OR, r_env, Q, mu_H, mu_C, NV_MR, NV_OR, TS,
                                 r_A_ufvnt, HEX, underfloor_insulation, mode_H, mode_C)
 
     # 太陽光発電設備の発電量
@@ -2243,7 +2251,7 @@ def calc_E_E(region, sol_region, A_A, A_MR, A_OR, A_env, HW, Q, TS, mu_H, mu_C, 
     return Decimal(E_E).quantize(Decimal('0.1'), rounding=ROUND_HALF_UP), E_E_PV_h_d_t, E_E_PV_d_t, E_E_CG_gen_d_t, E_E_CG_h_d_t, E_E_dmd_d_t, E_E_TU_aux_d_t
 
 
-def calc_E_G(region, sol_region, A_A, A_MR, A_OR, A_env, Q, mu_H, mu_C, NV_MR, NV_OR, TS, r_A_ufvnt, HEX, underfloor_insulation,
+def calc_E_G(region, sol_region, A_A, A_MR, A_OR, r_env, Q, mu_H, mu_C, NV_MR, NV_OR, TS, r_A_ufvnt, HEX, underfloor_insulation,
             H_A, H_MR, H_OR, H_HS, C_A, C_MR, C_OR, V, L, HW, SHC,
             spec_MR, spec_OR, spec_HS, mode_MR, mode_OR, mode_H, mode_C, CG, L_T_H_d_t_i,
             L_HWH, heating_flag_d):
@@ -2255,7 +2263,7 @@ def calc_E_G(region, sol_region, A_A, A_MR, A_OR, A_env, Q, mu_H, mu_C, NV_MR, N
       A_A(float): 床面積の合計 (m2)
       A_MR(float): 主たる居室の床面積 (m2)
       A_OR(float): その他の居室の床面積 (m2)
-      A_env(float): 外皮の部位の面積の合計 (m2)
+      r_env(float): 床面積の合計に対する外皮の部位の面積の合計の比 (-)
       Q(float): 当該住戸の熱損失係数 (W/m2K)
       mu_H(float): 断熱性能の区分݆における日射取得性能の区分݇の暖房期の日射取得係数
       mu_C(float): 断熱性能の区分݆における日射取得性能の区分݇の冷房期の日射取得係数
@@ -2308,7 +2316,7 @@ def calc_E_G(region, sol_region, A_A, A_MR, A_OR, A_env, Q, mu_H, mu_C, NV_MR, N
     # 1日当たりのコージェネレーション設備のガス消費量 (MJ/h)
     E_G_CG_d_t, *args = calc_E_CG_d_t(A_A, region, sol_region, HW, SHC, CG, H_A, H_MR, H_OR, H_HS, C_A, C_MR,
                            C_OR,
-                           V, L, A_MR, A_OR, A_env, Q, mu_H, mu_C, NV_MR, NV_OR, TS,
+                           V, L, A_MR, A_OR, r_env, Q, mu_H, mu_C, NV_MR, NV_OR, TS,
                            r_A_ufvnt, HEX, underfloor_insulation, mode_H, mode_C)
 
     # 1 時間当たりの家電のガス消費量 (MJ/h)
@@ -2354,7 +2362,7 @@ def calc_E_K(region, sol_region, A_A, A_MR, A_OR, H_A, spec_MR, spec_OR, spec_HS
       float: 1 年当たりの設計灯油消費量（MJ/年） (56)
 
     """
-    
+
     # 仮想居住人数
     n_p = get_n_p(A_A)
 
@@ -2391,7 +2399,7 @@ def calc_E_K(region, sol_region, A_A, A_MR, A_OR, H_A, spec_MR, spec_OR, spec_HS
     return E_K
 
 
-def calc_E_UT_H(region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, mode_H, H_A, spec_MR, spec_OR, spec_HS, mode_MR, mode_OR, HW, CG,
+def calc_E_UT_H(region, A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, mode_H, H_A, spec_MR, spec_OR, spec_HS, mode_MR, mode_OR, HW, CG,
                L_T_H_d_t, L_CS_d_t, L_CL_d_t):
     """1 年当たりの未処理暖房負荷の設計一次エネルギー消費量相当値（MJ/年） (58)
 
@@ -2400,7 +2408,7 @@ def calc_E_UT_H(region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, mode_H, H_A, spec
         A_A(float): 床面積の合計 [m2]
         A_MR(float): 主たる居室の床面積 [m2]
         A_OR(float): その他の居室の床面積 [m2]
-        A_env(float): 外皮の部位の面積の合計 [m2]
+      r_env(float): 床面積の合計に対する外皮の部位の面積の合計の比 [-]
         mu_H(float): 断熱性能の区分݆における日射取得性能の区分݇の暖房期の日射取得係数 [(W/m2)/(W/m2)]
         mu_C(float): 断熱性能の区分݆における日射取得性能の区分݇の冷房期の日射取得係数 [(W/m2)/(W/m2)]
         Q(float): 当該住戸の熱損失係数 [W/m2K]
@@ -2422,7 +2430,7 @@ def calc_E_UT_H(region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, mode_H, H_A, spec
 
     """
     # 暖房設備の未処理暖房負荷の設計一次エネルギー消費量相当値
-    E_UT_H_d_t = calc_E_UT_H_d_t(region, A_A, A_MR, A_OR, A_env, mu_H, mu_C, Q, mode_H, H_A, spec_MR, spec_OR, spec_HS, mode_MR, mode_OR, HW, CG,
+    E_UT_H_d_t = calc_E_UT_H_d_t(region, A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, mode_H, H_A, spec_MR, spec_OR, spec_HS, mode_MR, mode_OR, HW, CG,
                                  L_T_H_d_t, L_CS_d_t, L_CL_d_t)
 
     # 1 年当たりの未処理暖房負荷の設計一次エネルギー消費量相当値

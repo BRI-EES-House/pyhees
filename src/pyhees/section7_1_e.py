@@ -10,7 +10,7 @@ import numpy as np
 # ============================================================================
 
 def calc_E_E_hs_d_t(L_dashdash_k_d_t, L_dashdash_s_d_t, L_dashdash_w_d_t, L_dashdash_b1_d_t, L_dashdash_b2_d_t,
-                    L_dashdash_ba1_d_t, L_dashdash_ba2_d_t,
+                    L_dashdash_ba1_d_t, L_dashdash_ba2_d_t, daytime_heating,
                     e_rtd=None, theta_ex_d_Ave_d=None, theta_ex_Nave_d=None, CO2HP=None):
     """1日当たりの給湯機の消費電力量 (1)
 
@@ -22,6 +22,7 @@ def calc_E_E_hs_d_t(L_dashdash_k_d_t, L_dashdash_s_d_t, L_dashdash_w_d_t, L_dash
       L_dashdash_b2_d_t(ndarray): 1時間当たりの浴槽自動湯はり時における太陽熱補正給湯負荷 (MJ/h)
       L_dashdash_ba1_d_t(ndarray): 1時間当たりの浴槽水栓さし湯時における太陽熱補正給湯負荷 (MJ/h)
       L_dashdash_ba2_d_t(ndarray): 1時間当たりの浴槽追焚時における太陽熱補正給湯負荷 (MJ/h)
+      daytime_heating(bool): 昼間沸上げを評価するかのフラグ
       e_rtd(float, optional): 当該給湯機の効率 (Default value = None)
       theta_ex_d_Ave_d(ndarray, optional): 日付dにおける日平均外気温 (℃) (Default value = None)
       theta_ex_Nave_d(ndarray, optional): 日付dにおける夜間平均外気温 (℃) (Default value = None)
@@ -202,28 +203,43 @@ def calc_E_E_hs_d_t(L_dashdash_k_d_t, L_dashdash_s_d_t, L_dashdash_w_d_t, L_dash
     # セカンドモードのヒートポンプの加熱能力 (12)
     q_HP_cm2_d = get_q_HP_cm_d(e_hat_HP_cm2_d, P_HP_cm2_d)
 
-    # 沸き上げ終了時刻
-    t_HP_stop = get_t_HP_stop()
+    # ヒートポンプ昼間沸上率
+    R_day = get_R_day(daytime_heating)
 
-    # ファーストモードの1日当たりのヒートポンプ運転時間(19)
-    tau_dot_HP_cm1_d = get_tau_dot_HP_cm_d(Q_dot_HP_cm1_d, q_HP_cm1_d)
-    # セカンドモードの1日当たりのヒートポンプ運転時間(19)
-    tau_dot_HP_cm2_d = get_tau_dot_HP_cm_d(Q_dot_HP_cm2_d, q_HP_cm2_d)
+    # ファーストモード 日付dにおける制御モードcmの1日当たりのヒートポンプ運転時間数の合計 (20)
+    tau_dot_dot_HP_cm1_d = get_tau_dot_dot_HP_cm_d(Q_dot_HP_cm1_d, q_HP_cm1_d)
+    # セカンドモード 日付dにおける制御モードcmの1日当たりのヒートポンプ運転時間数の合計 (20)
+    tau_dot_dot_HP_cm2_d = get_tau_dot_dot_HP_cm_d(Q_dot_HP_cm2_d, q_HP_cm2_d)
 
-    # ファーストモードの日付dに沸き上げが終了する運転の沸き上げ開始時刻 (18)
-    t_HP_start_d_1 = get_t_HP_start_d(t_HP_stop, tau_dot_HP_cm1_d)
-    # セカンドモードの日付dに沸き上げが終了する運転の沸き上げ開始時刻 (18)
-    t_HP_start_d_2 = get_t_HP_start_d(t_HP_stop, tau_dot_HP_cm2_d)
+    # 沸き上げ時間帯の種類
+    hrs_bw_tbl = get_table_3()
 
-    # ファーストモードの1時間当たりのヒートポンプ運転時間(17)
-    tau_HP_cm1_d_t = get_tau_HP_cm_d_t(t_HP_stop, t_HP_start_d_1, tau_dot_HP_cm1_d)
-    # セカンドモードの1時間当たりのヒートポンプ運転時間(17)
-    tau_HP_cm2_d_t = get_tau_HP_cm_d_t(t_HP_stop, t_HP_start_d_2, tau_dot_HP_cm2_d)
+    tau_HP_cm1_hrs_bw_d_t_dic = {}
+    tau_HP_cm2_hrs_bw_d_t_dic = {}
+
+    for hrs_bw in hrs_bw_tbl:
+        # 沸き上げ終了時刻
+        t_HP_stop_hrs_bw = get_t_HP_stop_hrs_bw(hrs_bw)
+
+        # ファーストモード 日付dにおける制御モードcmの1日当たりのヒートポンプ運転時間 (19)
+        tau_dot_HP_cm1_hrs_bw_d = get_tau_dot_HP_cm_hrs_bw_d(hrs_bw, tau_dot_dot_HP_cm1_d, R_day)
+        # セカンドモード 日付dにおける制御モードcmの1日当たりのヒートポンプ運転時間 (19)
+        tau_dot_HP_cm2_hrs_bw_d = get_tau_dot_HP_cm_hrs_bw_d(hrs_bw, tau_dot_dot_HP_cm2_d, R_day)
+
+        # ファーストモードの日付dに沸き上げが終了する運転の沸き上げ開始時刻 (18)
+        t_HP_start_hrs_bw_d_1 = get_t_HP_start_hrs_bw_d(t_HP_stop_hrs_bw, tau_dot_HP_cm1_hrs_bw_d)
+        # セカンドモードの日付dに沸き上げが終了する運転の沸き上げ開始時刻 (18)
+        t_HP_start_hrs_bw_d_2 = get_t_HP_start_hrs_bw_d(t_HP_stop_hrs_bw, tau_dot_HP_cm2_hrs_bw_d)
+
+        # ファーストモードの1時間当たりのヒートポンプ運転時間(17)
+        tau_HP_cm1_hrs_bw_d_t_dic[hrs_bw] = get_tau_HP_cm_hrs_bw_d_t(t_HP_stop_hrs_bw, t_HP_start_hrs_bw_d_1, tau_dot_HP_cm1_hrs_bw_d)
+        # セカンドモードの1時間当たりのヒートポンプ運転時間(17)
+        tau_HP_cm2_hrs_bw_d_t_dic[hrs_bw] = get_tau_HP_cm_hrs_bw_d_t(t_HP_stop_hrs_bw, t_HP_start_hrs_bw_d_2, tau_dot_HP_cm2_hrs_bw_d)
 
     # ファーストモードの補機の消費電力量　(25)
-    E_E_aux_cm1_d_t = get_E_E_aux_cm_d_t(P_aux_HP_on_test, P_aux_HP_off_test, tau_HP_cm1_d_t)
+    E_E_aux_cm1_d_t = get_E_E_aux_cm_d_t(P_aux_HP_on_test, P_aux_HP_off_test, tau_HP_cm1_hrs_bw_d_t_dic)
     # ファーストモードの補機の消費電力量　(25)
-    E_E_aux_cm2_d_t = get_E_E_aux_cm_d_t(P_aux_HP_on_test, P_aux_HP_off_test, tau_HP_cm2_d_t)
+    E_E_aux_cm2_d_t = get_E_E_aux_cm_d_t(P_aux_HP_on_test, P_aux_HP_off_test, tau_HP_cm2_hrs_bw_d_t_dic)
 
     # ファーストモードの1日当たりの沸き上げに係るヒートポンプの消費電力量 (5)
     E_dot_E_HP_bw_cm1_d = get_E_dot_E_HP_bw_cm_d(Q_dot_HP_cm1_d, e_hat_HP_cm1_d)
@@ -241,9 +257,9 @@ def calc_E_E_hs_d_t(L_dashdash_k_d_t, L_dashdash_s_d_t, L_dashdash_w_d_t, L_dash
     E_dot_E_HP_cm2_d = get_E_dot_E_HP_cm_d(E_dot_E_HP_bw_cm2_d, E_dot_E_HP_def_cm2_d)
 
     # ファーストモードの1時間当たりのヒートポンプの消費電力量 (3)
-    E_E_HP_cm1_d_t = get_E_E_HP_cm_d_t(t_HP_stop, tau_dot_HP_cm1_d, E_dot_E_HP_cm1_d, tau_HP_cm1_d_t)
+    E_E_HP_cm1_d_t = get_E_E_HP_cm_d_t(R_day, tau_dot_dot_HP_cm1_d, E_dot_E_HP_cm1_d, tau_HP_cm1_hrs_bw_d_t_dic)
     # セカンドモードの1時間当たりのヒートポンプの消費電力量 (3)
-    E_E_HP_cm2_d_t = get_E_E_HP_cm_d_t(t_HP_stop, tau_dot_HP_cm2_d, E_dot_E_HP_cm2_d, tau_HP_cm2_d_t)
+    E_E_HP_cm2_d_t = get_E_E_HP_cm_d_t(R_day, tau_dot_dot_HP_cm2_d, E_dot_E_HP_cm2_d, tau_HP_cm2_hrs_bw_d_t_dic)
 
     # ファーストモードの1時間当たりの給湯機の消費電力量 (2)
     E_E_hs_cm1_d_t = get_E_E_hs_cm_d_t(E_E_HP_cm1_d_t, E_E_aux_cm1_d_t)
@@ -257,9 +273,25 @@ def calc_E_E_hs_d_t(L_dashdash_k_d_t, L_dashdash_s_d_t, L_dashdash_w_d_t, L_dash
     r_usg_cm2 = get_r_usg_cm2()
 
     # 消費電力量(1)
-    E_E_hs_d_t = r_usg_cm1 * E_E_hs_cm1_d_t + r_usg_cm2 * E_E_hs_cm2_d_t
+    E_E_hs_d_t = get_E_E_hs_d_t(E_E_hs_cm1_d_t, E_E_hs_cm2_d_t, r_usg_cm1, r_usg_cm2)
 
     return E_E_hs_d_t
+
+
+def get_E_E_hs_d_t(E_E_hs_cm1_d_t, E_E_hs_cm2_d_t, r_usg_cm1, r_usg_cm2):
+    """1日当たりの給湯機の消費電力量 (kWh/d) (1)
+
+    Args:
+      E_E_hs_cm1_d_t(ndarray): 日付dの時刻tにおけるファーストモードの1時間当たりの給湯機の消費電力量
+      E_E_hs_cm2_d_t(ndarray): 日付dの時刻tにおけるセカンドモードの1時間当たりの給湯機の消費電力量
+      r_usg_cm1(ndarray): 制御モードがファーストモードの利用率
+      r_usg_cm2(ndarray): 制御モードがセカンドモードの利用率
+
+    Returns:
+      ndarray: 1日当たりの給湯機の消費電力量 (kWh/d)
+
+    """
+    return r_usg_cm1 * E_E_hs_cm1_d_t + r_usg_cm2 * E_E_hs_cm2_d_t
 
 
 def get_r_usg_cm1():
@@ -342,59 +374,98 @@ def get_E_K_hs_d_t():
 # E.5.1 消費電力量
 # ============================================================================
 
-def get_E_E_HP_cm_d_t(t_HP_stop, tau_dot_HP_cm_d, E_dot_E_HP_cm_d, tau_HP_cm_d_t):
-    """日付dの時刻tにおける制御モードcmの1時間当たりのヒートポンプの消費電力量(3-1)(3-2)
+def get_E_E_HP_cm_d_t(R_day, tau_dot_dot_HP_cm_d, E_dot_E_HP_cm_d, tau_HP_cm_hrs_bw_d_t_lst):
+    """日付dの時刻tにおける制御モードcmの1時間当たりのヒートポンプの消費電力量 (kWh/h) (3-1)(3-2)(3-3)(3-4)
 
     Args:
-      t_HP_stop(float): 沸き上げ終了時刻
-      tau_dot_HP_cm_d(ndarray): 日付dにおける制御モードcmの1日当たりのヒートポンプ運転時間
+      R_day(float): 日付dにおける制御モードcmのヒートポンプの加熱能力 (MJ/d)
+      tau_dot_dot_HP_cm_d(ndarray): 日付dにおける制御モードcmの1日当たりのヒートポンプ運転時間
       E_dot_E_HP_cm_d(ndarray): 日付dにおける制御モードcmの1日当たりのヒートポンプの消費電力量
-      tau_HP_cm_d_t(ndarray): 日付dの時刻tにおける制御モードcmの1時間当たりのヒートポンプ運転時間
+      tau_HP_cm_hrs_bw_d_t_lst(dict): 日付dの時刻tにおける制御モードcmの1時間当たりのヒートポンプ運転時間
 
     Returns:
-      ndarray: 日付dの時刻tにおける制御モードcmの1時間当たりのヒートポンプの消費電力量
+      ndarray: 日付dの時刻tにおける制御モードcmの1時間当たりのヒートポンプの消費電力量 (kWh/h)
 
     """
     E_E_HP_cm_d_t = np.zeros(24 * 365)
 
+    # 沸き上げ時間帯に対する沸き上げ終了時刻
+    t_HP_stop_hrs_bw_night = get_t_HP_stop_hrs_bw(hrs_bw = 'night')
+    t_HP_stop_hrs_bw_day = get_t_HP_stop_hrs_bw(hrs_bw = 'day')
+
+    tau_HP_cm_hrs_bw_d_t_night = tau_HP_cm_hrs_bw_d_t_lst['night']
+    tau_HP_cm_hrs_bw_d_t_day = tau_HP_cm_hrs_bw_d_t_lst['day']
+
     # 1日後
     E_dot_E_HP_cm_d_1 = np.roll(E_dot_E_HP_cm_d, -1)
-    tau_dot_HP_cm_d_1 = np.roll(tau_dot_HP_cm_d, -1)
+    tau_dot_dot_HP_cm_d_1 = np.roll(tau_dot_dot_HP_cm_d, -1)
 
     # 24時間化
-    tau_dot_HP_cm_d_t = np.repeat(tau_dot_HP_cm_d, 24)
-    tau_dot_HP_cm_d_1_t = np.repeat(tau_dot_HP_cm_d_1, 24)
+    tau_dot_dot_HP_cm_d_t = np.repeat(tau_dot_dot_HP_cm_d, 24)
+    tau_dot_dot_HP_cm_d_1_t = np.repeat(tau_dot_dot_HP_cm_d_1, 24)
     E_dot_E_HP_cm_d_t = np.repeat(E_dot_E_HP_cm_d, 24)
     E_dot_E_HP_cm_d_1_t = np.repeat(E_dot_E_HP_cm_d_1, 24)
+    
+    # R_day = 0 の場合 (3-1)(3-2)
+    t1 = R_day == 0.0
 
-    # 0 <= t < t_HP_stop の場合　(3-1)
-    t1 = np.tile(np.logical_and(0 <= np.arange(24), np.arange(24) <= t_HP_stop), 365)
+    # 0 <= t < t_HP_stop_hrs_bw_night の場合　(3-1)
+    t2 = np.tile(np.logical_and(0.0 <= np.arange(24), np.arange(24) < t_HP_stop_hrs_bw_night), 365)
 
-    # tau_dot_HP_cm_d == 0 の場合
-    t2 = tau_dot_HP_cm_d_t == 0
-    t3 = np.logical_and(t1, t2)
-    E_E_HP_cm_d_t[t3] = 0
+    # tau_dot_dot_HP_cm_d_t == 0 の場合
+    t3 = tau_dot_dot_HP_cm_d_t == 0.0
+    t4 = np.logical_and(t1, t2, t3)
+    E_E_HP_cm_d_t[t4] = 0.0
 
-    # tau_dot_HP_cm_d != 0 の場合
-    t4 = tau_dot_HP_cm_d_t != 0
-    t5 = np.logical_and(t1, t4)
-    E_E_HP_cm_d_t[t5] = E_dot_E_HP_cm_d_t[t5] * (tau_HP_cm_d_t[t5] / tau_dot_HP_cm_d_t[t5])
+    # tau_dot_dot_HP_cm_d_t != 0 の場合
+    t5 = tau_dot_dot_HP_cm_d_t != 0.0
+    t6 = np.logical_and(t1, t2, t5)
+    E_E_HP_cm_d_t[t6] = E_dot_E_HP_cm_d_t[t6] * tau_HP_cm_hrs_bw_d_t_night[t6] / tau_dot_dot_HP_cm_d_t[t6]
 
-    # t_HP_stop <= t < 24 の場合　(3-2)
-    t6 = np.tile(np.logical_and(t_HP_stop <= np.arange(24), np.arange(24) <= 24), 365)
+    # t_HP_stop_hrs_bw_night <= t < 24 の場合　(3-2)
+    t7 = np.tile(np.logical_and(t_HP_stop_hrs_bw_night <= np.arange(24), np.arange(24) < 24), 365)
 
-    # tau_dot_HP_cm_d_1 == 0 の場合
-    t7 = tau_dot_HP_cm_d_1_t == 0
-    t8 = np.logical_and(t6, t7)
-    E_E_HP_cm_d_t[t8] = 0
+    # tau_dot_dot_HP_cm_d_1_t == 0 の場合
+    t8 = tau_dot_dot_HP_cm_d_1_t == 0.0
+    t9 = np.logical_and(t1, t7, t8)
+    E_E_HP_cm_d_t[t9] = 0.0
 
-    # tau_dot_HP_cm_d_1 != 0 の場合
-    t9 = tau_dot_HP_cm_d_1_t != 0
-    t10 = np.logical_and(t6, t9)
-    E_E_HP_cm_d_t[t10] = E_dot_E_HP_cm_d_1_t[t10] * (tau_HP_cm_d_t[t10] / tau_dot_HP_cm_d_1_t[t10])
+    # tau_dot_dot_HP_cm_d_1_t != 0 の場合
+    t10 = tau_dot_dot_HP_cm_d_1_t != 0.0
+    t11 = np.logical_and(t1, t7, t10)
+    E_E_HP_cm_d_t[t11] = E_dot_E_HP_cm_d_1_t[t11] * tau_HP_cm_hrs_bw_d_t_night[t11] / tau_dot_dot_HP_cm_d_1_t[t11]
+    
+    # R_day != 0 の場合 (3-3)(3-4)
+    t12 = R_day != 0
+    
+    # 0 <= t < t_HP_stop_hrs_bw_day の場合　(3-3)
+    t13 = np.tile(np.logical_and(0.0 <= np.arange(24), np.arange(24) < t_HP_stop_hrs_bw_day), 365)
+
+    # tau_dot_dot_HP_cm_d_t == 0 の場合
+    t14 = tau_dot_dot_HP_cm_d_t == 0.0
+    t15 = np.logical_and(t12, t13, t14)
+    E_E_HP_cm_d_t[t15] = 0.0
+
+    # tau_dot_dot_HP_cm_d_t != 0 の場合
+    t16 = tau_dot_dot_HP_cm_d_t != 0.0
+    t17 = np.logical_and(t12, t13, t16)
+    E_E_HP_cm_d_t[t17] = E_dot_E_HP_cm_d_t[t17] * ((tau_HP_cm_hrs_bw_d_t_night[t17] + tau_HP_cm_hrs_bw_d_t_day[t17]) / tau_dot_dot_HP_cm_d_t[t17])
+
+    # t_HP_stop_hrs_bw_day <= t < 24 の場合　(3-4)
+    t18 = np.tile(np.logical_and(t_HP_stop_hrs_bw_day <= np.arange(24), np.arange(24) < 24), 365)
+
+    # tau_dot_dot_HP_cm_d_1_t == 0 の場合
+    t19 = tau_dot_dot_HP_cm_d_1_t == 0.0
+    t20 = np.logical_and(t12, t18, t19)
+    E_E_HP_cm_d_t[t20] = 0.0
+
+    # tau_dot_dot_HP_cm_d_1_t != 0 の場合
+    t21 = tau_dot_dot_HP_cm_d_1_t != 0.0
+    t22 = np.logical_and(t12, t18, t21)
+    E_E_HP_cm_d_t[t22] = E_dot_E_HP_cm_d_1_t[t22] * ((tau_HP_cm_hrs_bw_d_t_night[t22] + tau_HP_cm_hrs_bw_d_t_day[t22]) / tau_dot_dot_HP_cm_d_1_t[t22])
 
     return E_E_HP_cm_d_t
-    
+
 
 def get_E_dot_E_HP_cm_d(E_dot_E_HP_bw_cm_d, E_dot_E_HP_def_cm_d):
     """日付dにおける制御モードcmの1日当たりのヒートポンプの消費電力量(4)
@@ -435,7 +506,7 @@ def get_E_dot_E_HP_def_cm_d(E_dot_HP_bw_cm_d, C_def_cm_d):
       ndarray: 日付dの時刻tにおける制御モードcmの1日当たりの除霜に係るヒートポンプの消費電力量
 
     """
-    return E_dot_HP_bw_cm_d * (1 / C_def_cm_d - 1)
+    return E_dot_HP_bw_cm_d * (1.0 / C_def_cm_d - 1.0)
 
 
 # ============================================================================
@@ -490,7 +561,7 @@ def get_e_hat_HP_cm_d(theta_ex_Nave_d, theta_star_ex_sum, theta_star_ex_imd, the
     e_hat_HP_cm_d[f5] = e_hat_HP_frst_cm + (theta_ex_Nave_d[f5] - theta_star_ex_frst) / (theta_star_ex_frst - theta_star_ex_win_cd) * \
                     (e_hat_HP_frst_cm - e_hat_HP_win_cd_cm)
 
-    return e_hat_HP_cm_d
+    return np.clip(e_hat_HP_cm_d, 1.0, None)
 
 
 def get_e_hat_HP_cm(r_e_HP_cm, e_HP_sum_std, e_HP_imd_std, e_HP_win_std, e_HP_frst_upper_cm, e_HP_frst_high, e_HP_win_cd_high,
@@ -561,13 +632,12 @@ def get_r_e_HP_cm2(theta_hat_bw_win_cm):
       float: セカンドモードの実働効率比
 
     """
-    if (theta_hat_bw_win_cm <= 75):
+    if (theta_hat_bw_win_cm <= 75.0):
         return 0.90
-    elif (75 < theta_hat_bw_win_cm):
-        return -0.005 * (theta_hat_bw_win_cm - 75) + 0.90
+    elif (75.0 < theta_hat_bw_win_cm):
+        return -0.005 * (theta_hat_bw_win_cm - 75.0) + 0.90
     else:
         raise ValueError(theta_hat_bw_win_cm)
-
 
 
 def get_e_HP_std(theta_bw_sum_std_test, theta_bw_imd_std_test, theta_bw_win_std_test, theta_star_bw_std, theta_star_ex_imd,
@@ -689,15 +759,15 @@ def get_P_HP_cm_d(q_HP_sum_std_test, q_HP_win_std_test, A_p, B_p, theta_hat_bw_c
         P_HP_cm_d = A_p * (theta_hat_bw_cm_d - theta_ex_Nave_d) + B_p
     # (13-2)
     else:
-        f1 = theta_ex_Nave_d <= 20
-        f2 = 20 < theta_ex_Nave_d
+        f1 = theta_ex_Nave_d <= 20.0
+        f2 = 20.0 < theta_ex_Nave_d
 
         P_HP_cm_d[f1] = A_p * (theta_hat_bw_cm_d[f1] - theta_ex_Nave_d[f1]) + B_p
 
         P_HP_cm_d[f2] = A_p * ((theta_hat_bw_cm_d[f2] - theta_ex_Nave_d[f2]) - (theta_star_bw_std - theta_star_ex_sum)) + \
                         P_HP_sum_std_test
 
-    return P_HP_cm_d
+    return np.clip(P_HP_cm_d, 0.1, None)
 
 
 # ============================================================================
@@ -791,115 +861,161 @@ def get_C_def_frst_test(e_HP_def_high_test, e_HP_frst_high_test):
 # E.5.5 ヒートポンプ運転時間
 # ============================================================================
 
-def get_tau_HP_cm_d_t(t_HP_stop, t_HP_start_d, tau_dot_HP_cm_d):
-    """日付dの時刻tにおける制御モードcmの1時間当たりのヒートポンプ運転時間(h/h)(17-1)(17-2)(17-3)(17-4)
+def get_tau_HP_cm_hrs_bw_d_t(t_HP_stop_hrs_bw, t_HP_start_hrs_bw_d, tau_dot_HP_cm_hrs_bw_d):
+    """日付dの時刻tにおける制御モードcmの沸き上げ時間帯に対する1時間当たりのヒートポンプ運転時間数 (h/h) (17-1)(17-2)(17-3)(17-4)(17-5)
 
     Args:
-      t_HP_stop(float): 沸き上げ終了時刻
-      t_HP_start_d(ndarray): 日付dの時刻tにおける制御モードcmの1時間当たりのヒートポンプ運転時間
-      t_HP_start_d(ndarray): 日付dにおける制御モードcmの1日当たりのヒートポンプ運転時間
-      tau_dot_HP_cm_d: returns: 日付dの時刻tにおける制御モードcmの1時間当たりのヒートポンプ運転時間
+      t_HP_stop_hrs_bw(float): 沸き上げ時間帯に対する沸き上げ終了時刻 (-)
+      t_HP_start_hrs_bw_d(ndarray): 沸き上げ時間帯に対する日付dに沸き上げが終了する運転の沸き上げ開始時刻 (-)
+      tau_dot_HP_cm_hrs_bw_d: 日付dの時刻tにおける制御モードcmの沸き上げ時間帯に対する1時間当たりのヒートポンプ運転時間数 (h/h)
 
     Returns:
-      ndarray: 日付dの時刻tにおける制御モードcmの1時間当たりのヒートポンプ運転時間
+      ndarray: 日付dの時刻tにおける制御モードcmの沸き上げ時間帯に対する1時間当たりのヒートポンプ運転時間 (h/h)
 
     """
-    tau_HP_cm_d_t = np.zeros(24 * 365)
-
-    # 1日後
-    t_HP_start_d_1 = np.roll(t_HP_start_d, -1)
-    tau_dot_HP_cm_d_1 = np.roll(tau_dot_HP_cm_d, -1)
+    tau_HP_cm_hrs_bw_d_t = np.zeros(24 * 365)
 
     # 24時間化
-    t_HP_start_d_t = np.repeat(t_HP_start_d, 24)
-    t_HP_start_d_1_t = np.repeat(t_HP_start_d_1, 24)
-    tau_dot_HP_cm_d_t = np.repeat(tau_dot_HP_cm_d, 24)
-    tau_dot_HP_cm_d_1_t = np.repeat(tau_dot_HP_cm_d_1, 24)
+    tau_dot_HP_cm_hrs_bw_d_t = np.repeat(tau_dot_HP_cm_hrs_bw_d, 24)
+
+    # (17-1)
+    f1 = tau_dot_HP_cm_hrs_bw_d_t == 0.0
+    tau_HP_cm_hrs_bw_d_t[f1] = 0.0
+
+    f2 = tau_dot_HP_cm_hrs_bw_d_t > 0.0
+
+    # 1日後
+    t_HP_start_hrs_bw_d_1 = np.roll(t_HP_start_hrs_bw_d, -1)
+    tau_dot_HP_cm_hrs_bw_d_1 = np.roll(tau_dot_HP_cm_hrs_bw_d, -1)
+
+    # 24時間化
+    t_HP_stop_hrs_bw_d_t = np.repeat(t_HP_stop_hrs_bw, 24 * 365)
+    t_HP_start_hrs_bw_d_t = np.repeat(t_HP_start_hrs_bw_d, 24)
+    t_HP_start_hrs_bw_d_1_t = np.repeat(t_HP_start_hrs_bw_d_1, 24)
+    tau_dot_HP_cm_hrs_bw_d_1_t = np.repeat(tau_dot_HP_cm_hrs_bw_d_1, 24)
     t = np.tile(np.arange(24), 365)
 
-    # 0 <= t < t_HP_stop の場合
-    t1 = np.tile(np.logical_and(0 <= np.arange(24), np.arange(24) < t_HP_stop), 365)
+    # 0 <= t < t_HP_stop_hrs_bw_d_t の場合
+    cond_t_HP_stop1 = np.logical_and(0.0 <= t, t < t_HP_stop_hrs_bw_d_t)
 
-    # 0 <= t_HP_start_d の場合(沸き上げ開始と沸き上げ終了が同日に行われる場合) (17-1)
-    t2 = np.repeat(0 <= t_HP_start_d, 24)
+    f3 = np.logical_and(f2, cond_t_HP_stop1)
 
-    # t < t_HP_start_d の場合
-    t5 = t < t_HP_start_d_t
-    t6 = np.logical_and(np.logical_and(t1, t2), t5)
-    tau_HP_cm_d_t[t6] = 0
+    # 0 <= t_HP_start_hrs_bw_d_t の場合(沸き上げ開始と沸き上げ終了が同日に行われる場合) # (17-2)
+    cond_t_HP_start_hrs_bw_d1 = 0.0 <= t_HP_start_hrs_bw_d_t
 
-    # t == t_HP_start_d の場合
-    t7 = t == t_HP_start_d_t
-    t8 = np.logical_and(np.logical_and(t1, t2), t7)
-    tau_HP_cm_d_t[t8] = tau_dot_HP_cm_d_t[t8] - np.floor(tau_dot_HP_cm_d_t[t8])
+    # t < t_HP_start_hrs_bw_d_t の場合
+    t1 = t < t_HP_start_hrs_bw_d_t
+    t2 = np.logical_and(np.logical_and(f3, cond_t_HP_start_hrs_bw_d1), t1)
+    tau_HP_cm_hrs_bw_d_t[t2] = 0.0
 
-    # t > t_HP_start_d の場合
-    t9 = t > t_HP_start_d_t
-    t10 = np.logical_and(np.logical_and(t1, t2), t9)
-    tau_HP_cm_d_t[t10] = 1
+    # t == t_HP_start_hrs_bw_d_t の場合
+    t3 = t == t_HP_start_hrs_bw_d_t
+    t4 = np.logical_and(np.logical_and(f3, cond_t_HP_start_hrs_bw_d1), t3)
+    tau_HP_cm_hrs_bw_d_t[t4] = tau_dot_HP_cm_hrs_bw_d_t[t4] - np.floor(tau_dot_HP_cm_hrs_bw_d_t[t4])
 
-    # 0 > t_HP_start_d の場合(沸き上げが終了する日の前日に沸き上げが開始する場合) (17-2)
-    t11 = np.repeat(0 > t_HP_start_d, 24)
-    t12 = np.logical_and(t1, t11)
-    tau_HP_cm_d_t[t12] = 1
+    # t > t_HP_start_hrs_bw_d_t の場合
+    t5 = t > t_HP_start_hrs_bw_d_t
+    t6 = np.logical_and(np.logical_and(f3, cond_t_HP_start_hrs_bw_d1), t5)
+    tau_HP_cm_hrs_bw_d_t[t6] = 1.0
 
-    # t_HP_stop <= t < 24 の場合
-    t13 = np.tile(np.logical_and(t_HP_stop <= np.arange(24), np.arange(24) < 24), 365)
+    # 0 > t_HP_start_hrs_bw_d_t の場合(沸き上げが終了する日の前日に沸き上げが開始する場合) (17-3)
+    cond_t_HP_start_hrs_bw_d2 = 0.0 > t_HP_start_hrs_bw_d_t
+    t7 = np.logical_and(f3, cond_t_HP_start_hrs_bw_d2)
+    tau_HP_cm_hrs_bw_d_t[t7] = 1.0
 
-    # 0 <= t_HP_start_d_1 の場合(沸き上げ開始と沸き上げ終了が同日に行われる場合) (17-3)
-    t14 = np.repeat(0 <= t_HP_start_d_1, 24)
-    t15 = np.logical_and(t13, t14)
-    tau_HP_cm_d_t[t15] = 0
+    # t_HP_stop_hrs_bw_d_t <= t < 24 の場合
+    cond_t_HP_stop2 = np.logical_and(t_HP_stop_hrs_bw_d_t <= t, t < 24.0)
 
-    # 0 > t_HP_start_d_1 の場合(沸き上げが終了する日の前日に沸き上げが開始する場合) (17-4)
-    t16 = np.repeat(0 > t_HP_start_d_1, 24)
+    f4 = np.logical_and(f2, cond_t_HP_stop2)
 
-    # t < t_HP_start_d_1 + 24 の場合
-    t17 = t < t_HP_start_d_1_t + 24
-    t18 = np.logical_and(np.logical_and(t13, t16), t17)
-    tau_HP_cm_d_t[t18] = 0
+    # 0 <= t_HP_start_hrs_bw_d_1_t の場合(沸き上げ開始と沸き上げ終了が同日に行われる場合) (17-4)
+    cond_t_HP_start_hrs_bw_next_day1 = 0.0 <= t_HP_start_hrs_bw_d_1_t
 
-    # t == t_HP_start_d_1 + 24 の場合
-    t19 = t == t_HP_start_d_1_t + 24
-    t20 = np.logical_and(np.logical_and(t13, t16), t19)
-    tau_HP_cm_d_t[t20] = tau_dot_HP_cm_d_1_t[t20] - np.floor(tau_dot_HP_cm_d_1_t[t20])
+    t8 = np.logical_and(f4, cond_t_HP_start_hrs_bw_next_day1)
+    tau_HP_cm_hrs_bw_d_t[t8] = 0.0
 
-    # t > t_HP_start_d_1 + 24 の場合
-    t21 = t > t_HP_start_d_1_t + 24
-    t22 = np.logical_and(np.logical_and(t13, t16), t21)
-    tau_HP_cm_d_t[t22] = 1
+    # 0 > t_HP_start_hrs_bw_d_1_t の場合(沸き上げが終了する日の前日に沸き上げが開始する場合) (17-5)
+    cond_t_HP_start_hrs_bw_next_day2 = 0.0 > t_HP_start_hrs_bw_d_1_t
 
-    return tau_HP_cm_d_t
+    # t < t_HP_start_hrs_bw_d_1_t + 24 の場合
+    t9 = t < t_HP_start_hrs_bw_d_1_t + 24.0
+    t10 = np.logical_and(np.logical_and(f4, cond_t_HP_start_hrs_bw_next_day2), t9)
+    tau_HP_cm_hrs_bw_d_t[t10] = 0.0
+
+    # t == t_HP_start_hrs_bw_d_1_t + 24 の場合
+    t11 = t == t_HP_start_hrs_bw_d_1_t + 24.0
+    t12 = np.logical_and(np.logical_and(f4, cond_t_HP_start_hrs_bw_next_day2), t11)
+    tau_HP_cm_hrs_bw_d_t[t12] = tau_dot_HP_cm_hrs_bw_d_1_t[t12] - np.floor(tau_dot_HP_cm_hrs_bw_d_1_t[t12])
+
+    # t > t_HP_start_hrs_bw_d_1_t + 24 の場合
+    t13 = t > t_HP_start_hrs_bw_d_1_t + 24.0
+    t14 = np.logical_and(np.logical_and(f4, cond_t_HP_start_hrs_bw_next_day2), t13)
+    tau_HP_cm_hrs_bw_d_t[t14] = 1.0
+
+    return tau_HP_cm_hrs_bw_d_t
 
 
-def get_t_HP_start_d(t_HP_stop, tau_dot_HP_cm_d):
-    """日付dに沸き上げが終了する運転の沸き上げ開始時刻(-)(18)
+def get_t_HP_start_hrs_bw_d(t_HP_stop_hrs_bw, tau_dot_HP_cm_hrs_bw_d):
+    """日付dに沸き上げが終了する運転の沸き上げ開始時刻(-) (18)
 
     Args:
-      Q_dot_HP_cm_d(ndarray): 沸き上げ終了時刻
-      q_HP_cm_d(ndarray): 日付dにおける制御モードcmの1日当たりのヒートポンプ運転時間
-      t_HP_stop: param tau_dot_HP_cm_d:
-      tau_dot_HP_cm_d: 
+      t_HP_stop_hrs_bw: param tau_dot_HP_cm_d:
+      tau_dot_HP_cm_hrs_bw_d: 日付dにおける制御モードcmの沸き上げ時間帯に対する1日当たりのヒートポンプ運転時間数 (h/d)
 
     Returns:
       ndarray: 日付dに沸き上げが終了する運転の沸き上げ開始時刻
 
     """
-    return t_HP_stop - (np.floor(tau_dot_HP_cm_d) + 1)
+    t_HP_start_hrs_bw_d = np.zeros(365)
+
+    # tau_dot_HP_cm_hrs_bw_d がゼロの場合は、定義しない
+    f1 = tau_dot_HP_cm_hrs_bw_d == 0.0
+    t_HP_start_hrs_bw_d[f1] = np.nan
+
+    f2 = tau_dot_HP_cm_hrs_bw_d != 0.0
+    t_HP_start_hrs_bw_d[f2] = t_HP_stop_hrs_bw - (np.floor(tau_dot_HP_cm_hrs_bw_d[f2]) + 1)
+
+    return t_HP_start_hrs_bw_d
 
 
-def get_tau_dot_HP_cm_d(Q_dot_HP_cm_d, q_HP_cm_d):
-    """日付dにおける制御モードcmの1日当たりのヒートポンプ運転時間(19)
+def get_tau_dot_HP_cm_hrs_bw_d(hrs_bw, tau_dot_dot_HP_cm_d, R_day):
+    """日付dにおける制御モードcmの沸き上げ時間帯に対する1日当たりのヒートポンプ運転時間数 (h/d) (19)
 
     Args:
-      Q_dot_HP_cm_d(ndarray): 日付dにおける制御モードcmの1日当たりの沸き上げ熱量
-      q_HP_cm_d(ndarray): 日付dにおける制御モードcmのヒートポンプの加熱能力
+      hrs_bw: 沸き上げ時間帯
+      tau_dot_dot_HP_cm_d(ndarray): 日付dにおける制御モードcmのヒートポンプの加熱能力 (MJ/d)
+      R_day(float): 日付dにおける制御モードcmのヒートポンプの加熱能力 (MJ/d)
 
     Returns:
-      ndarray: 日付dにおける制御モードcmの1日当たりのヒートポンプ運転時間
+      ndarray: 日付dにおける制御モードcmの沸き上げ時間帯に対する1日当たりのヒートポンプ運転時間数 (h/d)
 
     """
-    return np.minimum(24, (Q_dot_HP_cm_d * 1000) / (q_HP_cm_d * 3600))
+    # 沸き上げ時間帯に対する1日当たりのヒートポンプ運転時間数の上限
+    tau_dot_HP_max_hrs_bw = get_tau_dot_HP_max_hrs_bw(hrs_bw, R_day)
+    tau_dot_HP_max_hrs_bw_d = np.repeat(tau_dot_HP_max_hrs_bw, 365)
+
+    # 沸き上げ時間帯が昼間の場合 (19-2)
+    tau_dot_HP_cm_hrs_bw_d_day = np.minimum(tau_dot_dot_HP_cm_d * R_day, tau_dot_HP_max_hrs_bw_d)
+    if hrs_bw == 'day':
+      return tau_dot_HP_cm_hrs_bw_d_day
+
+    # 沸き上げ時間帯が夜間の場合 (19-1)
+    if hrs_bw == 'night':
+      return np.minimum(tau_dot_dot_HP_cm_d - tau_dot_HP_cm_hrs_bw_d_day, tau_dot_HP_max_hrs_bw_d)
+
+
+def get_tau_dot_dot_HP_cm_d(Q_dot_HP_cm_d, q_HP_cm_d):
+    """日付dにおける制御モードcmの1日当たりのヒートポンプ運転時間数の合計 (h/d) (20)
+
+    Args:
+      Q_dot_HP_cm_d(ndarray): 日付dにおける制御モードcmの1日当たりの沸き上げ熱量 (kW)
+      q_HP_cm_d(ndarray): 日付dにおける制御モードcmのヒートポンプの加熱能力 (MJ/d)
+
+    Returns:
+      ndarray: 日付dにおける制御モードcmの1日当たりのヒートポンプ運転時間数の合計 (h/d)
+
+    """
+    return np.minimum(24.0, (Q_dot_HP_cm_d * 1000) / (q_HP_cm_d * 3600))
 
 
 # ============================================================================
@@ -911,7 +1027,7 @@ def get_tau_dot_HP_cm_d(Q_dot_HP_cm_d, q_HP_cm_d):
 # ============================================================================
 
 def get_Q_dot_HP_cm_d(L_dashdash_d, Q_dot_loss_cm_d):
-    """日付dにおける制御モードcmの1日当たりの沸き上げ熱量(MJ/d)(20)
+    """日付dにおける制御モードcmの1日当たりの沸き上げ熱量(MJ/d)(21)
 
     Args:
       L_dashdash_d(ndarray): 日付dにおける1日当たりの太陽熱補正給湯熱負荷
@@ -929,7 +1045,7 @@ def get_Q_dot_HP_cm_d(L_dashdash_d, Q_dot_loss_cm_d):
 # ============================================================================
 
 def get_Q_dot_loss_cm_d(theta_tnk_eq_cm_d, theta_ex_d_Ave_d, R_tnk_test):
-    """日付dにおける制御モードcmの1日当たりの貯湯熱損失量(MJ/d)(21)
+    """日付dにおける制御モードcmの1日当たりの貯湯熱損失量(MJ/d)(22)
 
     Args:
       theta_tnk_eq_cm_d(ndarray): 日付dにおける制御モードcmの等価貯湯温度
@@ -949,7 +1065,7 @@ def get_Q_dot_loss_cm_d(theta_tnk_eq_cm_d, theta_ex_d_Ave_d, R_tnk_test):
 
 def get_theta_tnk_eq_cm1_d(theta_ex_d_Ave_d, theta_star_ex_frst, theta_star_ex_frst_upper, theta_tnk_eq_win,
                            theta_tnk_eq_frst, theta_tnk_eq_frst_upper):
-    """日付dにおける制御モードcmの等価貯湯温度（℃）(22-1)
+    """日付dにおける制御モードcmの等価貯湯温度（℃）(23-1)
 
     Args:
       theta_ex_d_Ave_d(ndarray): 日付dにおける日平均外気温度
@@ -976,11 +1092,11 @@ def get_theta_tnk_eq_cm1_d(theta_ex_d_Ave_d, theta_star_ex_frst, theta_star_ex_f
 
     theta_tnk_eq_cm1_d[f3] = -0.4 * (theta_ex_d_Ave_d[f3] - theta_star_ex_frst) + theta_tnk_eq_frst
 
-    return theta_tnk_eq_cm1_d
+    return np.clip(theta_tnk_eq_cm1_d, theta_ex_d_Ave_d, None)
 
 
 def get_theta_tnk_eq_cm2_d(theta_ex_d_Ave_d, theta_tnk_eq_cm1_d, theta_hat_bw_cm1_d, theta_hat_bw_cm2_d):
-    """日付dにおける制御モードcmの等価貯湯温度（℃）(22-2)
+    """日付dにおける制御モードcmの等価貯湯温度（℃）(23-2)
 
     Args:
       theta_ex_d_Ave_d(ndarray): 日付dにおける日平均外気温度
@@ -992,11 +1108,14 @@ def get_theta_tnk_eq_cm2_d(theta_ex_d_Ave_d, theta_tnk_eq_cm1_d, theta_hat_bw_cm
       ndarray: 日付dにおける制御モードcmの等価貯湯温度
 
     """
-    return (theta_tnk_eq_cm1_d - theta_ex_d_Ave_d) * (2.1 * ((theta_hat_bw_cm2_d - theta_ex_d_Ave_d) / (theta_hat_bw_cm1_d - theta_ex_d_Ave_d)) - 1.2) + theta_ex_d_Ave_d
+    theta_tnk_eq_cm2_d = (theta_tnk_eq_cm1_d - theta_ex_d_Ave_d) * \
+                         (2.1 * ((theta_hat_bw_cm2_d - theta_ex_d_Ave_d) / (theta_hat_bw_cm1_d - theta_ex_d_Ave_d)) - 1.2) + theta_ex_d_Ave_d
+
+    return np.clip(theta_tnk_eq_cm2_d, theta_ex_d_Ave_d, None)
 
 
 def get_theta_tnk_eq(theta_tnk_eq_test):
-    """冬期条件、着霜期条件および着霜領域（上限）における等価貯湯温度(23)
+    """冬期条件、着霜期条件および着霜領域（上限）における等価貯湯温度(24)
 
     Args:
       theta_tnk_eq_test(float): 試験時の等価貯湯温度
@@ -1005,20 +1124,20 @@ def get_theta_tnk_eq(theta_tnk_eq_test):
       tuple: 冬期条件、着霜期条件および着霜領域（上限）における等価貯湯温度
 
     """
-    # 冬期条件における等価貯湯温度(23a)
+    # 冬期条件における等価貯湯温度(24a)
     theta_tnk_eq_win = theta_tnk_eq_test
 
-    # 着霜期条件における等価貯湯温度(23a)
-    theta_tnk_eq_frst = theta_tnk_eq_test + 23
+    # 着霜期条件における等価貯湯温度(24b)
+    theta_tnk_eq_frst = theta_tnk_eq_test + 23.0
 
-    # 着霜領域（上限）における等価貯湯温度(23a)
+    # 着霜領域（上限）における等価貯湯温度(24c)
     theta_tnk_eq_frst_upper = theta_tnk_eq_test + 6.5
 
     return theta_tnk_eq_win, theta_tnk_eq_frst, theta_tnk_eq_frst_upper
 
 
 def get_theta_tnk_eq_test(Q_loss_test, R_tnk_test, theta_star_ex_win):
-    """試験時の等価貯湯温度(℃)(24)
+    """試験時の等価貯湯温度(℃)(25)
 
     Args:
       Q_loss_test(float): 試験時の貯湯熱損失量
@@ -1039,22 +1158,24 @@ def get_theta_tnk_eq_test(Q_loss_test, R_tnk_test, theta_star_ex_win):
 # E.7.1 消費電力量
 # ============================================================================
 
-def get_E_E_aux_cm_d_t(P_aux_HP_on_test, P_aux_HP_off_test, tau_HP_cm_d_t):
-    """日付dにおける制御モードcmの1日当たりの補機の消費電力量(25)
+def get_E_E_aux_cm_d_t(P_aux_HP_on_test, P_aux_HP_off_test, tau_HP_cm_hrs_bw_d_t_lst):
+    """日付dにおける制御モードcmの1日当たりの補機の消費電力量(26)
 
     Args:
-      theta_hat_bw_win_cm(float): 試験時のヒートポンプ停止時における補機の消費電力
-      theta_hat_bw_frst_cm(float): 試験時のヒートポンプ運転時における補機の消費電力
-      theta_hat_bw_win_cd_cm(ndarray): 日付dの時刻tにおける制御モードcmの1時間当たりのヒートポンプ運転時間
-      P_aux_HP_on_test: param P_aux_HP_off_test:
-      tau_HP_cm_d_t: returns: 日付dにおける制御モードcmの1日当たりの補機の消費電力量
-      P_aux_HP_off_test: 
+      P_aux_HP_on_test: 試験時のヒートポンプ停止時における補機の消費電力 (W)
+      P_aux_HP_off_test: 試験時のヒートポンプ運転時における補機の消費電力 (W)
+      tau_HP_cm_hrs_bw_d_t_lst: 日付dの時刻tにおける制御モードの沸き上げ時間帯に対する1時間当たりのヒートポンプ運転時間数 (h/h)
 
     Returns:
       ndarray: 日付dにおける制御モードcmの1日当たりの補機の消費電力量
 
     """
-    return (P_aux_HP_on_test * tau_HP_cm_d_t + P_aux_HP_off_test * (1 - tau_HP_cm_d_t)) / 1000
+    tau_HP_cm_hrs_bw_d_t_night = tau_HP_cm_hrs_bw_d_t_lst['night']
+    tau_HP_cm_hrs_bw_d_t_day = tau_HP_cm_hrs_bw_d_t_lst['day']
+
+    tmp = tau_HP_cm_hrs_bw_d_t_night + tau_HP_cm_hrs_bw_d_t_day
+
+    return (P_aux_HP_on_test * tmp + P_aux_HP_off_test * (1.0 - tmp)) / 1000
 
 
 # ============================================================================
@@ -1077,7 +1198,7 @@ def get_E_E_aux_cm_d_t(P_aux_HP_on_test, P_aux_HP_off_test, tau_HP_cm_d_t):
 def get_theta_hat_bw_cm_d(theta_star_ex_imd, theta_star_ex_win, theta_star_ex_frst, theta_star_ex_win_cd,
                           theta_star_ex_frst_upper, theta_ex_Nave_d, theta_hat_bw_sum_cm, theta_hat_bw_imd_cm,
                           theta_hat_bw_win_cm, theta_hat_bw_frst_cm, theta_hat_bw_win_cd_cm):
-    """日付dにおける制御モードcmのM1スタンダードモード沸き上げ温度（℃）(26)
+    """日付dにおける制御モードcmのM1スタンダードモード沸き上げ温度（℃）(27)
 
     Args:
       theta_star_ex_imd(float): 中間期条件の外気温度
@@ -1121,7 +1242,7 @@ def get_theta_hat_bw_cm_d(theta_star_ex_imd, theta_star_ex_win, theta_star_ex_fr
 
 
 def get_theta_hat_bw_sum_cm1(theta_star_bw_std):
-    """制御モードcmの夏期条件におけるM1スタンダードモード沸き上げ温度（℃）(27a-1)
+    """制御モードcmの夏期条件におけるM1スタンダードモード沸き上げ温度（℃）(28a-1)
 
     Args:
       theta_star_bw_std(float): 標準条件の沸き上げ温度（
@@ -1135,7 +1256,7 @@ def get_theta_hat_bw_sum_cm1(theta_star_bw_std):
 
 
 def get_theta_hat_bw_imd_cm1(theta_star_bw_std):
-    """制御モードcmの中間条件におけるM1スタンダードモード沸き上げ温度（℃）(27b-1)
+    """制御モードcmの中間条件におけるM1スタンダードモード沸き上げ温度（℃）(28b-1)
 
     Args:
       theta_star_bw_std(float): 標準条件の沸き上げ温度（
@@ -1149,7 +1270,7 @@ def get_theta_hat_bw_imd_cm1(theta_star_bw_std):
 
 
 def get_theta_hat_bw_win_cm1(theta_star_bw_std, theta_hat_bw_win_cm1_test):
-    """制御モードcmの冬期条件におけるM1スタンダードモード沸き上げ温度（℃）(27c-1)
+    """制御モードcmの冬期条件におけるM1スタンダードモード沸き上げ温度（℃）(28c-1)
 
     Args:
       theta_star_bw_std(float): 標準条件の沸き上げ温度（
@@ -1164,7 +1285,7 @@ def get_theta_hat_bw_win_cm1(theta_star_bw_std, theta_hat_bw_win_cm1_test):
 
 
 def get_theta_hat_bw_frst_cm1(theta_star_bw_high, theta_hat_bw_win_cm1):
-    """制御モードcmの着霜期条件におけるM1スタンダードモード沸き上げ温度（℃）(27d-1)
+    """制御モードcmの着霜期条件におけるM1スタンダードモード沸き上げ温度（℃）(28d-1)
 
     Args:
       theta_star_bw_high(float): 高温条件の沸き上げ温度（
@@ -1175,11 +1296,11 @@ def get_theta_hat_bw_frst_cm1(theta_star_bw_high, theta_hat_bw_win_cm1):
 
     """
     # 制御モードがファーストモードの場合
-    return np.minimum(theta_star_bw_high, theta_hat_bw_win_cm1 + 6)
+    return np.minimum(theta_star_bw_high, theta_hat_bw_win_cm1 + 6.0)
 
 
 def get_theta_hat_bw_win_cd_cm1(theta_star_bw_high, theta_hat_bw_win_cm1):
-    """制御モードcmの寒冷地冬期条件におけるM1スタンダードモード沸き上げ温度（℃）(27e-1)
+    """制御モードcmの寒冷地冬期条件におけるM1スタンダードモード沸き上げ温度（℃）(28e-1)
 
     Args:
       theta_star_bw_high(float): 高温条件の沸き上げ温度（
@@ -1190,11 +1311,11 @@ def get_theta_hat_bw_win_cd_cm1(theta_star_bw_high, theta_hat_bw_win_cm1):
 
     """
     # 制御モードがファーストモードの場合
-    return np.minimum(theta_star_bw_high, theta_hat_bw_win_cm1 + 8)
+    return np.minimum(theta_star_bw_high, theta_hat_bw_win_cm1 + 8.0)
 
 
 def get_theta_hat_bw_sum_cm2(theta_hat_bw_sum_cm1, theta_hat_bw_win_cm1, theta_hat_bw_win_cm2):
-    """制御モードcmの夏期条件におけるM1スタンダードモード沸き上げ温度（℃）(27a-2)
+    """制御モードcmの夏期条件におけるM1スタンダードモード沸き上げ温度（℃）(28a-2)
 
     Args:
       theta_hat_bw_sum_cm1(float): 制御モードがファーストモードの場合の夏期条件におけるM1スタンダードモード沸き上げ温度
@@ -1210,7 +1331,7 @@ def get_theta_hat_bw_sum_cm2(theta_hat_bw_sum_cm1, theta_hat_bw_win_cm1, theta_h
 
 
 def get_theta_hat_bw_imd_cm2(theta_hat_bw_imd_cm1, theta_hat_bw_win_cm1, theta_hat_bw_win_cm2):
-    """制御モードcmの中間期条件におけるM1スタンダードモード沸き上げ温度（℃）(27b-2)
+    """制御モードcmの中間期条件におけるM1スタンダードモード沸き上げ温度（℃）(28b-2)
 
     Args:
       theta_hat_bw_imd_cm1(float): 制御モードがファーストモードの場合の中間期条件におけるM1スタンダードモード沸き上げ温度
@@ -1226,7 +1347,7 @@ def get_theta_hat_bw_imd_cm2(theta_hat_bw_imd_cm1, theta_hat_bw_win_cm1, theta_h
 
 
 def get_theta_hat_bw_win_cm2(theta_hat_bw_win_cm1, theta_hat_bw_win_cm1_test, theta_hat_bw_win_cm2_test):
-    """制御モードcmの冬期条件におけるM1スタンダードモード沸き上げ温度（℃）(27c-2)
+    """制御モードcmの冬期条件におけるM1スタンダードモード沸き上げ温度（℃）(28c-2)
 
     Args:
       theta_hat_bw_win_cm1(float): 制御モードがファーストモードの場合の冬期条件におけるM1スタンダードモード沸き上げ温度
@@ -1245,7 +1366,7 @@ def get_theta_hat_bw_win_cm2(theta_hat_bw_win_cm1, theta_hat_bw_win_cm1_test, th
 
 
 def get_theta_hat_bw_frst_cm2(theta_star_bw_high, theta_hat_bw_frst_cm1, theta_hat_bw_win_cm1, theta_hat_bw_win_cm2):
-    """制御モードcmの着霜期条件におけるM1スタンダードモード沸き上げ温度（℃）(27d-2)
+    """制御モードcmの着霜期条件におけるM1スタンダードモード沸き上げ温度（℃）(28d-2)
 
     Args:
       theta_star_bw_high(float): 高温条件の沸き上げ温度（
@@ -1262,7 +1383,7 @@ def get_theta_hat_bw_frst_cm2(theta_star_bw_high, theta_hat_bw_frst_cm1, theta_h
 
 
 def get_theta_hat_bw_win_cd_cm2(theta_star_bw_high, theta_hat_bw_win_cd_cm1, theta_hat_bw_win_cm1, theta_hat_bw_win_cm2):
-    """制御モードcmの着霜期条件におけるM1スタンダードモード沸き上げ温度（℃）(27e-2)
+    """制御モードcmの着霜期条件におけるM1スタンダードモード沸き上げ温度（℃）(28e-2)
 
     Args:
       theta_star_bw_high(float): 高温条件の沸き上げ温度（
@@ -1287,7 +1408,7 @@ def get_delta_theta_hat_star_bw_win_test():
       float: 試験時のファーストモードの冬期条件におけるM1スタンダードモード沸き上げ温度とセカンドモードの冬期条件におけるM1スタンダードモード沸き上げ温度の差の最小値
 
     """
-    return 5
+    return 5.0
 
 
 def get_theta_star_bw():
@@ -1309,14 +1430,68 @@ def get_theta_star_bw():
 
 
 # ============================================================================
-# E.8.3 沸き上げ終了時刻
+# E.8.3 沸き上げ時間帯・沸き上げ終了時刻・ヒートポンプ運転時間数の上限
 # ============================================================================
 
-# 沸き上げ終了時刻
-def get_t_HP_stop():
-    """ """
-    # 沸き上げ終了時刻は7時
-    return 7
+def get_table_3():
+    """表 3 沸き上げ時間帯の種類
+
+    Args:
+
+    Returns:
+      list: 沸き上げ時間帯の種類
+
+    """
+    table3 = [
+        'night',    #夜間
+        'day'       #昼間
+    ]
+    return table3
+
+
+def get_t_HP_stop_hrs_bw(hrs_bw):
+    """沸き上げ時間帯に対する沸き上げ終了時刻
+
+    Args:
+      hrs_bw: 沸き上げ時間帯
+
+    Returns:
+      沸き上げ時間帯に対する沸き上げ終了時刻
+
+    """
+    if hrs_bw == 'night':
+      # 沸き上げ時間帯が夜間沸き上げ終了時刻は7時
+      return 7.0
+    elif hrs_bw == 'day':
+      # 沸き上げ時間帯が夜間沸き上げ終了時刻は16時
+      return 16.0
+
+
+def get_tau_dot_HP_max_hrs_bw(hrs_bw, R_day):
+    """沸き上げ時間帯に対する1日当たりのヒートポンプ運転時間数の上限(h/d) (29)
+
+    Args:
+      hrs_bw: 沸き上げ時間帯
+      R_day(-): ヒートポンプ昼間沸上率
+
+    Returns:
+        沸き上げ時間帯に対する1日当たりのヒートポンプ運転時間数の上限(h/d)
+
+    """
+    # 沸き上げ時間帯が夜間の場合
+    if hrs_bw == 'night':
+      # (29-1)
+      if R_day == 0.0:
+        return 24.0
+      elif R_day != 0.0:
+        return 15.0
+    # 沸き上げ時間帯が昼間の場合
+    elif hrs_bw == 'day':
+      # (29-2)
+      if R_day == 0.0:
+        return 0.0
+      elif R_day != 0.0:
+        return 7.0
 
 
 # ============================================================================
@@ -1335,28 +1510,28 @@ def get_spec(e_rtd):
     """
     spec = []
 
-    table_3_b = get_table_3_b()
+    table_4_b = get_table_4_b()
 
     if (e_rtd <= 2.7):
-        spec = table_3_b[0]
+        spec = table_4_b[0]
     elif (e_rtd == 2.8):
-        spec = table_3_b[1]
+        spec = table_4_b[1]
     elif (e_rtd == 2.9):
-        spec = table_3_b[2]
+        spec = table_4_b[2]
     elif (e_rtd == 3.0):
-        spec = table_3_b[3]
+        spec = table_4_b[3]
     elif (e_rtd == 3.1):
-        spec = table_3_b[4]
+        spec = table_4_b[4]
     elif (e_rtd == 3.2):
-        spec = table_3_b[5]
+        spec = table_4_b[5]
     elif (e_rtd == 3.3):
-        spec = table_3_b[6]
+        spec = table_4_b[6]
     elif (e_rtd == 3.4):
-        spec = table_3_b[7]
+        spec = table_4_b[7]
     elif (e_rtd == 3.5):
-        spec = table_3_b[8]
+        spec = table_4_b[8]
     elif (e_rtd >= 3.6):
-        spec = table_3_b[9]
+        spec = table_4_b[9]
     else:
         raise ValueError('e_rtd')
 
@@ -1386,17 +1561,17 @@ def get_spec(e_rtd):
     return CO2HP
 
 
-def get_table_3_b():
-    """表3（b） 給湯機の仕様の決定方法（当該給湯機の効率に応じて定まる数値を用いる場合）
+def get_table_4_b():
+    """表4（b） 給湯機の仕様の決定方法（当該給湯機の効率に応じて定まる数値を用いる場合）
 
     Args:
 
     Returns:
-      list: 表3（b） 給湯機の仕様の決定方法（当該給湯機の効率に応じて定まる数値を用いる場合）
+      list: 表4（b） 給湯機の仕様の決定方法（当該給湯機の効率に応じて定まる数値を用いる場合）
 
     """
-    # 表3（b） 給湯機の仕様の決定方法（当該給湯機の効率に応じて定まる数値を用いる場合）
-    table_3_b = [
+    # 表4（b） 給湯機の仕様の決定方法（当該給湯機の効率に応じて定まる数値を用いる場合）
+    table_4_b = [
         (1.175, 1.031, 1.263, 4.5, 4.5, 4.5, 2.37, 2.56, 90, 65, 65, 65, 0.0135, 0.4961, 21, 6, 11.5, 0.3, 69, 76),
         (1.146, 1.005, 1.232, 4.5, 4.5, 4.5, 2.43, 2.62, 90, 65, 65, 65, 0.0132, 0.4827, 21, 6, 11.5, 0.3, 69, 76),
         (1.117, 0.980, 1.201, 4.5, 4.5, 4.5, 2.49, 2.69, 90, 65, 65, 65, 0.0129, 0.4709, 21, 6, 11.5, 0.3, 69, 76),
@@ -1409,7 +1584,7 @@ def get_table_3_b():
         (0.915, 0.803, 0.984, 4.5, 4.5, 4.5, 3.04, 3.28, 90, 65, 65, 65, 0.0105, 0.3858, 21, 6, 11.5, 0.3, 69, 76)
     ]
 
-    return table_3_b
+    return table_4_b
 
 
 def get_e_rtd():
@@ -1453,9 +1628,9 @@ def get_e_rtd_from_e_APF(e_APF, bath_function):
     """
     # e_APFからe_rtdへの変換
     if bath_function == 'ふろ給湯機(追焚あり)':
-        e_rtd = e_APF - 0.7  # (28-1)
+        e_rtd = e_APF - 0.7  # (30-1)
     elif bath_function == '給湯単機能' or bath_function == 'ふろ給湯機(追焚なし)':
-        e_rtd = e_APF - 0.5  # (28-2)
+        e_rtd = e_APF - 0.5  # (30-2)
     else:
         raise NotImplementedError()
 
@@ -1463,6 +1638,23 @@ def get_e_rtd_from_e_APF(e_APF, bath_function):
     e_rtd = min(3.6, e_rtd)
 
     return e_rtd
+
+
+def get_R_day(daytime_heating):
+    """ヒートポンプ昼間沸上率 (-)
+
+    Args:
+      daytime_heating(bool): 認定機種に該当し、かつ昼間沸上げを評価するかどうか
+
+    Returns:
+      float: ヒートポンプ昼間沸上率 (-)
+
+    """
+    # 昼間沸上げを評価する場合
+    if daytime_heating == True:
+        return 0.5
+    else:
+        return 0.0
 
 
 # ============================================================================

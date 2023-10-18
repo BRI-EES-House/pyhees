@@ -27,13 +27,17 @@ def load_solrad(region, sol_region):
       sol_region(int): 年間の日射地域区分(1-5)
 
     Returns:
-      DateFrame: 日射量データ
+      DateFrame: 日射量データ(W/m2)
 
     """
     posnum = get_position_num(region, sol_region)
     csvpath =  os.path.join(os.path.dirname(__file__), 'data', 'solar', '%s.csv' % posnum)
-    return pd.read_csv(csvpath, skiprows=2, nrows=24 * 365,
+    df = pd.read_csv(csvpath, skiprows=2, nrows=24 * 365,
                        names=('T_ex', 'I_DN', 'I_Sky', 'h', 'A'), encoding="cp932")
+    # 「法線面直達日射量」と「水平面天空日射量」を（MJ/hm2）から（W/m2）に変換
+    df['I_DN'] = df['I_DN'].values / 3.6 * 1000
+    df['I_Sky'] = df['I_Sky'].values / 3.6 * 1000
+    return df
 
 
 def get_position_num(region, sol_region):
@@ -49,7 +53,7 @@ def get_position_num(region, sol_region):
     """
     nums = [
         ['7', '117', '124', '124-A4', '124-A5'],
-        ['49', '63', '59', '2A4', '2A5'],
+        ['49', '63', '59', '59-A4', '59-A5'],
         ['190', '230', '426', '403', '412'],
         ['286', '186', '292', '423', '401'],
         ['593', '542', '495', '473', '420'],
@@ -79,14 +83,14 @@ def calc_I_s_d_t(P_alpha, P_beta, df):
     Args:
       P_alpha(float): 方位角 (ラジアン)
       P_beta(float): 傾斜角 (ラジアン)
-      df(DateFrame): load_solrad の返り値
+      df(DateFrame): load_solrad の返り値または11_1のget_climate_dfの返り値(W/m2)
 
     Returns:
-      ndarray: 傾斜面の単位面積当たりの平均日射量
+      ndarray: 傾斜面の単位面積当たりの平均日射量(W/m2)
 
     """
-    I_DN_d_t = df['I_DN'].values / 3.6 * 1000
-    I_Sky_d_t = df['I_Sky'].values / 3.6 * 1000
+    I_DN_d_t = df['I_DN']
+    I_Sky_d_t = df['I_Sky']
     h_d_t = np.radians(df['h'].values)
     A_d_t = np.radians(df['A'].values * (df['A'].values >= 0) + (df['A'].values + 360.0) * (df['A'].values < 0))
 
