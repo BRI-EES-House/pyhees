@@ -36,11 +36,11 @@ see examples [here](https://github.com/BRI-EES-House/pyhees_example)
 ## Authors
 
 This has been developed by the programe SWG (residential) since 2021. The members are:
-- [Habara Hiromi](https://github.com/HiromiHabara) ([NILIM](http://www.nilim.go.jp/))
+- [Habara Hiromi](https://github.com/HiromiHabara) ([BRI](http://www.kenken.go.jp/))
 - [Miura Hisahi](https://github.com/HisashiMiura) ([BRI](https://www.kenken.go.jp/))
 - [Kumakura Eiko](https://github.com/kkkuma) ([NILIM](http://www.nilim.go.jp/))
 - [Uda Wataru](https://github.com/udawtr) ([Youworks Co.,Ltd](https://youworks.jp/))
-- [Hirata Makoto](https://github.com/rhirata0930) ([Youworks Co.,Ltd](https://youworks.jp/))
+- [Aiko Mayumi] ([Youworks Co.,Ltd](https://youworks.jp/))
 - [Mizutani Suguru](https://github.com/SMizutani) ([JYUKANKYO RESEARCH INSTITUTE INC.](https://www.jyuri.co.jp/))
 - Takayama Azusa ([JYUKANKYO RESEARCH INSTITUTE INC.](https://www.jyuri.co.jp/))
 
