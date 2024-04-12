@@ -1,11 +1,11 @@
-# B.4 地域の区分、方位及び日除けの形状に応じて算出した日除け効果係数と斜入射特性を用いる方法
+# B.4 地域の区分、方位及び日よけの形状に応じて算出した日よけ効果係数と斜入射特性を用いる方法
 
 def get_f_H_i(f_ang_H, f_sh_H, Direction):
     """開口部iの暖房期の取得日射熱補正係数 式(3a)
 
     Args:
       f_ang_H(float): 暖房期の垂直入射に対する斜入射の規準化日射熱取得率
-      f_sh_H(float): 暖房期の日除け効果係数
+      f_sh_H(float): 暖房期の日よけ効果係数
       Direction(str): 方位
 
     Returns:
@@ -24,7 +24,7 @@ def get_f_C_i(f_ang_C, f_sh_C, Direction):
 
     Args:
       f_ang_C(float): 冷房期の垂直入射に対する斜入射の規準化日射熱取得率
-      f_sh_C(float): 冷房期の日除け効果係数
+      f_sh_C(float): 冷房期の日よけ効果係数
       Direction(str): 方位
 
     Returns:

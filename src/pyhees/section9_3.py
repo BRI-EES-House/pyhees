@@ -9,6 +9,7 @@ import numpy as np
 from pyhees.section3_1_heatingday import get_heating_flag_d
 
 import pyhees.section3_1_e as algo
+import pyhees.section7_1_o as solar
 
 from pyhees.section11_2 import calc_I_s_d_t, get_Theta_ex
 
@@ -309,69 +310,59 @@ def get_U_s():
 # 6. 補正集熱量
 # ============================================================================
 
-def calc_L_sun_ass_d_t(L_tnk_d, L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t, L_dash_b1_d_t, L_dash_b2_d_t, L_dash_ba1_d_t):
-    """1時間当たりの空気集熱式太陽熱利用設備における補正集熱量 (MJ/d) (2)
+def calc_L_sun_ass_d_t(L_tnk_d, hw_connection_type, solar_device, solar_water_tap, Theta_sw_s,
+                      L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t, L_dash_b1_d_t, L_dash_b2_d_t, L_dash_ba1_d_t, Theta_w_sun_d_t):
+    """1時間当たりの空気集熱式太陽熱利用設備における補正集熱量 (MJ/h) (2)
 
     Args:
       L_tnk_d(ndarray): 1日当たりの給湯部におけるタンク蓄熱量の上限による補正集熱量 (MJ/d)
-      L_dash_k_d_t(ndarray): 1時間当たりの台所水栓における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_s_d_t(ndarray): 1時間当たりの浴室シャワー水栓における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_w_d_t(ndarray): 1時間当たりの洗面水栓における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_b1_d_t(ndarray): 1時間当たりの浴槽水栓湯はり時における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_b2_d_t(ndarray): 1時間当たりの浴槽自動湯はり時における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_ba1_d_t(ndarray): 1時間当たりの浴槽水栓さし湯時における節湯補正給湯熱負荷 (MJ/h)
+      Q_W_dmd_sun_d_t(ndarray): 給湯熱需要のうちの太陽熱利用設備の分担分 (MJ/h)
 
     Returns:
       ndarray: 1時間当たりの空気集熱式太陽熱利用設備における補正集熱量 (MJ/h)
 
     """
-    # 1日あたりの節湯補正給湯熱負荷 (MJ/d)
-    L_dash_k_d = np.sum(L_dash_k_d_t.reshape(365, 24), axis=1)
-    L_dash_s_d = np.sum(L_dash_s_d_t.reshape(365, 24), axis=1)
-    L_dash_w_d = np.sum(L_dash_w_d_t.reshape(365, 24), axis=1)
-    L_dash_b1_d = np.sum(L_dash_b1_d_t.reshape(365, 24), axis=1)
-    L_dash_b2_d = np.sum(L_dash_b2_d_t.reshape(365, 24), axis=1)
-    L_dash_ba1_d = np.sum(L_dash_ba1_d_t.reshape(365, 24), axis=1)
-
-    # 1日当たりの空気集熱式太陽熱利用設備における補正集熱量 (MJ/d) (3)
-    L_sun_ass_d = calc_L_sun_ass_d(L_tnk_d, L_dash_k_d, L_dash_s_d, L_dash_w_d, L_dash_b1_d, L_dash_b2_d, L_dash_ba1_d)
-    L_sun_ass_d = np.repeat(L_sun_ass_d, 24)
-
-    # 1日当たりの空気集熱式太陽熱利用設備における補正集熱量 (MJ/d)
     L_sun_ass_d_t = np.zeros(24 * 365)
 
-    # 24時間化
-    L_dash_k_d = np.repeat(L_dash_k_d, 24)
-    L_dash_s_d = np.repeat(L_dash_s_d, 24)
-    L_dash_w_d = np.repeat(L_dash_w_d, 24)
-    L_dash_b1_d = np.repeat(L_dash_b1_d, 24)
-    L_dash_b2_d = np.repeat(L_dash_b2_d, 24)
-    L_dash_ba1_d = np.repeat(L_dash_ba1_d, 24)
+    # 各用途における節湯補正給湯熱負荷に対する太陽熱利用設備の分担割合 第7章付録O.4
+    r_sun_k_d_t, r_sun_s_d_t, r_sun_w_d_t, r_sun_b1_d_t, r_sun_b2_d_t, r_sun_ba1_d_t = [np.zeros(24 * 365) for _ in range(6)]
 
-    # 1) 1日あたりの節湯補正給湯熱負荷 = 0 の場合
-    f1 = (L_dash_k_d + L_dash_s_d + L_dash_w_d + L_dash_b1_d + L_dash_b2_d + L_dash_ba1_d) == 0
+    for dt in range(24 * 365):
+      r_sun_k_d_t[dt], r_sun_s_d_t[dt], r_sun_w_d_t[dt], \
+        r_sun_b1_d_t[dt], r_sun_b2_d_t[dt], r_sun_ba1_d_t[dt] = solar.get_r_sun(hw_connection_type, solar_device, solar_water_tap, Theta_w_sun_d_t[dt], Theta_sw_s,
+                  L_dash_b1_d_t[dt], L_dash_b2_d_t[dt], L_dash_ba1_d_t[dt])
+
+    # 給湯熱需要のうちの太陽熱利用設備の分担分 第7章付録O.3.(2)
+    Q_W_dmd_sun_d_t = solar.get_Q_W_dmd_sun_d_t(L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t, L_dash_b1_d_t, L_dash_b2_d_t, L_dash_ba1_d_t,
+                          r_sun_k_d_t, r_sun_s_d_t, r_sun_w_d_t, r_sun_b1_d_t, r_sun_b2_d_t, r_sun_ba1_d_t)
+
+    # 給湯熱需要のうちの太陽熱利用設備の分担分 (MJ/d)
+    Q_dot_W_dmd_sun_d = get_Q_dot_W_dmd_sun_d(Q_W_dmd_sun_d_t)
+    Q_dot_W_dmd_sun_d_t = np.repeat(Q_dot_W_dmd_sun_d, 24)
+
+    # 1日当たりの空気集熱式太陽熱利用設備における補正集熱量 (MJ/d)
+    L_dot_sun_ass_d = get_L_dot_sun_ass_d(L_tnk_d, Q_dot_W_dmd_sun_d)
+    L_dot_sun_ass_d_t = np.repeat(L_dot_sun_ass_d, 24)
+
+    # (2-1)
+    # 給湯熱需要のうちの太陽熱利用設備の分担分（MJ/d) == 0 の場合
+    f1 = Q_dot_W_dmd_sun_d_t == 0
     L_sun_ass_d_t[f1] = 0
 
-    # 2) 1日あたりの節湯補正給湯熱負荷 > 0 の場合
-    f2 = (L_dash_k_d + L_dash_s_d + L_dash_w_d + L_dash_b1_d + L_dash_b2_d + L_dash_ba1_d) > 0
-    L_dash_d = L_dash_k_d + L_dash_s_d + L_dash_w_d + L_dash_b1_d + L_dash_b2_d + L_dash_ba1_d
-    L_dash_d_t = L_dash_k_d_t + L_dash_s_d_t + L_dash_w_d_t + L_dash_b1_d_t + L_dash_b2_d_t + L_dash_ba1_d_t
-    L_sun_ass_d_t[f2] = L_sun_ass_d[f2] * L_dash_d_t[f2] / L_dash_d[f2]
+    # (2-2)
+    # 給湯熱需要のうちの太陽熱利用設備の分担分（MJ/d) != 0 の場合
+    f2 = Q_dot_W_dmd_sun_d_t != 0
+    L_sun_ass_d_t[f2] = L_dot_sun_ass_d_t[f2] * (Q_W_dmd_sun_d_t[f2] / Q_dot_W_dmd_sun_d_t[f2])
 
     return L_sun_ass_d_t
 
 
-def calc_L_sun_ass_d(L_tnk_d, L_dash_k_d, L_dash_s_d, L_dash_w_d, L_dash_b1_d, L_dash_b2_d, L_dash_ba1_d):
+def get_L_dot_sun_ass_d(L_tnk_d, Q_dot_W_dmd_sun_d):
     """1日当たりの空気集熱式太陽熱利用設備における補正集熱量 (MJ/d) (3)
 
     Args:
       L_tnk_d(ndarray): 1日当たりの給湯部におけるタンク蓄熱量の上限による補正集熱量 (MJ/d)
-      L_dash_k_d(ndarray): 1日当たりの台所水栓における節湯補正給湯熱負荷 (MJ/d)
-      L_dash_s_d(ndarray): 1日当たりの浴室シャワー水栓における節湯補正給湯熱負荷 (MJ/d)
-      L_dash_w_d(ndarray): 1日当たりの洗面水栓における節湯補正給湯熱負荷 (MJ/d)
-      L_dash_b1_d(ndarray): 1日当たりの浴槽水栓湯はり時における節湯補正給湯熱負荷 (MJ/d)
-      L_dash_b2_d(ndarray): 1日当たりの浴槽自動湯はり時における節湯補正給湯熱負荷 (MJ/d)
-      L_dash_ba1_d(ndarray): 1日当たりの浴槽水栓さし湯時における節湯補正給湯熱負荷 (MJ/d)
+      Q_dot_W_dmd_sun_d(ndarray): 給湯熱需要のうちの太陽熱利用設備の分担分（MJ/d)
 
     Returns:
       ndarray: 1日当たりの空気集熱式太陽熱利用設備における補正集熱量 (MJ/d)
@@ -381,13 +372,9 @@ def calc_L_sun_ass_d(L_tnk_d, L_dash_k_d, L_dash_s_d, L_dash_w_d, L_dash_b1_d, L
     f_sr_uplim = get_f_sr_uplim()
 
     # 1日当たりの空気集熱式太陽熱利用設備における補正集熱量 (MJ/d)
-    L_sun_ass_d = np.clip(
-        L_tnk_d,
-        None,
-        (L_dash_k_d + L_dash_s_d + L_dash_w_d + L_dash_b1_d + L_dash_b2_d + L_dash_ba1_d) * f_sr_uplim
-    )
+    L_dot_sun_ass_d = np.clip(L_tnk_d, None, Q_dot_W_dmd_sun_d * f_sr_uplim)
 
-    return L_sun_ass_d
+    return L_dot_sun_ass_d
 
 
 def get_f_sr_uplim():
@@ -400,6 +387,19 @@ def get_f_sr_uplim():
 
     """
     return 0.9
+
+
+def get_Q_dot_W_dmd_sun_d(Q_W_dmd_sun_d_t):
+    """給湯熱需要のうちの太陽熱利用設備の分担分 (MJ/d) (4)
+
+    Args:
+      Q_W_dmd_sun_d_t(ndarray): 給湯熱需要のうちの太陽熱利用設備の分担分 (MJ/h)
+
+    Returns:
+      float: 給湯熱需要のうちの太陽熱利用設備の分担分 (MJ/d)
+
+    """
+    return np.sum(Q_W_dmd_sun_d_t.reshape(365, 24), axis=1)
 
 
 # ============================================================================
@@ -467,7 +467,7 @@ def calc_E_E_W_aux_ass_d_t(hotwater_use, heating_flag_d, region, sol_region, P_a
 
     # ----- 7. 補機の消費電力量 -----
 
-    # 1時間当たりの補機の消費電力量のうち暖房設備への付加分 (kWh/h) (4)
+    # 1時間当たりの補機の消費電力量のうち給湯設備への付加分 (kWh/h) (6)
     E_E_W_aux_ass_d_t = get_E_E_W_aux_ass_d_t(r_sa_d_t, t_cp_d_t, E_E_fan_d_t, E_E_cp_d_t)
 
     return E_E_W_aux_ass_d_t
@@ -475,7 +475,7 @@ def calc_E_E_W_aux_ass_d_t(hotwater_use, heating_flag_d, region, sol_region, P_a
 
 def calc_E_E_H_aux_ass_d_t(hotwater_use, heating_flag_d, region, sol_region, P_alpha, P_beta,
                            A_col, V_fan_P0, m_fan_test, d0, d1, fan_sso, fan_type):
-    """1時間当たりの補機の消費電力量のうち暖房設備への付加分 (kWh/h) (4)
+    """1時間当たりの補機の消費電力量のうち暖房設備への付加分 (kWh/h) (5)
 
     Args:
       hotwater_use(bool): 空気集熱式太陽熱利用設備が給湯部を有する場合はTrue
@@ -529,14 +529,14 @@ def calc_E_E_H_aux_ass_d_t(hotwater_use, heating_flag_d, region, sol_region, P_a
 
     # ----- 7. 補機の消費電力量 -----
 
-    # 1時間当たりの補機の消費電力量のうち暖房設備への付加分 (kWh/h) (4)
+    # 1時間当たりの補機の消費電力量のうち暖房設備への付加分 (kWh/h) (5)
     E_E_H_aux_ass_d_t = get_E_E_H_aux_ass_d_t(r_sa_d_t, t_cp_d_t, E_E_fan_d_t)
 
     return E_E_H_aux_ass_d_t
 
 
 def get_E_E_H_aux_ass_d_t(r_sa_d_t, t_cp_d_t, E_E_fan_d_t):
-    """1時間当たりの補機の消費電力量のうち暖房設備への付加分 (kWh/h) (4)
+    """1時間当たりの補機の消費電力量のうち暖房設備への付加分 (kWh/h) (5)
 
     Args:
       r_sa_d_t(ndarray): 1時間当たりの空気搬送ファンの風量のうち床下空間または居室へ供給する風量の割合 (-)
@@ -550,7 +550,7 @@ def get_E_E_H_aux_ass_d_t(r_sa_d_t, t_cp_d_t, E_E_fan_d_t):
 
     E_E_H_aux_ass_d_t = np.zeros(24 * 365)
 
-    # (4)
+    # (5)
     f = np.logical_and(0 < r_sa_d_t, t_cp_d_t == 0)
     E_E_H_aux_ass_d_t[f] = E_E_fan_d_t[f]
 
@@ -572,7 +572,7 @@ def get_E_E_W_aux_ass_d_t(r_sa_d_t, t_cp_d_t, E_E_fan_d_t, E_E_cp_d_t):
     """
     E_E_W_aux_ass_d_t = np.zeros(24 * 365)
 
-    # (5)
+    # (6)
     f = np.logical_and(r_sa_d_t == 0, 0 < t_cp_d_t)
     E_E_W_aux_ass_d_t[f] = E_E_fan_d_t[f] + E_E_cp_d_t[f]
 
@@ -588,7 +588,7 @@ def get_E_E_W_aux_ass_d_t(r_sa_d_t, t_cp_d_t, E_E_fan_d_t, E_E_cp_d_t):
 # ============================================================================
 
 def get_t_cp_d_t(hotwater_use, t_fan_d_t, heating_flag_d):
-    """1時間当たりの循環ポンプの稼働時間 (h/h) (6)
+    """1時間当たりの循環ポンプの稼働時間 (h/h) (7)
 
     Args:
       hotwater_use(bool): 空気集熱式太陽熱利用設備が給湯部を有する場合はTrue
@@ -602,13 +602,13 @@ def get_t_cp_d_t(hotwater_use, t_fan_d_t, heating_flag_d):
     t_cp_d_t = np.zeros(24 * 365)
 
     if hotwater_use == False:
-        # (6-1) 集熱した熱を給湯に使用しない場合は循環ポンプは稼働しない
+        # (7-1) 集熱した熱を給湯に使用しない場合は循環ポンプは稼働しない
         pass
     else:
         # 暖房日を時間ごとの配列へ展開 365->24*365
         heating_flag_d_t = np.repeat(heating_flag_d, 24)
 
-        # (6-2) 空気搬送ファンが稼働しているが非暖房日の場合は循環ポンプは稼働する
+        # (7-2) 空気搬送ファンが稼働しているが非暖房日の場合は循環ポンプは稼働する
         f = np.logical_and(0 < t_fan_d_t, heating_flag_d_t == False)
         t_cp_d_t[f] = 1.0
 
@@ -620,7 +620,7 @@ def get_t_cp_d_t(hotwater_use, t_fan_d_t, heating_flag_d):
 # ============================================================================
 
 def get_E_E_cp_d_t(pump_sso, t_cp_d_t):
-    """1時間当たりの循環ポンプの消費電力量 (kWh/h) (7)
+    """1時間当たりの循環ポンプの消費電力量 (kWh/h) (8)
 
     Args:
       pump_sso(bool): 循環ポンプの自立運転用太陽光発電装置を採用する場合はTrue
@@ -660,7 +660,7 @@ def get_P_cp():
 # ============================================================================
 
 def calc_L_tnk_d(Q_d, W_tnk, Theta_wtr_d):
-    """1日当たりの給湯部におけるタンク蓄熱量の上限による補正集熱量 (MJ/d) (8)
+    """1日当たりの給湯部におけるタンク蓄熱量の上限による補正集熱量 (MJ/d) (9)
 
     Args:
       Q_d(ndarray): 1日当たりの基準集熱量 (MJ/d)
@@ -701,7 +701,7 @@ def get_alpha_tnk_d():
 
 
 def get_HC_tnk_d(W_tnk, Theta_wtr_d):
-    """給湯部のタンク蓄熱量の上限 (MJ/d) (9)
+    """給湯部のタンク蓄熱量の上限 (MJ/d) (10)
 
     Args:
       W_tnk(float): 給湯部のタンク容量 (L)
@@ -725,7 +725,7 @@ def get_HC_tnk_d(W_tnk, Theta_wtr_d):
 # ============================================================================
 
 def calc_Q_d(Q_col_d_t, t_cp_d_t):
-    """1日当たりの基準集熱量 (MJ/d) (10)
+    """1日当たりの基準集熱量 (MJ/d) (11)
 
     Args:
       Q_col_d_t(ndarray): 1時間当たりの集熱部における集熱量 (MJ/d)
@@ -735,13 +735,13 @@ def calc_Q_d(Q_col_d_t, t_cp_d_t):
       ndarray: 1日当たりの基準集熱量 (MJ/d)
 
     """
-    # 1時間当たりの集熱部における集熱量のうちの給湯利用分 (11)
+    # 1時間当たりの集熱部における集熱量のうちの給湯利用分 (12)
     Q_col_w_d_t = get_Q_col_w_d_t(Q_col_d_t, t_cp_d_t)
 
     # 給湯部のシステム効率
     f_s = 0.85
 
-    # 1日当たりの基準集熱量 (MJ/d) (10)
+    # 1日当たりの基準集熱量 (MJ/d)
     tmp = Q_col_w_d_t * f_s
     Q_d = np.sum(tmp.reshape(365, 24), axis=1)
 
@@ -749,7 +749,7 @@ def calc_Q_d(Q_col_d_t, t_cp_d_t):
 
 
 def get_Q_col_w_d_t(Q_col_d_t, t_cp_d_t):
-    """1時間当たりの集熱部における集熱量のうちの給湯利用分 (MJ/h) (11)
+    """1時間当たりの集熱部における集熱量のうちの給湯利用分 (MJ/h) (12)
 
     Args:
       Q_col_d_t(ndarray): 1時間当たりの集熱部における集熱量 (MJ/d)
@@ -762,7 +762,7 @@ def get_Q_col_w_d_t(Q_col_d_t, t_cp_d_t):
     # 給湯部の熱交換効率
     f_hx = 0.25
 
-    # 1時間当たりの集熱部における集熱量のうちの給湯利用分 (MJ/h) (11)
+    # 1時間当たりの集熱部における集熱量のうちの給湯利用分 (MJ/h)
     Q_col_w_d_t = Q_col_d_t * f_hx * t_cp_d_t
 
     return Q_col_w_d_t
@@ -777,7 +777,7 @@ def get_Q_col_w_d_t(Q_col_d_t, t_cp_d_t):
 # ============================================================================
 
 def get_t_fan_d_t(Theta_col_nonopg_d_t, Theta_col_opg_d_t):
-    """1時間当たりの空気搬送ファンの稼働時間 (h/h) (12)
+    """1時間当たりの空気搬送ファンの稼働時間 (h/h) (13)
 
     Args:
       Theta_col_nonopg_d_t(ndarray): 空気搬送ファン停止時の集熱部の出口における空気温度 (℃)
@@ -801,7 +801,7 @@ def get_t_fan_d_t(Theta_col_nonopg_d_t, Theta_col_opg_d_t):
 # ============================================================================
 
 def get_V_fan_d_t(t_fan_d_t, V_fan_P0):
-    """1時間当たりの空気搬送ファンの風量 (m3/h) (13)
+    """1時間当たりの空気搬送ファンの風量 (m3/h) (14)
 
     Args:
       t_fan_d_t(ndarray): 1時間当たりの空気搬送ファンの稼働時間 (h/h)
@@ -820,7 +820,7 @@ def get_V_fan_d_t(t_fan_d_t, V_fan_P0):
 # ============================================================================
 
 def calc_E_E_fan_d_t(fan_sso, fan_type, V_fan_d_t, t_fan_d_t):
-    """1時間当たりの空気搬送ファンの消費電力量 (kWh/h) (14)
+    """1時間当たりの空気搬送ファンの消費電力量 (kWh/h) (15)
 
     Args:
       fan_sso(bool): 空気搬送ファンの自立運転用太陽光発電装置を採用する場合はTrue
@@ -881,7 +881,7 @@ def get_table_1():
 # ============================================================================
 
 def get_V_sa_d_t_i(i, A_HCZ_i, A_MR, A_OR, V_sa_d_t_A):
-    """1時間当たりの床下空間または居室へ供給する空気の風量 (m3/h) (15)
+    """1時間当たりの床下空間または居室へ供給する空気の風量 (m3/h) (16)
 
     Args:
       i(int): 暖冷房区画の番号
@@ -905,7 +905,7 @@ def get_V_sa_d_t_i(i, A_HCZ_i, A_MR, A_OR, V_sa_d_t_A):
 
 
 def get_V_sa_d_t_A(V_fan_d_t, r_sa_d_t):
-    """床下空間または居室へ供給する1時間当たりの空気の風量の合計 (m3/h) (16)
+    """床下空間または居室へ供給する1時間当たりの空気の風量の合計 (m3/h) (17)
 
     Args:
       V_fan_d_t(ndarray): 1時間当たりの空気搬送ファンの風量 (m3/h)
@@ -921,7 +921,7 @@ def get_V_sa_d_t_A(V_fan_d_t, r_sa_d_t):
 
 
 def get_r_sa_d_t(t_fan_d_t, heating_flag_d):
-    """1時間当たりの空気搬送ファンの風量のうち床下空間または居室へ供給する風量の割合 (17)
+    """1時間当たりの空気搬送ファンの風量のうち床下空間または居室へ供給する風量の割合 (18)
 
     Args:
       t_fan_d_t(ndarray): 1時間当たりの空気搬送ファンの稼働時間 (h/h)
@@ -947,7 +947,7 @@ def get_r_sa_d_t(t_fan_d_t, heating_flag_d):
 # ============================================================================
 
 def get_Theta_sa_d_t(V_fan_d_t, Theta_col_opg_d_t, Q_col_W_d_t):
-    """床下空間または居室へ供給する空気の温度 (℃) (18)
+    """床下空間または居室へ供給する空気の温度 (℃) (19)
 
     Args:
       V_fan_d_t(ndarray): 1時間当たりの空気搬送ファンの風量 (m3/h)
@@ -1046,7 +1046,7 @@ def calc_Theta_col(A_col, P_alpha, P_beta, V_fan_P0, d0, d1, m_fan_test, region,
 # ============================================================================
 
 def get_Q_col_d_t(V_fan_d_t, Theta_col_opg_d_t, Theta_ex_d_t):
-    """1時間当たりの集熱部における集熱量 (MJ/h) (19)
+    """1時間当たりの集熱部における集熱量 (MJ/h) (20)
 
     Args:
       V_fan_d_t(ndarray): 1時間当たりの空気搬送ファンの風量 (m3/h)
@@ -1063,7 +1063,7 @@ def get_Q_col_d_t(V_fan_d_t, Theta_col_opg_d_t, Theta_ex_d_t):
     # 空気の比熱 [kJ/(kgK)]
     c_p_air = 1.006
 
-    # 1時間当たりの集熱部における集熱量 (MJ/h) (19)
+    # 1時間当たりの集熱部における集熱量 (MJ/h)
     Q_col_d_t = ro_air * c_p_air * V_fan_d_t * (Theta_col_opg_d_t - Theta_ex_d_t) * 10 ** (-3)
 
     return Q_col_d_t
@@ -1074,7 +1074,7 @@ def get_Q_col_d_t(V_fan_d_t, Theta_col_opg_d_t, Theta_ex_d_t):
 # ============================================================================
 
 def get_Theta_col_nonopg_d_t(Theta_col_nonopg_j_d_t, V_col_j_d_t):
-    """空気搬送ファン停止時の集熱部の出口における空気温度 (℃) (20)
+    """空気搬送ファン停止時の集熱部の出口における空気温度 (℃) (21)
 
     Args:
       Theta_col_nonopg_j_d_t(ndarray): 空気搬送ファン停止時の集熱器群ごとの出口における空気温度 (℃)
@@ -1099,7 +1099,7 @@ def get_Theta_col_nonopg_d_t(Theta_col_nonopg_j_d_t, V_col_j_d_t):
 # ============================================================================
 
 def get_Theta_col_opg_d_t(Theta_col_opg_j_d_t, V_col_j_d_t):
-    """空気搬送ファン稼働時の集熱部の出口における空気温度 (℃) (21)
+    """空気搬送ファン稼働時の集熱部の出口における空気温度 (℃) (22)
 
     Args:
       Theta_col_opg_j_d_t(ndarray): 空気搬送ファン稼働時の集熱器群ごとの出口における空気温度 (℃)
@@ -1112,7 +1112,7 @@ def get_Theta_col_opg_d_t(Theta_col_opg_j_d_t, V_col_j_d_t):
     # 集熱器群の数 (-)
     n = Theta_col_opg_j_d_t.shape[0]
 
-    # 空気搬送ファン稼働時の集熱部の出口における空気温度 (℃) (21)
+    # 空気搬送ファン稼働時の集熱部の出口における空気温度 (℃)
     Theta_col_opg_d_t = (np.sum([Theta_col_opg_j_d_t[j] * V_col_j_d_t[j] for j in range(n)], axis=0)
                          / np.sum([V_col_j_d_t[j] for j in range(n)], axis=0))
 
@@ -1124,7 +1124,7 @@ def get_Theta_col_opg_d_t(Theta_col_opg_j_d_t, V_col_j_d_t):
 # ============================================================================
 
 def calc_Theta_col_nonopg_j_d_t(P_alpha_j, P_beta_j, region, sol_region, Theta_ex_d_t, d0_j=None, d1_j=None):
-    """空気搬送ファン停止時の集熱器群jの出口における空気温度 (℃) (22)
+    """空気搬送ファン停止時の集熱器群jの出口における空気温度 (℃) (23)
 
     Args:
       P_alpha_j(float): 方位角 (°)
@@ -1187,7 +1187,7 @@ def get_d1_default():
 # ============================================================================
 
 def get_Theta_col_opg_j_d_t(V_col_j_d_t, A_col_j, U_c_j, Theta_col_nonopg_j_d_t, Theta_ex_d_t):
-    """空気搬送ファン稼働時の集熱器群jの出口における空気温度 (℃) (23)
+    """空気搬送ファン稼働時の集熱器群jの出口における空気温度 (℃) (24)
 
     Args:
       V_col_j_d_t(ndarray): 空気搬送ファン稼働時に集熱器群jを流れる空気の体積流量
@@ -1206,7 +1206,7 @@ def get_Theta_col_opg_j_d_t(V_col_j_d_t, A_col_j, U_c_j, Theta_col_nonopg_j_d_t,
     # 空気の比熱 [kJ/(kgK)]
     c_p_air = 1.006
 
-    # 空気搬送ファン稼働時の集熱器群jの出口における空気温度 (℃) (23)
+    # 空気搬送ファン稼働時の集熱器群jの出口における空気温度 (℃)
     Theta_col_opg_j_d_t = (Theta_col_nonopg_j_d_t + (Theta_ex_d_t - Theta_col_nonopg_j_d_t)
                            * np.exp(- (U_c_j * A_col_j) / (c_p_air * ro_air * V_col_j_d_t / 3600 * 10 ** 3)))
 
@@ -1214,7 +1214,7 @@ def get_Theta_col_opg_j_d_t(V_col_j_d_t, A_col_j, U_c_j, Theta_col_nonopg_j_d_t,
 
 
 def get_V_col_j_d_t(V_fan_P0_j, A_col_j, A_col):
-    """空気搬送ファン稼働時に集熱器群jを流れる空気の体積流量 (m3/h) (24)
+    """空気搬送ファン稼働時に集熱器群jを流れる空気の体積流量 (m3/h) (25)
 
     Args:
       V_fan_P0_j(float): 空気搬送ファンの送風機特性曲線において機外静圧をゼロとしたときの空気搬送ファンの風量 (m3/h)
@@ -1230,7 +1230,7 @@ def get_V_col_j_d_t(V_fan_P0_j, A_col_j, A_col):
 
 
 def get_U_c_j(m_fan_test_j=None, d1_j=None):
-    """集熱器群jを構成する集熱器の総合熱損失係数 (25)
+    """集熱器群jを構成する集熱器の総合熱損失係数 (26)
 
     Args:
       m_fan_test_j(float, optional): 集熱器群jを構成する集熱器の集熱性能試験時における単位面積当たりの空気の質量流量 (kg/(s・m2)) (Default value = None)
@@ -1248,7 +1248,7 @@ def get_U_c_j(m_fan_test_j=None, d1_j=None):
     if d1_j is None:
         d1_j = 2.0
 
-    # 集熱器群jを構成する集熱器の総合熱損失係数 (25)
+    # 集熱器群jを構成する集熱器の総合熱損失係数
     U_c_j = - c_p_air * m_fan_test_j * 10 ** 3 * np.log(1 - 1 / (c_p_air * m_fan_test_j * 10 ** 3) * d1_j)
 
     return U_c_j

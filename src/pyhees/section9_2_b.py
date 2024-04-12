@@ -2,13 +2,14 @@
 # 付録B ソーラーシステム
 # ============================================================================
 
-import math
 import numpy as np
+from pyhees.util import util
 
 # ============================================================================
 # B.3.1 熱交換器の温度効率
 # ============================================================================
-def calc_Epsilon_t_hx_d_t(c_p_htm, UA_hx, G_htm_d_t):
+
+def get_epsilon_t_hx_d_t(c_p_htm, UA_hx, G_htm_d_t):
     """熱交換器の温度効率(-) (1)
 
     Args:
@@ -18,25 +19,24 @@ def calc_Epsilon_t_hx_d_t(c_p_htm, UA_hx, G_htm_d_t):
 
     Returns:
       ndarray: 熱交換器の温度効率 (-)
-
     """
-    Epsilon_t_hx_d_t = np.zeros(24 * 365)
+    epsilon_t_hx_d_t = np.zeros(24 * 365)
 
     f1 = G_htm_d_t == 0
-    Epsilon_t_hx_d_t[f1] = 1
+    epsilon_t_hx_d_t[f1] = 1
 
-    f2 =  G_htm_d_t > 0
+    f2 = G_htm_d_t > 0
     exp_tmp = - UA_hx / (c_p_htm * G_htm_d_t[f2] * 10 ** 3 / 3600)
-    Epsilon_t_hx_d_t[f2] = 1 - np.exp(exp_tmp)
+    epsilon_t_hx_d_t[f2] = 1 - np.exp(exp_tmp)
 
-    return Epsilon_t_hx_d_t
+    return epsilon_t_hx_d_t
 
 
 # ============================================================================
 # B.3.2 貯湯タンク内の水の利用可否
 # ============================================================================
 
-def calc_isAvailable_w_tank(Theta_wtr, Theta_w_tank_mixed_prev, Theta_w_tank_upper_prev, t_hc_start_d):
+def get_isAvailable_w_tank(Theta_wtr, Theta_w_tank_mixed_prev, Theta_w_tank_upper_prev, t_hc_start_d):
     """貯湯タンク内の水の利用可否 (-)
 
     Args:
@@ -47,29 +47,27 @@ def calc_isAvailable_w_tank(Theta_wtr, Theta_w_tank_mixed_prev, Theta_w_tank_upp
 
     Returns:
       bool: 貯湯タンク内の水の利用可否 (-)
-
     """
     # 貯湯タンク内の水の利用可否
     isAvailable_w_tank_d_t = False
 
     if t_hc_start_d == 1:
-        f1 = Theta_w_tank_mixed_prev < Theta_wtr or math.isclose(Theta_w_tank_mixed_prev, Theta_wtr)
+        f1 = Theta_w_tank_mixed_prev < Theta_wtr or util.is_equal(Theta_w_tank_mixed_prev, Theta_wtr)
         if f1:
-          isAvailable_w_tank_d_t = False
+            isAvailable_w_tank_d_t = False
 
         f2 = Theta_w_tank_mixed_prev > Theta_wtr
         if f2:
-          isAvailable_w_tank_d_t = True
-    
+            isAvailable_w_tank_d_t = True
+
     else:
-        f1 = Theta_w_tank_upper_prev < Theta_wtr or math.isclose(Theta_w_tank_upper_prev, Theta_wtr)
+        f1 = Theta_w_tank_upper_prev < Theta_wtr or util.is_equal(Theta_w_tank_upper_prev, Theta_wtr)
         if f1:
-        
-          isAvailable_w_tank_d_t = False
+            isAvailable_w_tank_d_t = False
 
         f2 = Theta_w_tank_upper_prev > Theta_wtr
         if f2:
-          isAvailable_w_tank_d_t = True
+            isAvailable_w_tank_d_t = True
 
     return isAvailable_w_tank_d_t
 
@@ -78,7 +76,7 @@ def calc_isAvailable_w_tank(Theta_wtr, Theta_w_tank_mixed_prev, Theta_w_tank_upp
 # B.4.1 温度効率
 # ============================================================================
 
-def calc_Epsilon_t_stc_d_t(A_stcp, b1, c_p_htm, G_htm_d_t):
+def get_epsilon_t_stc_d_t(A_stcp, b1, c_p_htm, G_htm_d_t):
     """熱交換器の温度効率 (-) (3)
 
     Args:
@@ -89,21 +87,20 @@ def calc_Epsilon_t_stc_d_t(A_stcp, b1, c_p_htm, G_htm_d_t):
 
     Returns:
       float: 集熱配管の温度効率 (-)
-
     """
-    Epsilon_t_stc_d_t = np.zeros(24 * 365)
+    epsilon_t_stc_d_t = np.zeros(24 * 365)
 
     f1 = G_htm_d_t == 0
-    Epsilon_t_stc_d_t[f1] = 1
+    epsilon_t_stc_d_t[f1] = 1
 
     f2 = G_htm_d_t > 0
-    exp_tmp = - (b1 * A_stcp)/ (c_p_htm * G_htm_d_t[f2] * 10 **3 / 3600)
-    Epsilon_t_stc_d_t[f2] = 1 - np.exp(exp_tmp)
+    exp_tmp = - (b1 * A_stcp) / (c_p_htm * G_htm_d_t[f2] * 10 ** 3 / 3600)
+    epsilon_t_stc_d_t[f2] = 1 - np.exp(exp_tmp)
 
-    return Epsilon_t_stc_d_t
+    return epsilon_t_stc_d_t
 
 
-def calc_Epsilon_t_stp_d_t(c_p_htm, UA_stp, G_htm_d_t):
+def get_epsilon_t_stp_d_t(c_p_htm, UA_stp, G_htm_d_t):
     """集熱配管の温度効率 (-) (4)
 
     Args:
@@ -113,55 +110,52 @@ def calc_Epsilon_t_stp_d_t(c_p_htm, UA_stp, G_htm_d_t):
 
     Returns:
       float: 集熱配管の温度効率 (-)
-
     """
-    Epsilon_t_stp_d_t = np.zeros(24 * 365)
+    epsilon_t_stp_d_t = np.zeros(24 * 365)
 
     f1 = G_htm_d_t == 0
-    Epsilon_t_stp_d_t[f1] = 1
+    epsilon_t_stp_d_t[f1] = 1
 
     f2 = G_htm_d_t > 0
 
     # 集熱配管の片道長さ
     L_stp = get_L_stp()
 
-    exp_tmp = - (UA_stp * L_stp)/ (c_p_htm * G_htm_d_t[f2] * 10 ** 3 / 3600)
-    Epsilon_t_stp_d_t[f2] = 1 - np.exp(exp_tmp)
+    exp_tmp = - (UA_stp * L_stp) / (c_p_htm * G_htm_d_t[f2] * 10 ** 3 / 3600)
+    epsilon_t_stp_d_t[f2] = 1 - np.exp(exp_tmp)
 
-    return Epsilon_t_stp_d_t
+    return epsilon_t_stp_d_t
 
 
 def get_L_stp():
     """集熱配管の片道長さ (m)
-    
+
     Args:
 
     Returns:
       int: 集熱配管の片道長さ (m)
-
     """
     return 20
 
 
-def calc_G_htm_d_t(Gs_htm, delta_tau_hc_d_t):
+def get_G_htm_d_t(Gs_htm, Delta_tau_hc_d_t):
     """1時間当たりの熱媒の循環量 (kg/h) (5)
 
     Args:
       Gs_htm(float): 熱媒の基準循環流量 (kg/h)
-      delta_tau_hc_d_t(ndarray): 1時間当たりの集熱時間数 (-)
+      Delta_tau_hc_d_t(ndarray): 1時間当たりの集熱時間数 (-)
 
     Returns:
       ndarray: 1時間当たりの熱媒の循環量 (kg/h)
-
     """
-    return Gs_htm * delta_tau_hc_d_t
+    return Gs_htm * Delta_tau_hc_d_t
 
 
 # ============================================================================
 # B.4.3 集熱時間数および集熱開始時刻
 # ============================================================================
 
-def calc_delta_tau_hc_d_t(I_s_d_t):
+def get_Delta_tau_hc_d_t(I_s_d_t):
     """1時間当たりの集熱時間数 (h/h) (6)
 
     Args:
@@ -169,26 +163,25 @@ def calc_delta_tau_hc_d_t(I_s_d_t):
 
     Returns:
       ndarray: 1時間当たりの集熱時間数 (h/h)
-
     """
     # 集熱の可否を判断する基準となる単位面積当たりの平均日射量 (W/m2)
     I_s_lmt = get_I_s_lmt()
 
     # 1時間当たりの集熱時間数の計算領域を確保
-    delta_tau_hc_d_t = np.zeros(24 * 365, dtype=np.int32)
+    Delta_tau_hc_d_t = np.zeros(24 * 365)
 
     # I_s_d_t < I_s_lmt  の場合
     f1 = I_s_d_t < I_s_lmt
-    delta_tau_hc_d_t[f1] = 0
+    Delta_tau_hc_d_t[f1] = 0
 
     # I_s_d_t >= I_s_lmt の場合
     f2 = I_s_d_t >= I_s_lmt
-    delta_tau_hc_d_t[f2] = 1
+    Delta_tau_hc_d_t[f2] = 1
 
-    return delta_tau_hc_d_t
+    return Delta_tau_hc_d_t
 
 
-def calc_t_hc_start_d(I_s_d_t):
+def get_t_hc_start_d(I_s_d_t):
     """集熱開始時刻 (-) (7)
 
     Args:
@@ -196,7 +189,6 @@ def calc_t_hc_start_d(I_s_d_t):
 
     Returns:
       ndarray: 集熱開始時刻 (-)
-
     """
     # 1時間前
     I_s_d_t_prev = np.roll(I_s_d_t, 1)
@@ -205,7 +197,7 @@ def calc_t_hc_start_d(I_s_d_t):
     I_s_lmt = get_I_s_lmt()
 
     # 集熱開始時刻の計算領域を確保
-    t_hc_start_d = np.zeros(365 * 24, dtype=np.int32)
+    t_hc_start_d = np.zeros(24 * 365)
 
     f = np.logical_and(I_s_d_t >= I_s_lmt, I_s_d_t_prev < I_s_lmt)
     t_hc_start_d[f] = 1
@@ -220,7 +212,6 @@ def get_I_s_lmt():
 
     Returns:
         int: 集熱の可否を判断する基準となる単位面積当たりの平均日射量 (W/m2)
-
     """
     return 150
 
@@ -229,60 +220,58 @@ def get_I_s_lmt():
 # B.4.4 循環ポンプの稼働時間数
 # ============================================================================
 
-def calc_delta_tau_pump_hc_d_t(delta_tau_hc_d_t):
+def get_Delta_tau_pump_hc_d_t(Delta_tau_hc_d_t):
     """1時間当たりの集熱時における循環ポンプの稼働時間数 (h/h) (8)
 
     Args:
-      delta_tau_hc_d_t(ndarray): 1時間当たりの集熱時間数 (-)
+      Delta_tau_hc_d_t(ndarray): 1時間当たりの集熱時間数 (-)
 
     Returns:
       ndarray: 1時間当たりの集熱時における循環ポンプの稼働時間数 (h/h)
-
     """
     # 1時間当たりの集熱時における循環ポンプの稼働時間数の計算領域を確保
-    delta_tau_pump_hc_d_t = np.zeros(24 * 365, dtype=np.int32)
+    Delta_tau_pump_hc_d_t = np.zeros(24 * 365)
 
-    # delta_tau_hc_d_t == 0 の場合
-    f1 = delta_tau_hc_d_t == 0
-    delta_tau_pump_hc_d_t[f1] = 0
+    # Delta_tau_hc_d_t == 0 の場合
+    f1 = Delta_tau_hc_d_t == 0
+    Delta_tau_pump_hc_d_t[f1] = 0
 
-    # delta_tau_hc_d_t > 0 の場合
-    f2 = delta_tau_hc_d_t > 0
-    delta_tau_pump_hc_d_t[f2] = 1
+    # Delta_tau_hc_d_t > 0 の場合
+    f2 = Delta_tau_hc_d_t > 0
+    Delta_tau_pump_hc_d_t[f2] = 1
 
-    return delta_tau_pump_hc_d_t
+    return Delta_tau_pump_hc_d_t
 
 
-def calc_delta_tau_pump_non_hc_d_t(I_s_d_t, delta_tau_hc_d_t):
+def get_Delta_tau_pump_non_hc_d_t(I_s_d_t, Delta_tau_hc_d_t):
     """1時間当たりの非集熱時における循環ポンプの稼働時間数 (h/h) (9)
 
     Args:
       I_s_d_t(ndarray): 集熱器の単位面積当たりの平均日射量 (W/m2)
-      delta_tau_hc_d_t(ndarray): 1時間当たりの集熱時間数(-)
+      Delta_tau_hc_d_t(ndarray): 1時間当たりの集熱時間数(-)
 
     Returns:
       ndarray: 1時間当たりの非集熱時における循環ポンプの稼働時間数 (h/h)
-
     """
     # 1時間当たりの非集熱時における循環ポンプの稼働時間数の計算領域を確保
-    delta_tau_pump_non_hc_d_t = np.zeros(24 * 365, dtype=np.int32)
+    Delta_tau_pump_non_hc_d_t = np.zeros(24 * 365)
 
-    # delta_tau_hc_d_t > 0 or I_s_d_t == 0 の場合
-    f1 = np.logical_or(delta_tau_hc_d_t > 0, I_s_d_t == 0)
-    delta_tau_pump_non_hc_d_t[f1] = 0
+    # Delta_tau_hc_d_t > 0 or I_s_d_t == 0 の場合
+    f1 = np.logical_or(Delta_tau_hc_d_t > 0, I_s_d_t == 0)
+    Delta_tau_pump_non_hc_d_t[f1] = 0
 
-    # delta_tau_hc_d_t == 0 and I_s_d_t > 0 の場合
-    f2 = np.logical_and(delta_tau_hc_d_t == 0, I_s_d_t > 0)
-    delta_tau_pump_non_hc_d_t[f2] = 1
+    # Delta_tau_hc_d_t == 0 and I_s_d_t > 0 の場合
+    f2 = np.logical_and(Delta_tau_hc_d_t == 0, I_s_d_t > 0)
+    Delta_tau_pump_non_hc_d_t[f2] = 1
 
-    return delta_tau_pump_non_hc_d_t
+    return Delta_tau_pump_non_hc_d_t
 
 
 # ============================================================================
 # B.5 仕様
 # ============================================================================
 
-def calc_b0(b0):
+def get_b0(b0):
     """集熱器の集熱効率特性線図一次近似式の切片 (-)
 
     Args:
@@ -290,7 +279,6 @@ def calc_b0(b0):
 
     Returns:
       float: 集熱器の集熱効率特性線図一次近似式の切片 (-)
-
     """
     if b0 is not None:
         return b0
@@ -300,7 +288,7 @@ def calc_b0(b0):
         return table_2[1]
 
 
-def calc_b1(b1):
+def get_b1(b1):
     """集熱器の集熱効率特性線図一次近似式の傾き W/(m2・K)
 
     Args:
@@ -308,7 +296,6 @@ def calc_b1(b1):
 
     Returns:
       float: 集熱器の集熱効率特性線図一次近似式の傾き W/(m2・K)
-
     """
     if b1 is not None:
         return b1
@@ -318,7 +305,7 @@ def calc_b1(b1):
         return table_2[2]
 
 
-def calc_Gs_htm(Gs_htm):
+def get_Gs_htm(Gs_htm):
     """熱媒の基準循環流量 (kg/h)
 
     Args:
@@ -326,7 +313,6 @@ def calc_Gs_htm(Gs_htm):
 
     Returns:
       float: 熱媒の基準循環流量 (kg/h)
-
     """
     if Gs_htm is not None:
         return Gs_htm
@@ -336,7 +322,7 @@ def calc_Gs_htm(Gs_htm):
         return table_2[3]
 
 
-def calc_c_p_htm(c_p_htm):
+def get_c_p_htm(c_p_htm):
     """熱媒の定圧比熱 kJ/(kg･K)
 
     Args:
@@ -344,7 +330,6 @@ def calc_c_p_htm(c_p_htm):
 
     Returns:
       float: 熱媒の定圧比熱 kJ/(kg･K)
-
     """
     if c_p_htm is not None:
         return c_p_htm
@@ -354,7 +339,7 @@ def calc_c_p_htm(c_p_htm):
         return table_2[4]
 
 
-def calc_UA_stp(UA_stp):
+def get_UA_stp(UA_stp):
     """集熱配管の放熱係数 W/(m・K)
 
     Args:
@@ -362,7 +347,6 @@ def calc_UA_stp(UA_stp):
 
     Returns:
       float: 集熱配管の放熱係数 W/(m・K)
-
     """
     if UA_stp is not None:
         return UA_stp
@@ -372,7 +356,7 @@ def calc_UA_stp(UA_stp):
         return table_2[5]
 
 
-def calc_UA_hx(UA_hx):
+def get_UA_hx(UA_hx):
     """熱交換器の伝熱係数 (W/K)
 
     Args:
@@ -380,7 +364,6 @@ def calc_UA_hx(UA_hx):
 
     Returns:
       float: 熱交換器の伝熱係数 (W/K)
-
     """
     if UA_hx is not None:
         return UA_hx
@@ -398,7 +381,6 @@ def get_P_pump_hc(P_pump_hc):
 
     Returns:
       float: 集熱時における循環ポンプの消費電力量 (W)
-
     """
     if P_pump_hc is not None:
         return P_pump_hc
@@ -416,7 +398,6 @@ def get_P_pump_non_hc(P_pump_non_hc):
 
     Returns:
       float: 非集熱時における循環ポンプの消費電力量 (W)
-
     """
     if P_pump_non_hc is not None:
         return P_pump_non_hc
@@ -426,7 +407,7 @@ def get_P_pump_non_hc(P_pump_non_hc):
         return table_2[8]
 
 
-def calc_eta_r_tank(eta_r_tank):
+def get_eta_r_tank(eta_r_tank):
     """有効出湯効率 (%)
 
     Args:
@@ -434,7 +415,6 @@ def calc_eta_r_tank(eta_r_tank):
 
     Returns:
       float: 有効出湯効率 (%)
-
     """
     if eta_r_tank is not None:
         return eta_r_tank
@@ -444,15 +424,14 @@ def calc_eta_r_tank(eta_r_tank):
         return table_2[10]
 
 
-def calc_UA_tank(UA_tank):
-    """熱交換器の伝熱係数 (-)
+def get_UA_tank(UA_tank):
+    """貯湯タンクの放熱係数(W/K)
 
     Args:
-      UA_tank(float): 熱交換器の伝熱係数 (-)
+      UA_tank(float): 貯湯タンクの放熱係数(W/K)
 
     Returns:
-      float: 熱交換器の伝熱係数 (-)
-
+      float: 貯湯タンクの放熱係数(W/K)
     """
     if UA_tank is not None:
         return UA_tank
@@ -469,7 +448,6 @@ def get_table_2():
 
     Returns:
       list: 仕様を表す示すパラメータとその決定方法
-
     """
     table_2 = [
         None,

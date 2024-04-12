@@ -20,8 +20,10 @@ import pyhees.section7_1_n as gas_hybrid_tankless
 import pyhees.section7_1_i as whybrid
 import pyhees.section7_1_j as watersaving
 import pyhees.section7_1_m as schedule
+import pyhees.section7_1_o as solar
 
 import pyhees.section9_2 as lss
+from pyhees.section9_2_d import is_installed_hw_type
 import pyhees.section9_3 as ass
 
 from pyhees.section11_1 import load_climate, get_Theta_ex
@@ -41,11 +43,12 @@ from pyhees.section11_3 import load_schedule, get_schedule_hw
 @lru_cache()
 def calc_hotwater_load(n_p, region, sol_region, has_bath, bath_function, pipe_diameter, kitchen_watersaving_A,
                       kitchen_watersaving_C, shower_watersaving_A, shower_watersaving_B, washbowl_watersaving_C,
-                      bath_insulation,
+                      bath_insulation, hw_type,
                       type=None, ls_type=None, P_alpha_sp=None, P_beta_sp=None, W_tnk_ss=None,
                       hotwater_use=None, heating_flag_d=None, A_col=None, P_alpha=None, P_beta=None, V_fan_P0=None,
                       d0=None, d1=None, m_fan_test=None, W_tnk_ass=None, A_stcp=None, b0=None, b1=None, c_p_htm=None,
-                      eta_r_tank=None, g_htm=None, Gs_htm=None, hw_connection_type=None, UA_hx=None, UA_stp=None, UA_tank=None
+                      eta_r_tank=None, g_htm=None, Gs_htm=None, hw_connection_type=None, UA_hx=None, UA_stp=None, UA_tank=None,
+                      solar_water_tap=None
                       ):
     """給湯負荷の計算
 
@@ -78,6 +81,7 @@ def calc_hotwater_load(n_p, region, sol_region, has_bath, bath_function, pipe_di
       d1(tuple, optional): 集熱器群を構成する集熱器の集熱効率特性線図一次近似式の傾き (W/(m2K)) (Default value = None)
       m_fan_test(tuple, optional): 集熱器群を構成する集熱器の集熱性能試験時における単位面積当たりの空気の質量流量 (kg/(s・m2)) (Default value = None)
       W_tnk_ass(float, optional): タンク容量 (L) (Default value = None)
+      solar_water_tap(str, optional): 太陽熱用水栓 (Default value = None)
 
     Returns:
       dict: 1日当たりの給湯設備付加
@@ -154,8 +158,39 @@ def calc_hotwater_load(n_p, region, sol_region, has_bath, bath_function, pipe_di
 
     # ----- 7. 太陽熱補正給湯熱負荷 -----
 
-    # 太陽熱利用給湯設備による補正集熱量
-    L_sun_d_t = calc_L_sun_d_t(
+    # 太陽熱利用設備から供給される水の温度
+    Theta_w_sun_d_t = get_Theta_w_sun_d_t(
+        region=region,
+        sol_region=sol_region,
+        solar_device=type,
+        ls_type=ls_type,
+        A_stcp=A_stcp,
+        b0=b0,
+        b1=b1,
+        c_p_htm=c_p_htm,
+        eta_r_tank=eta_r_tank,
+        g_htm=g_htm,
+        Gs_htm=Gs_htm,
+        hw_connection_type=hw_connection_type,
+        V_tank=W_tnk_ss,
+        P_alpha_sp=P_alpha_sp,
+        P_beta_sp=P_beta_sp,
+        Theta_wtr_d=Theta_wtr_d,
+        UA_hx=UA_hx,
+        UA_stp=UA_stp,
+        UA_tank=UA_tank,
+        solar_water_tap = solar_water_tap,
+        Theta_sw_s = Theta_sw_s,
+        L_dash_k_d_t=L_dash_k_d_t,
+        L_dash_s_d_t=L_dash_s_d_t,
+        L_dash_w_d_t=L_dash_w_d_t,
+        L_dash_b1_d_t=L_dash_b1_d_t,
+        L_dash_b2_d_t=L_dash_b2_d_t,
+        L_dash_ba1_d_t=L_dash_ba1_d_t)
+
+
+    # 太陽熱利用給湯設備による補正集熱量の総量
+    L_sun_total_d_t = calc_L_sun_total_d_t(
         region=region,
         sol_region=sol_region,
         solar_device=type,
@@ -185,6 +220,9 @@ def calc_hotwater_load(n_p, region, sol_region, has_bath, bath_function, pipe_di
         UA_hx=UA_hx,
         UA_stp=UA_stp,
         UA_tank=UA_tank,
+        Theta_w_sun_d_t = Theta_w_sun_d_t,
+        solar_water_tap = solar_water_tap,
+        Theta_sw_s = Theta_sw_s,
         L_dash_k_d_t=L_dash_k_d_t,
         L_dash_s_d_t=L_dash_s_d_t,
         L_dash_w_d_t=L_dash_w_d_t,
@@ -193,23 +231,22 @@ def calc_hotwater_load(n_p, region, sol_region, has_bath, bath_function, pipe_di
         L_dash_ba1_d_t=L_dash_ba1_d_t
     )
 
+    # 1時間当たりの台所水栓における液体集熱式太陽熱利用設備による補正集熱量（MJ/h）
+    L_sun_k_d_t, L_sun_s_d_t, L_sun_w_d_t, \
+        L_sun_b1_d_t, L_sun_b2_d_t, L_sun_ba1_d_t = get_L_sun_d_t(hw_connection_type, type, solar_water_tap, Theta_sw_s, L_sun_total_d_t, L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t,
+                                                      L_dash_b1_d_t, L_dash_b2_d_t, L_dash_ba1_d_t, Theta_w_sun_d_t)
+
     # 太陽熱補正給湯熱負荷
-    L_dashdash_k_d_t = calc_L_dashdash_k_d_t(L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t, L_dash_b1_d_t, L_dash_b2_d_t,
-                                            L_dash_ba1_d_t,
-                                            L_sun_d_t)
-    L_dashdash_s_d_t = calc_L_dashdash_s_d_t(L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t, L_dash_b1_d_t, L_dash_b2_d_t,
-                                            L_dash_ba1_d_t,
-                                            L_sun_d_t)
-    L_dashdash_w_d_t = calc_L_dashdash_w_d_t(L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t, L_dash_b1_d_t, L_dash_b2_d_t,
-                                            L_dash_ba1_d_t,
-                                            L_sun_d_t)
-    L_dashdash_b1_d_t = calc_L_dashdash_b1_d_t(L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t, L_dash_b1_d_t, L_dash_b2_d_t,
-                                              L_dash_ba1_d_t, L_sun_d_t)
-    L_dashdash_b2_d_t = calc_L_dashdash_b2_d_t(L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t, L_dash_b1_d_t, L_dash_b2_d_t,
-                                              L_dash_ba1_d_t, L_sun_d_t)
-    L_dashdash_ba1_d_t = calc_L_dashdash_ba1_d_t(L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t, L_dash_b1_d_t, L_dash_b2_d_t,
-                                                L_dash_ba1_d_t, L_sun_d_t)
+    L_dashdash_k_d_t = calc_L_dashdash_k_d_t(L_dash_k_d_t, L_sun_k_d_t)
+    L_dashdash_s_d_t = calc_L_dashdash_s_d_t(L_dash_s_d_t, L_sun_s_d_t)
+    L_dashdash_w_d_t = calc_L_dashdash_w_d_t(L_dash_w_d_t, L_sun_w_d_t)
+    L_dashdash_b1_d_t = calc_L_dashdash_b1_d_t(L_dash_b1_d_t, L_sun_b1_d_t)
+    L_dashdash_b2_d_t = calc_L_dashdash_b2_d_t(L_dash_b2_d_t, L_sun_b2_d_t)
+    L_dashdash_ba1_d_t = calc_L_dashdash_ba1_d_t(L_dash_ba1_d_t, L_sun_ba1_d_t)
     L_dashdash_ba2_d_t = get_L_dashdash_ba2_d_t(L_dash_ba2_d_t)
+
+    # 浴槽湯張りの方法
+    bathtub_filling_method_d_t = get_bathtub_filling_method_d_t(hw_connection_type, hw_type, solar_device=type, L_sun_total_d_t=L_sun_total_d_t)
 
     print('L_ba = {}'.format(np.sum(L_ba_d_t)))
 
@@ -265,8 +302,142 @@ def calc_hotwater_load(n_p, region, sol_region, has_bath, bath_function, pipe_di
         'W_dash_b2_d_t': W_dash_b2_d_t,
         'W_dash_ba1_d_t': W_dash_ba1_d_t,
         'theta_ex_d_Ave_d': theta_ex_d_Ave_d,
-        'Theta_ex_Nave_d': Theta_ex_Nave_d
+        'Theta_ex_Nave_d': Theta_ex_Nave_d,
+        'bathtub_filling_method_d_t': bathtub_filling_method_d_t
     }
+
+
+# ============================================================================
+# 19. 太陽熱利用設備から供給される水の温度
+# ============================================================================
+
+
+def get_Theta_w_sun_d_t(region, sol_region, ls_type, A_stcp, b0, b1, c_p_htm, eta_r_tank, g_htm, Gs_htm, hw_connection_type, 
+              P_alpha_sp, P_beta_sp, Theta_wtr_d, UA_hx, UA_stp, UA_tank, V_tank,
+              solar_device, solar_water_tap, Theta_sw_s, L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t,
+              L_dash_b1_d_t, L_dash_b2_d_t, L_dash_ba1_d_t):
+    """太陽熱利用設備から供給される水の温度（℃）
+
+    Args:
+      region(int): 省エネルギー地域区分
+      sol_region(int): 年間の日射地域区分(1-5)
+      ls_type(str): 液体集熱式太陽熱利用設備の種類 (密閉形太陽熱温水器（直圧式）,ソーラーシステム, 開放形太陽熱温水器)
+      A_stcp(float): 集熱部の有効集熱面積(m2)
+      b0(float): 集熱器の集熱効率特性線図一次近似式の切片 (-)
+      b1(float): 集熱器の集熱効率特性線図一次近似式の傾き (W/(m2・K))
+      c_p_htm(float): 熱媒の定圧比熱 (kJ/(kg･K)) 
+      eta_r_tank(float): 有効出湯効率 (%)
+      g_htm(float): 単位日射量当たりの循環流量((kg/h)/(W/m2))
+      Gs_htm(float): 熱媒の基準循環流量(kg/h)
+      hw_connection_type(str): 給湯接続方式の種類 (-)
+      P_alpha_sp(float): ソーラーシステムの太陽熱集熱部の方位角 (°)
+      P_beta_sp(float): ソーラーシステムの太陽熱集熱部の傾斜角 (°)
+      Theta_wtr_d(ndarray): 日平均給水温度 (℃)
+      UA_hx(float): 熱交換器の伝熱係数 (-)
+      UA_stp(float): 集熱配管の放熱係数 (W/(m.K)
+      UA_tank(float): 貯湯タンクの放熱係数(W/K)
+      V_tank(float): タンク容量 (L),
+      solar_device(str): 太陽熱利用設備の種類 (液体集熱式,空気集熱式)
+      solar_water_tap(str): 太陽熱用水栓
+      Theta_sw_s(int): 浴室シャワー水栓の基準給湯温度
+      L_dash_k_d_t(ndarray): 1時間当たりの台所水栓における節湯補正給湯熱負荷 (MJ/h)
+      L_dash_s_d_t(ndarray): 1時間当たりの浴室シャワー水栓における節湯補正給湯熱負荷 (MJ/h)
+      L_dash_w_d_t(ndarray): 1時間当たりの洗面水栓における節湯補正給湯熱負荷 (MJ/h)
+      L_dash_b1_d_t(ndarray): 1時間当たりの浴槽水栓湯はりにおける節湯補正給湯熱負荷 (MJ/h)
+      L_dash_b2_d_t(ndarray): 1時間当たりの浴槽自動湯はりにおける節湯補正給湯熱負荷 (MJ/h)
+      L_dash_ba1_d_t(ndarray): 1時間当たりの浴槽水栓さし湯における節湯補正給湯熱負荷 (MJ/h)
+
+    Returns:
+      ndarray: 太陽熱利用設備から供給される水の温度（℃）
+    """
+    if solar_device == '液体集熱式':
+        # 日射量データ
+        solrad = load_solrad(region, sol_region)
+
+        # 外気温度
+        climate = load_climate(region)
+        Theta_ex_d_t = get_Theta_ex(climate)
+
+        args = {
+          'ls_type':ls_type,
+          'A_stcp':A_stcp,
+          'b0': b0,
+          'b1': b1,
+          'c_p_htm':c_p_htm,
+          'eta_r_tank':eta_r_tank,
+          'g_htm':g_htm,
+          'Gs_htm':Gs_htm,
+          'hw_connection_type':hw_connection_type,
+          'P_alpha_sp':P_alpha_sp,
+          'P_beta_sp':P_beta_sp,
+          'Theta_wtr_d':Theta_wtr_d,
+          'UA_hx':UA_hx,
+          'UA_stp':UA_stp,
+          'UA_tank':UA_tank,
+          'V_tank':V_tank,
+          'solrad': solrad,
+          'solar_device': solar_device,
+          'solar_water_tap': solar_water_tap,
+          'Theta_ex_d_t': Theta_ex_d_t,
+          'Theta_sw_s': Theta_sw_s,
+          'L_dash_k_d_t':L_dash_k_d_t,
+          'L_dash_s_d_t':L_dash_s_d_t,
+          'L_dash_w_d_t':L_dash_w_d_t,
+          'L_dash_b1_d_t':L_dash_b1_d_t,
+          'L_dash_b2_d_t':L_dash_b2_d_t,
+          'L_dash_ba1_d_t':L_dash_ba1_d_t
+      }
+
+        # 1時間当たりの液体集熱式太陽熱利用設備による補正集熱量を求めるために必要な変数の計算
+        swh = lss.calc_swh_variables(**args)
+
+        # 給湯熱需要を満たすために必要となる貯湯タンク上層部の水の質量を算出する際に基準となる貯湯タンク上層部の水の温度 (太陽熱利用設備から供給される水の温度)
+        return swh['Theta_reqw_tank_d_t']
+    else:
+      return np.full(24 * 365, np.nan)
+
+
+def get_L_sun_d_t(hw_connection_type, solar_device, solar_water_tap, Theta_sw_s, 
+                  L_sun_total_d_t, L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t,
+                  L_dash_b1_d_t, L_dash_b2_d_t, L_dash_ba1_d_t, Theta_w_sun_d_t):
+    """各用途における太陽熱利用設備による補正集熱量 (MJ/h)
+
+    Args:
+      hw_connection_type(str): 給湯接続方式の種類 (-)
+      solar_device(str): 太陽熱利用設備の種類 (-)
+      solar_water_tap(str): 太陽熱用水栓 (-)
+      Theta_w_sun_d_t(ndarray): 太陽熱利用設備から供給される水の温度
+      Theta_sw_s(int): 浴室シャワー水栓における基準給湯温度
+      L_sun_total_d_t(ndarray): 1時間当たりの洗面水栓における節湯補正給湯量 (L/d)
+      L_dash_k_d_t(ndarray): 1時間当たりの台所水栓における節湯補正給湯熱負荷（MJ/h）
+      L_dash_s_d_t(ndarray): 1時間当たりの浴室シャワー水栓における節湯補正給湯熱負荷（MJ/h）
+      L_dash_w_d_t(ndarray): 1時間当たりの洗面水栓における節湯補正給湯熱負荷（MJ/h）
+      L_dash_b1_d_t(ndarray): 1時間当たりの浴槽水栓湯はり時における節湯補正給湯熱負荷（MJ/h）
+      L_dash_b2_d_t(ndarray): 1時間当たりの浴槽自動湯はり時における節湯補正給湯熱負荷（MJ/h）
+      L_dash_ba1_d_t(ndarray): 1時間当たりの浴槽水栓さし湯時における節湯補正給湯熱負荷（MJ/h）
+
+    Returns:
+      tuple: 各用途における太陽熱利用設備による補正集熱量 (MJ/h)
+    """
+    if solar_device in ["液体集熱式", "空気集熱式"]:
+        return solar.calc_L_sun_d_t(
+                hw_connection_type=hw_connection_type,
+                solar_device = solar_device,
+                solar_water_tap = solar_water_tap,
+                Theta_sw_s = Theta_sw_s,
+                L_sun_total_d_t=L_sun_total_d_t,
+                L_dash_k_d_t=L_dash_k_d_t,
+                L_dash_s_d_t=L_dash_s_d_t,
+                L_dash_w_d_t=L_dash_w_d_t,
+                L_dash_b1_d_t=L_dash_b1_d_t,
+                L_dash_b2_d_t=L_dash_b2_d_t,
+                L_dash_ba1_d_t=L_dash_ba1_d_t,
+                Theta_w_sun_d_t= Theta_w_sun_d_t
+              )
+    elif solar_device == None:
+        return [np.zeros(24 * 365) for _ in range(6)]
+    else:
+        raise ValueError(solar_device)
 
 
 def calc_E_E_W_d_t(n_p, L_HWH, heating_flag_d, region, sol_region, HW, SHC):
@@ -308,7 +479,8 @@ def calc_E_E_W_d_t(n_p, L_HWH, heating_flag_d, region, sol_region, HW, SHC):
         'shower_watersaving_A': HW['shower_watersaving_A'],
         'shower_watersaving_B': HW['shower_watersaving_B'],
         'washbowl_watersaving_C': HW['washbowl_watersaving_C'],
-        'bath_insulation': HW['bath_insulation']
+        'bath_insulation': HW['bath_insulation'],
+        'hw_type': HW['hw_type']
     }
     if SHC is not None:
         if SHC['type'] == '液体集熱式':
@@ -328,7 +500,8 @@ def calc_E_E_W_d_t(n_p, L_HWH, heating_flag_d, region, sol_region, HW, SHC):
                 'UA_hx': SHC['UA_hx'],
                 'UA_stp': SHC['UA_stp'],
                 'UA_tank': SHC['UA_tank'],
-                'W_tnk_ss': SHC['V_tank']
+                'W_tnk_ss': SHC['V_tank'],
+                'solar_water_tap': SHC['solar_water_tap'],
             })
         elif SHC['type'] == '空気集熱式':
             args.update({
@@ -403,7 +576,6 @@ def calc_E_E_aux_ss_d_t(SHC, region=None, sol_region=None, heating_flag_d=None):
 
     Returns:
       ndarray: 1時間当たりの補機の消費電力量 (kWh/h)
-
     """
     if SHC is None:
         return np.zeros(24 * 365)
@@ -462,7 +634,6 @@ def calc_E_G_W_d_t(n_p, L_HWH, heating_flag_d, A_A, region, sol_region, HW, SHC)
 
     Returns:
       ndarray: 1時間当たりの給湯設備のガス消費量 (MJ/h)
-
     """
     if HW is None or HW['hw_type'] is None:
         # 台所、洗面所及 び浴室等がいずれも無い場合は0とする
@@ -484,7 +655,8 @@ def calc_E_G_W_d_t(n_p, L_HWH, heating_flag_d, A_A, region, sol_region, HW, SHC)
         'shower_watersaving_A': HW['shower_watersaving_A'],
         'shower_watersaving_B': HW['shower_watersaving_B'],
         'washbowl_watersaving_C': HW['washbowl_watersaving_C'],
-        'bath_insulation': HW['bath_insulation']
+        'bath_insulation': HW['bath_insulation'],
+        'hw_type': HW['hw_type']
     }
     if SHC is not None:
         if SHC['type'] == '液体集熱式':
@@ -504,7 +676,8 @@ def calc_E_G_W_d_t(n_p, L_HWH, heating_flag_d, A_A, region, sol_region, HW, SHC)
                 'UA_hx': SHC['UA_hx'],
                 'UA_stp': SHC['UA_stp'],
                 'UA_tank': SHC['UA_tank'],
-                'W_tnk_ss': SHC['V_tank']
+                'W_tnk_ss': SHC['V_tank'],
+                'solar_water_tap': SHC['solar_water_tap'],
             })
         elif SHC['type'] == '空気集熱式':
             args.update({
@@ -549,7 +722,8 @@ def calc_E_G_W_d_t(n_p, L_HWH, heating_flag_d, A_A, region, sol_region, HW, SHC)
         Theta_ex_Ave=hotwater_load['theta_ex_d_Ave_d'],
         Theta_ex_Nave=hotwater_load['Theta_ex_Nave_d'],
         L_HWH=L_HWH,
-        hybrid_param=HW.get('hybrid_param')
+        hybrid_param=HW.get('hybrid_param'),
+        bathtub_filling_method_d_t=hotwater_load['bathtub_filling_method_d_t']
     )
 
     return E_G_hs_d
@@ -575,7 +749,6 @@ def calc_E_K_W_d_t(n_p, L_HWH, heating_flag_d, A_A, region, sol_region, HW, SHC)
 
     Returns:
       ndarray: 1時間当たりの給湯設備の灯油消費量 (MJ/h) (3)
-
     """
     if HW is None or HW['hw_type'] is None:
         # 台所、洗面所及 び浴室等がいずれも無い場合は0とする
@@ -597,7 +770,8 @@ def calc_E_K_W_d_t(n_p, L_HWH, heating_flag_d, A_A, region, sol_region, HW, SHC)
         'shower_watersaving_A': HW['shower_watersaving_A'],
         'shower_watersaving_B': HW['shower_watersaving_B'],
         'washbowl_watersaving_C': HW['washbowl_watersaving_C'],
-        'bath_insulation': HW['bath_insulation']
+        'bath_insulation': HW['bath_insulation'],
+        'hw_type': HW['hw_type']
     }
     if SHC is not None:
         if SHC['type'] == '液体集熱式':
@@ -617,7 +791,8 @@ def calc_E_K_W_d_t(n_p, L_HWH, heating_flag_d, A_A, region, sol_region, HW, SHC)
                 'UA_hx': SHC['UA_hx'],
                 'UA_stp': SHC['UA_stp'],
                 'UA_tank': SHC['UA_tank'],
-                'W_tnk_ss': SHC['V_tank']
+                'W_tnk_ss': SHC['V_tank'],
+                'solar_water_tap': SHC['solar_water_tap'],
             })
         elif SHC['type'] == '空気集熱式':
             args.update({
@@ -644,6 +819,7 @@ def calc_E_K_W_d_t(n_p, L_HWH, heating_flag_d, A_A, region, sol_region, HW, SHC)
         e_rtd=HW['e_rtd'],
         e_dash_rtd=HW['e_dash_rtd'],
         bath_function=bath_function,
+        bathtub_filling_method_d_t=hotwater_load['bathtub_filling_method_d_t'],
         L_dashdash_k_d_t=hotwater_load['L_dashdash_k_d_t'],
         L_dashdash_s_d_t=hotwater_load['L_dashdash_s_d_t'],
         L_dashdash_w_d_t=hotwater_load['L_dashdash_w_d_t'],
@@ -669,7 +845,6 @@ def get_E_M_W_d_t():
 
     Returns:
       ndarray: 1時間当たりの給湯設備のその他の燃料による一次エネルギー消費量
-
     """
     # 1時間当たりの給湯設備のその他の燃料による一次エネルギー消費量は0とする
     return np.zeros(24 * 365)
@@ -717,7 +892,6 @@ def calc_E_E_hs_d_t(hw_type, bath_function, package_id, hybrid_param, hybrid_cat
 
     Returns:
       ndarray: 1時間当たりの給湯機の消費電力量 (MJ/h)
-
     """
     if hw_type == 'ガス従来型給湯機' or hw_type == 'ガス従来型給湯温水暖房機' \
             or hw_type == 'ガス潜熱回収型給湯機' or hw_type == 'ガス潜熱回収型給湯温水暖房機':
@@ -827,7 +1001,7 @@ def calc_E_E_hs_d_t(hw_type, bath_function, package_id, hybrid_param, hybrid_cat
         raise ValueError(hw_type)
 
 
-def calc_E_G_hs_d(hw_type, hybrid_category, e_rtd, e_dash_rtd, bath_function, package_id, Theta_ex_Nave, W_dash_k_d_t, W_dash_s_d_t,
+def calc_E_G_hs_d(hw_type, hybrid_category, e_rtd, e_dash_rtd, bath_function, bathtub_filling_method_d_t, package_id, Theta_ex_Nave, W_dash_k_d_t, W_dash_s_d_t,
                  W_dash_w_d_t, W_dash_b1_d_t, W_dash_b2_d_t, W_dash_ba1_d_t, Theta_ex_Ave, L_dashdash_k_d_t,
                  L_dashdash_s_d_t, L_dashdash_w_d_t,
                  L_dashdash_b1_d_t, L_dashdash_b2_d_t, L_dashdash_ba1_d_t, L_dashdash_ba2_d_t, L_HWH, hybrid_param):
@@ -867,7 +1041,6 @@ def calc_E_G_hs_d(hw_type, hybrid_category, e_rtd, e_dash_rtd, bath_function, pa
 
     Returns:
       ndarray: 1時間当たりの給湯機のガス消費量 (MJ/h)
-
     """
     if hw_type == 'ガス従来型給湯機' or hw_type == 'ガス従来型給湯温水暖房機' \
             or hw_type == 'ガス潜熱回収型給湯機' or hw_type == 'ガス潜熱回収型給湯温水暖房機':
@@ -883,7 +1056,8 @@ def calc_E_G_hs_d(hw_type, hybrid_category, e_rtd, e_dash_rtd, bath_function, pa
             L_dashdash_b2_d_t=L_dashdash_b2_d_t,
             L_dashdash_ba1_d_t=L_dashdash_ba1_d_t,
             L_dashdash_ba2_d_t=L_dashdash_ba2_d_t,
-            bath_function=bath_function
+            bath_function=bath_function,
+            bathtub_filling_method_d_t=bathtub_filling_method_d_t
         )
     elif hw_type == '石油従来型給湯機' or hw_type == '石油従来型給湯温水暖房機' \
             or hw_type == '石油潜熱回収型給湯機' or hw_type == '石油潜熱回収型給湯温水暖房機':
@@ -929,7 +1103,8 @@ def calc_E_G_hs_d(hw_type, hybrid_category, e_rtd, e_dash_rtd, bath_function, pa
             L_dashdash_b2=L_dashdash_b2_d_t,
             L_dashdash_ba1=L_dashdash_ba1_d_t,
             L_dashdash_ba2=L_dashdash_ba2_d_t,
-            bath_function=bath_function
+            bath_function=bath_function,
+            bathtub_filling_method_d_t=bathtub_filling_method_d_t
         )
     elif hw_type == '電気ヒートポンプ・ガス瞬間式併用型給湯温水暖房機(給湯熱源：ガス瞬間式、暖房熱源：電気ヒートポンプ・ガス瞬間式併用、タンクユニット：なし)':
         return gas_hybrid_tankless.get_E_G_hs(
@@ -941,7 +1116,8 @@ def calc_E_G_hs_d(hw_type, hybrid_category, e_rtd, e_dash_rtd, bath_function, pa
             L_dashdash_b2=L_dashdash_b2_d_t,
             L_dashdash_ba1=L_dashdash_ba1_d_t,
             L_dashdash_ba2=L_dashdash_ba2_d_t,
-            bath_function=bath_function
+            bath_function=bath_function,
+            bathtub_filling_method_d_t=bathtub_filling_method_d_t
         )
     elif hw_type == '電気ヒートポンプ・ガス瞬間式併用型給湯温水暖房機(給湯熱源：電気ヒートポンプ・ガス瞬間式併用、暖房熱源：電気ヒートポンプ・ガス瞬間式併用)':
         return whybrid.calc_E_G_hs_d_t(
@@ -962,7 +1138,7 @@ def calc_E_G_hs_d(hw_type, hybrid_category, e_rtd, e_dash_rtd, bath_function, pa
 
 def calc_E_K_hs_d_t(hw_type, e_rtd, e_dash_rtd, bath_function, theta_ex_d_Ave_d, L_dashdash_k_d_t, L_dashdash_s_d_t,
                     L_dashdash_w_d_t,
-                    L_dashdash_b1_d_t, L_dashdash_b2_d_t, L_dashdash_ba1_d_t, L_dashdash_ba2_d_t):
+                    L_dashdash_b1_d_t, L_dashdash_b2_d_t, L_dashdash_ba1_d_t, L_dashdash_ba2_d_t, bathtub_filling_method_d_t):
     """1時間当たりの給湯機の灯油消費量 (MJ/h)
 
     Args:
@@ -978,10 +1154,10 @@ def calc_E_K_hs_d_t(hw_type, e_rtd, e_dash_rtd, bath_function, theta_ex_d_Ave_d,
       L_dashdash_b2_d_t(ndarray): 1時間当たりの浴槽追焚時における太陽熱補正給湯熱負荷 (MJ/h)
       L_dashdash_ba1_d_t(ndarray): 1時間当たりの浴槽水栓さし湯時における太陽熱補正給湯熱負荷 (MJ/h)
       L_dashdash_ba2_d_t(ndarray): 1時間当たりの浴槽追焚時における太陽熱補正給湯熱負荷 (MJ/h)
+      bathtub_filling_method_d_t(ndarray): 浴槽湯張りの方法 (-)
 
     Returns:
       ndarray: 1時間当たりの給湯機の灯油消費量 (MJ/h)
-
     """
     if hw_type == 'ガス従来型給湯機' or hw_type == 'ガス従来型給湯温水暖房機' \
             or hw_type == 'ガス潜熱回収型給湯機' or hw_type == 'ガス潜熱回収型給湯温水暖房機':
@@ -1000,7 +1176,8 @@ def calc_E_K_hs_d_t(hw_type, e_rtd, e_dash_rtd, bath_function, theta_ex_d_Ave_d,
             L_dashdash_b1_d_t=L_dashdash_b1_d_t,
             L_dashdash_b2_d_t=L_dashdash_b2_d_t,
             L_dashdash_ba1_d_t=L_dashdash_ba1_d_t,
-            L_dashdash_ba2_d_t=L_dashdash_ba2_d_t
+            L_dashdash_ba2_d_t=L_dashdash_ba2_d_t,
+            bathtub_filling_method_d_t=bathtub_filling_method_d_t
         )
     elif hw_type == '電気ヒートポンプ給湯機':
         return eheatpump.get_E_K_hs_d_t()
@@ -1024,7 +1201,6 @@ def calc_E_K_hs_d_t(hw_type, e_rtd, e_dash_rtd, bath_function, theta_ex_d_Ave_d,
         raise ValueError(hw_type)
 
 
-
 def get_normalized_bath_function(hw_type, bath_function):
     """表4 評価可能な給湯機／給湯温水暖房機の種類
 
@@ -1034,7 +1210,6 @@ def get_normalized_bath_function(hw_type, bath_function):
 
     Returns:
       str: 評価可能な給湯機／給湯温水暖房機の種類
-
     """
     if hw_type == 'ガス従来型給湯機' or hw_type == 'ガス従来型給湯温水暖房機' \
             or hw_type == 'ガス潜熱回収型給湯機' or hw_type == 'ガス潜熱回収型給湯温水暖房機':
@@ -1067,162 +1242,82 @@ def get_normalized_bath_function(hw_type, bath_function):
 # ============================================================================
 
 
-def calc_L_dashdash_k_d_t(L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t, L_dash_b1_d_t, L_dash_b2_d_t, L_dash_ba1_d_t,
-                         L_sun_d_t):
+def calc_L_dashdash_k_d_t(L_dash_k_d_t, L_sun_k_d_t):
     """1時間当たりの台所水栓における太陽熱補正給湯熱負荷 (MJ/h) (4a)
 
     Args:
       L_dash_k_d_t(ndarray): 1時間当たりの台所水栓における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_s_d_t(ndarray): 1時間当たりの浴室シャワー水栓における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_w_d_t(ndarray): 1時間当たりの洗面水栓における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_b1_d_t(ndarray): 1時間当たりの浴槽水栓湯はり時における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_b2_d_t(ndarray): 1時間当たりの浴槽追焚時における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_ba1_d_t(ndarray): 1時間当たりの浴槽水栓さし湯時における節湯補正給湯熱負荷 (MJ/h)
       L_sun_d_t(ndarray): 1時間当たりの太陽熱利用給湯設備による補正集熱量 (MJ/h)
 
     Returns:
       ndarray: 1時間当たりの台所水栓における太陽熱補正給湯熱負荷 (MJ/h)
-
     """
-
-    L_dashdash_k_d_t = np.zeros(24 * 365)
-
-    L_dash_d_t = L_dash_k_d_t + L_dash_s_d_t + L_dash_w_d_t + L_dash_b1_d_t + L_dash_b2_d_t + L_dash_ba1_d_t
-    f = L_dash_d_t > 0
-    L_dashdash_k_d_t[f] = L_dash_k_d_t[f] - L_sun_d_t[f] * (L_dash_k_d_t[f] / L_dash_d_t[f])
-
-    return L_dashdash_k_d_t
+    return L_dash_k_d_t - L_sun_k_d_t
 
 
-def calc_L_dashdash_s_d_t(L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t, L_dash_b1_d_t, L_dash_b2_d_t, L_dash_ba1_d_t,
-                         L_sun_d_t):
+def calc_L_dashdash_s_d_t(L_dash_s_d_t, L_sun_s_d_t):
     """1時間当たりの浴室シャワー水栓における太陽熱補正給湯熱負荷 (MJ/h) (4b)
 
     Args:
-      L_dash_k_d_t(ndarray): 1時間当たりの台所水栓における節湯補正給湯熱負荷 (MJ/h)
       L_dash_s_d_t(ndarray): 1時間当たりの浴室シャワー水栓における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_w_d_t(ndarray): 1時間当たりの洗面水栓における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_b1_d_t(ndarray): 1時間当たりの浴槽水栓湯はり時における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_b2_d_t(ndarray): 1時間当たりの浴槽追焚時における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_ba1_d_t(ndarray): 1時間当たりの浴槽水栓さし湯時における節湯補正給湯熱負荷 (MJ/h)
       L_sun_d_t(ndarray): 1時間当たりの太陽熱利用給湯設備による補正集熱量 (MJ/h)
 
     Returns:
       ndarray: 1時間当たりの浴室シャワー水栓における太陽熱補正給湯熱負荷 (MJ/h)
-
     """
-    L_dashdash_s_d_t = np.zeros(24 * 365)
-
-    L_dash_d_t = L_dash_k_d_t + L_dash_s_d_t + L_dash_w_d_t + L_dash_b1_d_t + L_dash_b2_d_t + L_dash_ba1_d_t
-    f = L_dash_d_t > 0
-    L_dashdash_s_d_t[f] = L_dash_s_d_t[f] - L_sun_d_t[f] * (L_dash_s_d_t[f] / L_dash_d_t[f])
-
-    return L_dashdash_s_d_t
+    return L_dash_s_d_t - L_sun_s_d_t
 
 
-def calc_L_dashdash_w_d_t(L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t, L_dash_b1_d_t, L_dash_b2_d_t, L_dash_ba1_d_t,
-                         L_sun_d_t):
+def calc_L_dashdash_w_d_t(L_dash_w_d_t, L_sun_w_d_t):
     """1時間当たりの洗面水栓における太陽熱補正給湯熱負荷 (MJ/h) (4c)
 
     Args:
-      L_dash_k_d_t(ndarray): 1時間当たりの台所水栓における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_s_d_t(ndarray): 1時間当たりの浴室シャワー水栓における節湯補正給湯熱負荷 (MJ/h)
       L_dash_w_d_t(ndarray): 1時間当たりの洗面水栓における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_b1_d_t(ndarray): 1時間当たりの浴槽水栓湯はり時における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_b2_d_t(ndarray): 1時間当たりの浴槽追焚時における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_ba1_d_t(ndarray): 1時間当たりの浴槽水栓さし湯時における節湯補正給湯熱負荷 (MJ/h)
       L_sun_d_t(ndarray): 1時間当たりの太陽熱利用給湯設備による補正集熱量 (MJ/h)
 
     Returns:
       ndarray: 1時間当たりの洗面水栓における太陽熱補正給湯熱負荷 (MJ/h)
-
     """
-    L_dashdash_w_d_t = np.zeros(24 * 365)
-
-    L_dash_d_t = L_dash_k_d_t + L_dash_s_d_t + L_dash_w_d_t + L_dash_b1_d_t + L_dash_b2_d_t + L_dash_ba1_d_t
-    f = L_dash_d_t > 0
-    L_dashdash_w_d_t[f] = L_dash_w_d_t[f] - L_sun_d_t[f] * (L_dash_w_d_t[f] / L_dash_d_t[f])
-
-    return L_dashdash_w_d_t
+    return L_dash_w_d_t - L_sun_w_d_t
 
 
-def calc_L_dashdash_b1_d_t(L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t, L_dash_b1_d_t, L_dash_b2_d_t, L_dash_ba1_d_t,
-                          L_sun_d_t):
+def calc_L_dashdash_b1_d_t(L_dash_b1_d_t, L_sun_b1_d_t):
     """1時間当たりの浴槽水栓湯はり時における太陽熱補正給湯熱負荷 (MJ/h) (4d)
 
     Args:
-      L_dash_k_d_t(ndarray): 1時間当たりの台所水栓における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_s_d_t(ndarray): 1時間当たりの浴室シャワー水栓における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_w_d_t(ndarray): 1時間当たりの洗面水栓における節湯補正給湯熱負荷 (MJ/h)
       L_dash_b1_d_t(ndarray): 1時間当たりの浴槽水栓湯はり時における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_b2_d_t(ndarray): 1時間当たりの浴槽追焚時における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_ba1_d_t(ndarray): 1時間当たりの浴槽水栓さし湯時における節湯補正給湯熱負荷 (MJ/h)
       L_sun_d_t(ndarray): 1時間当たりの太陽熱利用給湯設備による補正集熱量 (MJ/h)
 
     Returns:
       ndarray: 1時間当たりの浴槽水栓湯はり時における太陽熱補正給湯熱負荷 (MJ/h)
-
     """
-    L_dashdash_b1_d_t = np.zeros(24 * 365)
-
-    L_dash_d_t = L_dash_k_d_t + L_dash_s_d_t + L_dash_w_d_t + L_dash_b1_d_t + L_dash_b2_d_t + L_dash_ba1_d_t
-    f = L_dash_d_t > 0
-    L_dashdash_b1_d_t[f] = L_dash_b1_d_t[f] - L_sun_d_t[f] * (L_dash_b1_d_t[f] / L_dash_d_t[f])
-
-    return L_dashdash_b1_d_t
+    return L_dash_b1_d_t - L_sun_b1_d_t
 
 
-
-def calc_L_dashdash_b2_d_t(L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t, L_dash_b1_d_t, L_dash_b2_d_t, L_dash_ba1_d_t,
-                          L_sun_d_t):
+def calc_L_dashdash_b2_d_t(L_dash_b2_d_t, L_sun_b2_d_t):
     """1時間当たりの浴槽自動湯はり時における太陽熱補正給湯負荷 (MJ/h) (4e)
 
     Args:
-      L_dash_k_d_t(ndarray): 1時間当たりの台所水栓における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_s_d_t(ndarray): 1時間当たりの浴室シャワー水栓における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_w_d_t(ndarray): 1時間当たりの洗面水栓における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_b1_d_t(ndarray): 1時間当たりの浴槽水栓湯はり時における節湯補正給湯熱負荷 (MJ/h)
       L_dash_b2_d_t(ndarray): 1時間当たりの浴槽追焚時における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_ba1_d_t(ndarray): 1時間当たりの浴槽水栓さし湯時における節湯補正給湯熱負荷 (MJ/h)
       L_sun_d_t(ndarray): 1時間当たりの太陽熱利用給湯設備による補正集熱量 (MJ/h)
 
     Returns:
       ndarray: 1時間当たりの浴槽自動湯はり時における太陽熱補正給湯負荷 (MJ/h)
-
     """
-    L_dashdash_b2_d_t = np.zeros(24 * 365)
-
-    L_dash_d_t = L_dash_k_d_t + L_dash_s_d_t + L_dash_w_d_t + L_dash_b1_d_t + L_dash_b2_d_t + L_dash_ba1_d_t
-    f = L_dash_d_t > 0
-    L_dashdash_b2_d_t[f] = L_dash_b2_d_t[f] - L_sun_d_t[f] * (L_dash_b2_d_t[f] / L_dash_d_t[f])
-
-    return L_dashdash_b2_d_t
+    return L_dash_b2_d_t - L_sun_b2_d_t
 
 
-def calc_L_dashdash_ba1_d_t(L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t, L_dash_b1_d_t, L_dash_b2_d_t, L_dash_ba1_d_t,
-                           L_sun_d_t):
+def calc_L_dashdash_ba1_d_t(L_dash_ba1_d_t, L_sun_ba1_d_t):
     """1時間当たりの浴槽水栓さし湯時における太陽熱補正給湯負荷 (MJ/h) (4f)
 
     Args:
-      L_dash_k_d_t(ndarray): 1時間当たりの台所水栓における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_s_d_t(ndarray): 1時間当たりの浴室シャワー水栓における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_w_d_t(ndarray): 1時間当たりの洗面水栓における節湯補正給湯熱負荷 (MJ/h)
-      L_dash_b1_d_t(ndarray): 1時間当たりの浴槽水栓湯はり時における節湯補正給湯熱負荷 (MJ/hd)
-      L_dash_b2_d_t(ndarray): 1時間当たりの浴槽追焚時における節湯補正給湯熱負荷 (MJ/h)
       L_dash_ba1_d_t(ndarray): 1時間当たりの浴槽水栓さし湯時における節湯補正給湯熱負荷 (MJ/h)
       L_sun_d_t(ndarray): 1時間当たりの太陽熱利用給湯設備による補正集熱量 (MJ/h)
 
     Returns:
       ndarray: 1時間当たりの浴槽水栓さし湯時における太陽熱補正給湯負荷 (MJ/h)
-
     """
-    L_dashdash_ba1_d_t = np.zeros(24 * 365)
-
-    L_dash_d_t = L_dash_k_d_t + L_dash_s_d_t + L_dash_w_d_t + L_dash_b1_d_t + L_dash_b2_d_t + L_dash_ba1_d_t
-    f = L_dash_d_t > 0
-    L_dashdash_ba1_d_t[f] = L_dash_ba1_d_t[f] - L_sun_d_t[f] * (L_dash_ba1_d_t[f] / L_dash_d_t[f])
-
-    return L_dashdash_ba1_d_t
+    return L_dash_ba1_d_t - L_sun_ba1_d_t
 
 
 def get_L_dashdash_ba2_d_t(L_dash_ba2_d_t):
@@ -1233,19 +1328,18 @@ def get_L_dashdash_ba2_d_t(L_dash_ba2_d_t):
 
     Returns:
       1時間当たりの浴槽追焚時における太陽熱補正給湯負荷 (MJ/h)
-
     """
     return L_dash_ba2_d_t
 
 
-def calc_L_sun_d_t(region, sol_region=None, solar_device=None, ls_type=None, P_alpha_sp=None, P_beta_sp=None,
+def calc_L_sun_total_d_t(region, solar_water_tap, Theta_sw_s, L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t, L_dash_b1_d_t, L_dash_b2_d_t, L_dash_ba1_d_t,
+                  sol_region=None, solar_device=None, ls_type=None, P_alpha_sp=None, P_beta_sp=None,
                   W_tnk_ss=None, hotwater_use=None, heating_flag_d=None, A_col=None, P_alpha=None, P_beta=None,
                   V_fan_P0=None, d0=None,
-                  d1=None, m_fan_test=None, W_tnk_ass=None, Theta_wtr_d=None, L_dash_k_d_t=None, L_dash_s_d_t=None,
-                  L_dash_w_d_t=None, L_dash_b1_d_t=None, L_dash_b2_d_t=None, L_dash_ba1_d_t=None,
+                  d1=None, m_fan_test=None, W_tnk_ass=None, Theta_wtr_d=None,
                   A_stcp=None, b0=None, b1=None, c_p_htm=None, eta_r_tank=None, g_htm=None, Gs_htm=None,
-                  hw_connection_type=None, UA_hx=None, UA_stp=None, UA_tank=None):
-    """太陽熱利用給湯設備による補正集熱量
+                  hw_connection_type=None, UA_hx=None, UA_stp=None, UA_tank=None, Theta_w_sun_d_t=None):
+    """太陽熱利用給湯設備による補正集熱量の総量
 
     Args:
       region(int): 省エネルギー地域区分
@@ -1275,13 +1369,9 @@ def calc_L_sun_d_t(region, sol_region=None, solar_device=None, ls_type=None, P_a
       m_fan_test: Default value = None)
 
     Returns:
-      ndarray: 1時間当たりの太陽熱利用設備による補正集熱量 (MJ/h)
-
+      ndarray: 1時間当たりの太陽熱利用設備による補正集熱量の総量 (MJ/h)
     """
     if solar_device == '液体集熱式':
-        # 1時間当たりの給湯熱需要（浴槽追焚を除く）
-        Q_W_dmd_excl_ba2_d_t = calc_Q_W_dmd_excl_ba2_d_t(L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t, L_dash_b1_d_t, L_dash_b2_d_t, L_dash_ba1_d_t)
-
         # 日射量データ
         solrad = load_solrad(region, sol_region)
 
@@ -1307,8 +1397,16 @@ def calc_L_sun_d_t(region, sol_region=None, solar_device=None, ls_type=None, P_a
             UA_tank=UA_tank,
             V_tank=W_tnk_ss,
             solrad = solrad,
-            Q_W_dmd_excl_ba2_d_t = Q_W_dmd_excl_ba2_d_t,
-            Theta_ex_d_t = Theta_ex_d_t
+            solar_device = solar_device,
+            solar_water_tap = solar_water_tap,
+            Theta_ex_d_t = Theta_ex_d_t,
+            Theta_sw_s = Theta_sw_s,
+            L_dash_k_d_t=L_dash_k_d_t,
+            L_dash_s_d_t=L_dash_s_d_t,
+            L_dash_w_d_t=L_dash_w_d_t,
+            L_dash_b1_d_t=L_dash_b1_d_t,
+            L_dash_b2_d_t=L_dash_b2_d_t,
+            L_dash_ba1_d_t=L_dash_ba1_d_t
         )
     elif solar_device == '空気集熱式':
         if hotwater_use == True:
@@ -1322,8 +1420,19 @@ def calc_L_sun_d_t(region, sol_region=None, solar_device=None, ls_type=None, P_a
             Q_col_d_t = ass.get_Q_col_d_t(V_fan_d_t, Theta_col_opg_d_t, Theta_ex_d_t)
             Q_d = ass.calc_Q_d(Q_col_d_t, t_cp_d_t)
             L_tnk_d = ass.calc_L_tnk_d(Q_d, W_tnk_ass, Theta_wtr_d)
-            return ass.calc_L_sun_ass_d_t(L_tnk_d, L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t, L_dash_b1_d_t,
-                                          L_dash_b2_d_t, L_dash_ba1_d_t)
+            return ass.calc_L_sun_ass_d_t(
+              L_tnk_d,
+              hw_connection_type=hw_connection_type,
+              solar_device = solar_device,
+              solar_water_tap = solar_water_tap,
+              Theta_sw_s = Theta_sw_s,
+              L_dash_k_d_t = L_dash_k_d_t,
+              L_dash_s_d_t = L_dash_s_d_t,
+              L_dash_w_d_t = L_dash_w_d_t,
+              L_dash_b1_d_t = L_dash_b1_d_t,
+              L_dash_b2_d_t = L_dash_b2_d_t,
+              L_dash_ba1_d_t = L_dash_ba1_d_t,
+              Theta_w_sun_d_t = Theta_w_sun_d_t)
         else:
             return np.zeros(24 * 365)
     elif solar_device is None:
@@ -1347,7 +1456,6 @@ def get_L_dash_k_d_t(W_dash_k_d_t, Theta_sw_k, Theta_wtr_d):
 
     Returns:
       ndarray: 台所水栓における節湯補正給湯負荷 (MJ/h)
-
     """
     return W_dash_k_d_t * (Theta_sw_k - np.repeat(Theta_wtr_d, 24)) * 4.186 * 10 ** (-3)
 
@@ -1363,7 +1471,6 @@ def get_L_dash_s_d_t(W_dash_s_d_t, Theta_sw_s, Theta_wtr_d):
 
     Returns:
       ndarray: 浴室シャワーにおける節湯補正給湯負荷 (MJ/h)
-
     """
     return W_dash_s_d_t * (Theta_sw_s - np.repeat(Theta_wtr_d, 24)) * 4.186 * 10 ** (-3)
 
@@ -1379,7 +1486,6 @@ def get_L_dash_w_d_t(W_dash_w_d_t, Theta_sw_w, Theta_wtr_d):
 
     Returns:
       ndarray: 洗面水栓における節湯補正給湯負荷 (MJ/d)
-
     """
     return W_dash_w_d_t * (Theta_sw_w - np.repeat(Theta_wtr_d, 24)) * 4.186 * 10 ** (-3)
 
@@ -1396,7 +1502,6 @@ def get_L_dash_bx_d_t(W_dash_b1_d_t, W_dash_b2_d_t, Theta_wtr_d, has_bath, bash_
 
     Returns:
       ndarray: 浴槽水栓湯はり時・浴槽自動湯はり時における節水補正給湯熱負荷 (MJ/d)
-
     """
     if has_bath == False:
         L_dash_b1_d_t = np.zeros(24 * 365)  # (5-1d)
@@ -1429,7 +1534,6 @@ def get_L_dash_bax_d_t(W_dash_ba1_d_t, Theta_wtr_d, L_ba_d_t, has_bath, bash_fun
 
     Returns:
       ndarray: 浴槽水栓さし湯時／浴槽追焚時における節水補正給湯熱負荷 (MJ/h)
-
     """
     if has_bath == False:
         L_dash_ba1_d_t = np.zeros(24 * 365)  # (5-1f)
@@ -1455,7 +1559,6 @@ def get_Theta_sw_k():
 
     Returns:
       int: 台所水栓の基準給湯温度
-
     """
     return get_table_5()[0]
 
@@ -1468,7 +1571,6 @@ def get_Theta_sw_s():
 
     Returns:
       int: 浴室シャワー水栓の基準給湯温度
-
     """
     return get_table_5()[1]
 
@@ -1481,7 +1583,6 @@ def get_Theta_sw_w():
 
     Returns:
       int: 洗面水栓の基準給湯温度
-
     """
     return get_table_5()[2]
 
@@ -1493,7 +1594,6 @@ def get_Theta_sw_b1():
 
     Returns:
       int: 浴槽水栓湯はりの基準給湯温度
-
     """
     return get_table_5()[3]
 
@@ -1505,7 +1605,6 @@ def get_Theta_sw_b2():
 
     Returns:
       int: 浴槽自動湯はりの基準給湯温度
-
     """
     return get_table_5()[4]
 
@@ -1517,7 +1616,6 @@ def get_Theta_sw_ba1():
 
     Returns:
       int: 浴槽水栓さし湯の基準給湯温度
-
     """
     return get_table_5()[5]
 
@@ -1529,7 +1627,6 @@ def get_table_5():
 
     Returns:
       list: 用途ごとの基準給湯温度
-
     """
     table_5 = [
         40,
@@ -1557,7 +1654,6 @@ def calc_W_dash_k_d_t(W_k_d_t, kitchen_watersaving_A, kitchen_watersaving_C, pip
 
     Returns:
       ndarray: 1時間当たりの台所水栓における節湯補正給湯量 (L/h)
-
     """
     # 台所水栓における節湯の効果係数
     f_sk = watersaving.get_f_sk(kitchen_watersaving_A, kitchen_watersaving_C, Theta_wtr_d)
@@ -1579,7 +1675,6 @@ def calc_W_dash_s_d_t(W_s_d_t, shower_watersaving_A, shower_watersaving_B, pipe_
 
     Returns:
       ndarray: 1時間当たりの浴室シャワーにおける節湯補正給湯量 (L/h)
-
     """
     # 浴室シャワー水栓のける節湯の効果係数
     f_ss = watersaving.get_f_ss(shower_watersaving_A, shower_watersaving_B)
@@ -1601,7 +1696,6 @@ def calc_W_dash_w_d_t(W_w_d_t, washbowl_watersaving_C, pipe_diameter, Theta_wtr_
 
     Returns:
       ndarray: 1時間当たりの台所水栓における節湯補正給湯量 (L/h)
-
     """
     # 配管における節湯の効果係数
     f_sp = watersaving.get_f_sp(pipe_diameter)
@@ -1621,7 +1715,6 @@ def calc_W_dash_b1_d_t(W_b1_d_t, pipe_diameter):
 
     Returns:
       ndarray: 1時間当たりの浴槽水栓湯はり時における節湯補正給湯量 (L/h)
-
     """
     # 配管における節湯の効果係数
     f_sp = watersaving.get_f_sp(pipe_diameter)
@@ -1640,7 +1733,6 @@ def calc_W_dash_b2_d_t(W_b2_d_t):
 
     Returns:
       ndarray: 1時間当たりの浴槽自動湯はり時における節湯補正給湯量 (L/h)
-
     """
     # 浴槽における節湯の効果係数
     f_sb = watersaving.get_f_sb()
@@ -1657,7 +1749,6 @@ def calc_W_dash_ba1_d_t(W_ba1_d_t, pipe_diameter):
 
     Returns:
       1時間当たりの浴槽水栓さし湯時における節湯補正給湯量 (L/h)
-
     """
     # 配管における節湯の効果係数
     f_sp = watersaving.get_f_sp(pipe_diameter)
@@ -1678,7 +1769,6 @@ def calc_W_k_d_t(n_p, schedule_hw):
 
     Returns:
       ndarray: 1時間当たりの台所水栓における基準給湯量 (L/h)
-
     """
     if n_p in [1, 2, 3, 4]:
         return calc_W_k_p_d_t(n_p, schedule_hw)
@@ -1706,7 +1796,6 @@ def calc_W_s_d_t(n_p, schedule_hw, has_bath):
 
     Returns:
       ndarray: 1時間当たりの浴室シャワー水栓における基準給湯量 (L/h)
-
     """
     if n_p in [1, 2, 3, 4]:
         return calc_W_s_p_d_t(n_p, schedule_hw, has_bath)
@@ -1733,7 +1822,6 @@ def calc_W_w_d_t(n_p, schedule_hw):
 
     Returns:
       ndarray: 1時間当たりの洗面水栓における基準給湯量 (L/h)
-
     """
     if n_p in [1, 2, 3, 4]:
         return calc_W_w_p_d_t(n_p, schedule_hw)
@@ -1760,7 +1848,6 @@ def get_schedule_pattern_list():
 
     Returns:
       list: 生活スケジュールパターン
-
     """
     ptn_list = [
         '休日在宅（大）',
@@ -1782,7 +1869,6 @@ def calc_W_k_p_d_t(p, schedule_hw):
 
     Returns:
       ndarray: 1時間当たりの居住人数がp人における台所水栓における基準給湯量 (L/h)
-
     """
     # 読み取るべき表の選択
     table = schedule.get_table_m_for_p(p)
@@ -1811,7 +1897,6 @@ def calc_W_s_p_d_t(p, schedule_hw, has_bath):
 
     Returns:
       ndarray: 1時間当たりの居住人数がp人における洗面シャワー水栓における基準給湯量 (L/h)
-
     """
     # 読み取るべき表の選択
     table = schedule.get_table_m_for_p(p)
@@ -1842,7 +1927,6 @@ def calc_W_w_p_d_t(p, schedule_hw):
 
     Returns:
       ndarray: 1日当たりの居住人数がp人における洗面水栓における基準給湯量 (L/d)
-
     """
     # 読み取るべき表の選択
     table = schedule.get_table_m_for_p(p)
@@ -1873,7 +1957,6 @@ def calc_W_b1_d_t(n_p, schedule_hw, has_bath, bath_function):
 
     Returns:
       ndarray: 浴槽水栓湯はり時における給湯基準量 (L/h)
-
     """
     if bath_function == '給湯単機能':
         return calc_W_b_d_t(n_p, schedule_hw, has_bath)
@@ -1895,7 +1978,6 @@ def calc_W_b2_d_t(n_p, schedule_hw, has_bath, bath_function):
 
     Returns:
       ndarray: 浴槽自動湯はり時における給湯基準量 (L/d)
-
     """
     if bath_function == 'ふろ給湯機(追焚なし)' or bath_function == 'ふろ給湯機(追焚あり)':
         return calc_W_b_d_t(n_p, schedule_hw, has_bath)
@@ -1915,7 +1997,6 @@ def calc_W_b_d_t(n_p, schedule_hw, has_bath):
 
     Returns:
       ndarray: 1時間あたりの浴槽湯はり時における基準給湯量 (L/h)
-
     """
     if n_p in [1, 2, 3, 4]:
         return calc_W_b_p_d_t(n_p, schedule_hw, has_bath)
@@ -1945,7 +2026,6 @@ def calc_W_b_p_d_t(p, schedule_hw, has_bath):
 
     Returns:
       ndarray: 1時間あたりの居住人数がp人における浴槽湯はり時における基準給湯量 (L/h)
-
     """
     # 読み取るべき表の選択
     table = schedule.get_table_m_for_p(p)
@@ -1977,7 +2057,6 @@ def calc_n_b_p_d_t(p, schedule_hw, has_bath):
 
     Returns:
       ndarray: 1時間あたりの居住人数がp人における入浴人数(人/h)
-
     """
     # 読み取るべき表の選択
     table = schedule.get_table_m_for_p(p)
@@ -2009,7 +2088,6 @@ def calc_W_ba1_d_t(bath_function, L_ba_d_t, Theta_wtr_d):
 
     Returns:
       ndarray: 浴槽水栓さし湯時における基準給湯量 (L/h)
-
     """
     if bath_function == '給湯単機能' or bath_function == 'ふろ給湯機(追焚なし)':
         # 浴槽水栓さし湯時における基準給湯温度
@@ -2037,7 +2115,6 @@ def calc_L_ba_d_t(bath_insulation, schedule_hw, has_bath, theta_ex_d_Ave_d, n_p)
 
     Returns:
       ndarray: 浴槽沸かし直しによる給湯熱負荷 (MJ/d)
-
     """
     if 1 <= n_p and n_p <= 2:
         n_b_1_d_t = calc_n_b_p_d_t(1, schedule_hw, has_bath)
@@ -2072,7 +2149,6 @@ def calc_L_ba_p_d_t(p, bath_insulation, n_b_p_d_t, theta_ex_d_Ave_d):
 
     Returns:
       ndarray: 居住人数がp人における浴槽沸かし直しにおける給湯熱負荷 (MJ/d)
-
     """
     # 係数a_ba, b_ba
     a_ba_p_d, b_ba_p_d = get_coeff_eq11(bath_insulation, p, theta_ex_d_Ave_d)
@@ -2111,7 +2187,6 @@ def get_coeff_eq11(bath_insulation, p, theta_ex_d_Ave_d):
 
     Returns:
       tuple: 係数a_ba, b_ba
-
     """
     if bath_insulation == False:
         # 通常浴槽
@@ -2144,8 +2219,6 @@ def get_coeff_eq11(bath_insulation, p, theta_ex_d_Ave_d):
 
 
 
-
-
 def get_table_6():
     """表6 係数 a_ba, b_ba
 
@@ -2153,7 +2226,6 @@ def get_table_6():
 
     Returns:
       list: 係数 a_ba, b_ba
-
     """
     table_6 = [
         (-0.12, 6.00, -0.10, 4.91, -0.06, 3.02, 0.00, 0.00),
@@ -2180,7 +2252,6 @@ def get_Theta_wtr_d(region, Theta_ex_prd_Ave_d):
 
     Returns:
       ndarray: 日平均給水温度 (℃)
-
     """
 
     # 日平均給水温度を求める際の会期係数
@@ -2198,7 +2269,6 @@ def get_table_7():
 
     Returns:
       list: 日平均給水温度を求める際の回帰係数の値
-
     """
     table_7 = [
         (0.6639, 3.466),
@@ -2220,7 +2290,6 @@ def get_Theta_ex_prd_Ave_d(theta_ex_d_Ave_d):
 
     Returns:
       ndarray: 期間平均外気温度 (℃)
-
     """
     # 10日前までを拡張した配列を作る(最終日は削る=>-1)
     tmp = np.zeros(365 + 10 - 1)
@@ -2246,7 +2315,6 @@ def get_theta_ex_d_Ave_d(Theta_ex_d_t):
 
     Returns:
       ndarray: 日平均外気温度 (℃)
-
     """
     # 8760時間の一次配列を365*24の二次配列へ再配置させる
     tmp = Theta_ex_d_t.reshape(365, 24)
@@ -2272,7 +2340,6 @@ def get_Theta_ex_Nave_d(Theta_ex_d_t):
 
     Returns:
       ndarray: 夜間平均外気温度 (℃)
-
     """
     # 1時間後ろに配列をずらす(そして、12月31日23時を1月1日0時に移動させる)
     tmp = np.roll(Theta_ex_d_t, 1)
@@ -2306,7 +2373,6 @@ def get_L_HWH_d(L_HWH_d_t):
 
     Returns:
       ndarray: 1日当たりの温水暖房の熱負荷 (MJ/d)
-
     """
     # 8760時間の一次配列を365*24の二次配列へ再配置させる
     tmp = L_HWH_d_t.reshape(365, 24)
@@ -2330,7 +2396,32 @@ def calc_Q_W_dmd_excl_ba2_d_t(L_dash_k_d_t, L_dash_s_d_t, L_dash_w_d_t, L_dash_b
 
     Returns:
       ndarray: 1時間当たりの給湯熱需要（浴槽追焚を除く） (MJ/h)
-
     """
     return L_dash_k_d_t + L_dash_s_d_t + L_dash_w_d_t + L_dash_b1_d_t + L_dash_b2_d_t + L_dash_ba1_d_t
 
+
+# ============================================================================
+# 20. 浴槽湯張りの方法
+# ============================================================================
+
+def get_bathtub_filling_method_d_t(hw_connection_type, hw_type, solar_device, L_sun_total_d_t):
+    """浴槽湯張りの方法
+
+    Args:
+      hw_connection_type(str): 給湯接続方式の種類 (-)
+      hw_type(str): 給湯機／給湯温水暖房機の種類 (-)
+      solar_device(str): 太陽熱利用設備の種類 (液体集熱式,空気集熱式,None) (-)
+      L_sun_total_d_t(ndarray): 1時間当たりの洗面水栓における節湯補正給湯量 (L/d)
+
+    Returns:
+      ndarray: 浴槽湯張りの方法
+    """
+    if solar_device == None:
+        return np.full(24 * 365, "給湯機で温度調整して浴槽湯張りを行う")
+    elif solar_device == "液体集熱式":
+        is_installed_hw_type(hw_connection_type, hw_type)
+        return solar.get_swh_bathtub_filling_method_d_t(hw_connection_type, L_sun_total_d_t)
+    elif solar_device == "空気集熱式":
+        return solar.get_open_swh_bathtub_filling_method_d_t()
+    else:
+        return ValueError(solar_device)

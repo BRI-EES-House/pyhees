@@ -37,7 +37,7 @@ def get_E_E_hs(W_dash_k_d_t, W_dash_s_d_t, W_dash_w_d_t, W_dash_b1_d_t, W_dash_b
 
 
 def get_E_G_hs(Theta_ex_Ave, L_dashdash_k, L_dashdash_s, L_dashdash_w, L_dashdash_b1, L_dashdash_b2,
-               L_dashdash_ba1, L_dashdash_ba2, bath_function):
+               L_dashdash_ba1, L_dashdash_ba2, bath_function, bathtub_filling_method_d_t):
     """1時間当たりの給湯機のガス消費量
 
     Args:
@@ -50,6 +50,7 @@ def get_E_G_hs(Theta_ex_Ave, L_dashdash_k, L_dashdash_s, L_dashdash_w, L_dashdas
       L_dashdash_ba1(ndarray): 1時間当たりの浴槽水栓さし湯時における節湯補正給湯熱負荷 (MJ/d)
       L_dashdash_ba2(ndarray): 1時間当たりの浴槽追焚時における節湯補正給湯熱負荷 (MJ/d)
       bath_function(str): ふろ機能の種類
+      bathtub_filling_method_d_t(ndarray): 浴槽湯張りの方法 (-)
 
     Returns:
       ndarray: 1時間当たりの給湯機のガス消費量 (MJ/d)
@@ -66,7 +67,8 @@ def get_E_G_hs(Theta_ex_Ave, L_dashdash_k, L_dashdash_s, L_dashdash_w, L_dashdas
         L_dashdash_ba1_d_t=L_dashdash_ba1,
         L_dashdash_ba2_d_t=L_dashdash_ba2,
         bath_function=bath_function,
-        e_rtd=0.866
+        e_rtd=0.866,
+        bathtub_filling_method_d_t=bathtub_filling_method_d_t
     )
 
 

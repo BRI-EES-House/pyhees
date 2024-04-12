@@ -115,7 +115,7 @@ def calc_E_E_hs_aux3_d_t(L_dashdash_ba2_d_t):
 
 def calc_E_G_hs_d_t(theta_ex_d_Ave_d, L_dashdash_k_d_t, L_dashdash_s_d_t, L_dashdash_w_d_t, L_dashdash_b1_d_t,
                     L_dashdash_b2_d_t,
-                    L_dashdash_ba1_d_t, L_dashdash_ba2_d_t, bath_function, hw_type=None, e_rtd=None, e_dash_rtd=None):
+                    L_dashdash_ba1_d_t, L_dashdash_ba2_d_t, bath_function, bathtub_filling_method_d_t, hw_type=None, e_rtd=None, e_dash_rtd=None):
     """1時間当たりの給湯機のガス消費量 (5)
 
     Args:
@@ -128,6 +128,7 @@ def calc_E_G_hs_d_t(theta_ex_d_Ave_d, L_dashdash_k_d_t, L_dashdash_s_d_t, L_dash
       L_dashdash_ba1_d_t(ndarray): 1時間当たりの浴槽水栓さし湯時における太陽熱補正給湯負荷 (MJ/h)
       L_dashdash_ba2_d_t(ndarray): 1時間当たりの浴槽追焚時における太陽熱補正給湯負荷 (MJ/h)
       bath_function(str): ふろ機能の種類
+      bathtub_filling_method_d_t(ndarray): 浴槽湯張りの方法 (-)
       hw_type(str, optional): 給湯機の種類 (Default value = None)
       e_rtd(float, optional): 当該給湯機の効率 (Default value = None)
       e_dash_rtd(float, optional): エネルギーの使用の合理化に関する法律」に基づく「特定機器の性能の向上に関する製造事業者等の 判断の基準等」（ガス温水機器）に定義される「エネルギー消費効率」 (Default value = None)
@@ -136,6 +137,8 @@ def calc_E_G_hs_d_t(theta_ex_d_Ave_d, L_dashdash_k_d_t, L_dashdash_s_d_t, L_dash
       ndarray: 1時間当たりの給湯機のガス消費量 (MJ/h)
 
     """
+    E_G_hs_d_t = np.zeros(24 * 365)
+
     # 効率の決定
     if e_rtd is None:
         if e_dash_rtd is None:
@@ -159,45 +162,72 @@ def calc_E_G_hs_d_t(theta_ex_d_Ave_d, L_dashdash_k_d_t, L_dashdash_s_d_t, L_dash
     e_k_d = get_e_k_d(theta_ex_d_Ave_d, L_dashdash_k_d, L_dashdash_w_d, f_hs)
     e_s_d = get_e_s_d(theta_ex_d_Ave_d, L_dashdash_s_d, f_hs)
     e_w_d = get_e_w_d(theta_ex_d_Ave_d, L_dashdash_k_d, L_dashdash_w_d, f_hs)
+    e_b1_d = get_e_b1_d(theta_ex_d_Ave_d, L_dashdash_b1_d, f_hs)
+    e_b2_d = get_e_b2_d(theta_ex_d_Ave_d, L_dashdash_b2_d, f_hs)
+    e_ba1_d = get_e_ba1_d(theta_ex_d_Ave_d, L_dashdash_ba1_d, f_hs)
+    e_ba2_d = get_e_ba2_d(theta_ex_d_Ave_d, L_dashdash_ba2_d, f_hs)
 
+    e_k_d_t = np.repeat(e_k_d, 24)
+    e_s_d_t = np.repeat(e_s_d, 24)
+    e_w_d_t = np.repeat(e_w_d, 24)
+    e_b1_d_t = np.repeat(e_b1_d, 24)
+    e_b2_d_t = np.repeat(e_b2_d, 24)
+    e_ba1_d_t = np.repeat(e_ba1_d, 24)
+    e_ba2_d_t = np.repeat(e_ba2_d, 24)
+
+    # 浴槽湯張りの方法は給湯機で温度調整して浴槽湯張りを行うの場合
+    f1 = bathtub_filling_method_d_t == "給湯機で温度調整して浴槽湯張りを行う"
     if bath_function == '給湯単機能':
-
-        # 日平均給湯機効率
-        e_b1_d = get_e_b1_d(theta_ex_d_Ave_d, L_dashdash_b1_d, f_hs)
-        e_ba1_d = get_e_ba1_d(theta_ex_d_Ave_d, L_dashdash_ba1_d, f_hs)
-
-        # (5a)
-        return L_dashdash_k_d_t / np.repeat(e_k_d, 24) \
-               + L_dashdash_s_d_t / np.repeat(e_s_d, 24) \
-               + L_dashdash_w_d_t / np.repeat(e_w_d, 24) \
-               + L_dashdash_b1_d_t / np.repeat(e_b1_d, 24) \
-               + L_dashdash_ba1_d_t / np.repeat(e_ba1_d, 24)
+        # (5-1a)
+        E_G_hs_d_t[f1] = L_dashdash_k_d_t[f1] / e_k_d_t[f1] \
+              + L_dashdash_s_d_t[f1] / e_s_d_t[f1] \
+              + L_dashdash_w_d_t[f1] / e_w_d_t[f1] \
+              + L_dashdash_b1_d_t[f1] / e_b1_d_t[f1] \
+              + L_dashdash_ba1_d_t[f1] / e_ba1_d_t[f1]
     elif bath_function == 'ふろ給湯機(追焚なし)':
-
-        # 日平均給湯機効率
-        e_b2_d = get_e_b2_d(theta_ex_d_Ave_d, L_dashdash_b2_d, f_hs)
-        e_ba1_d = get_e_ba1_d(theta_ex_d_Ave_d, L_dashdash_ba1_d, f_hs)
-
-        # (5b)
-        return L_dashdash_k_d_t / np.repeat(e_k_d, 24) \
-               + L_dashdash_s_d_t / np.repeat(e_s_d, 24) \
-               + L_dashdash_w_d_t / np.repeat(e_w_d, 24) \
-               + L_dashdash_b2_d_t / np.repeat(e_b2_d, 24) \
-               + L_dashdash_ba1_d_t / np.repeat(e_ba1_d, 24)
+        # (5-1b)
+        E_G_hs_d_t[f1] = L_dashdash_k_d_t[f1] / e_k_d_t[f1] \
+              + L_dashdash_s_d_t[f1] / e_s_d_t[f1] \
+              + L_dashdash_w_d_t[f1] / e_w_d_t[f1] \
+              + L_dashdash_b2_d_t[f1] / e_b2_d_t[f1] \
+              + L_dashdash_ba1_d_t[f1] / e_ba1_d_t[f1]
     elif bath_function == 'ふろ給湯機(追焚あり)':
-
-        # 日平均給湯機効率
-        e_b2_d = get_e_b2_d(theta_ex_d_Ave_d, L_dashdash_b2_d, f_hs)
-        e_ba2_d = get_e_ba2_d(theta_ex_d_Ave_d, L_dashdash_ba2_d, f_hs)
-
-        # (5c)
-        return L_dashdash_k_d_t / np.repeat(e_k_d, 24) \
-               + L_dashdash_s_d_t / np.repeat(e_s_d, 24) \
-               + L_dashdash_w_d_t / np.repeat(e_w_d, 24) \
-               + L_dashdash_b2_d_t / np.repeat(e_b2_d, 24) \
-               + L_dashdash_ba2_d_t / np.repeat(e_ba2_d, 24)
+        # (5-1c)
+        E_G_hs_d_t[f1] = L_dashdash_k_d_t[f1] / e_k_d_t[f1] \
+              + L_dashdash_s_d_t[f1] / e_s_d_t[f1] \
+              + L_dashdash_w_d_t[f1] / e_w_d_t[f1] \
+              + L_dashdash_b2_d_t[f1] / e_b2_d_t[f1] \
+              + L_dashdash_ba2_d_t[f1] / e_ba2_d_t[f1]
     else:
         raise ValueError(bath_function)
+
+    # 浴槽湯張りの方法は給湯機を経由せずに浴槽に落とした中温水に対して浴槽水栓さし湯または浴槽追焚を行うことで浴槽湯張りを行うの場合
+    f2 = bathtub_filling_method_d_t == "給湯機を経由せずに浴槽に落とした中温水に対して浴槽水栓さし湯または浴槽追焚を行うことで浴槽湯張りを行う"
+    if bath_function == '給湯単機能':
+        # (5-2a)
+        E_G_hs_d_t[f2] = L_dashdash_k_d_t[f2] / e_k_d_t[f2] \
+              + L_dashdash_s_d_t[f2] / e_s_d_t[f2] \
+              + L_dashdash_w_d_t[f2] / e_w_d_t[f2] \
+              + L_dashdash_b1_d_t[f2] / e_ba1_d_t[f2] \
+              + L_dashdash_ba1_d_t[f2] / e_ba1_d_t[f2]
+    elif bath_function == 'ふろ給湯機(追焚なし)':
+        # (5-2b)
+        E_G_hs_d_t[f2] = L_dashdash_k_d_t[f2] / e_k_d_t[f2] \
+              + L_dashdash_s_d_t[f2] / e_s_d_t[f2] \
+              + L_dashdash_w_d_t[f2] / e_w_d_t[f2] \
+              + L_dashdash_b2_d_t[f2] / e_ba1_d_t[f2] \
+              + L_dashdash_ba1_d_t[f2] / e_ba1_d_t[f2]
+    elif bath_function == 'ふろ給湯機(追焚あり)':
+        # (5-2c)
+        E_G_hs_d_t[f2] = L_dashdash_k_d_t[f2] / e_k_d_t[f2] \
+              + L_dashdash_s_d_t[f2] / e_s_d_t[f2] \
+              + L_dashdash_w_d_t[f2] / e_w_d_t[f2] \
+              + L_dashdash_b2_d_t[f2] / e_ba2_d_t[f2] \
+              + L_dashdash_ba2_d_t[f2] / e_ba2_d_t[f2]
+    else:
+        raise ValueError(bath_function)
+
+    return E_G_hs_d_t
 
 
 def get_e_k_d(theta_ex_d_Ave_d, L_dashdash_k_d, L_dashdash_w_d, f_hs):

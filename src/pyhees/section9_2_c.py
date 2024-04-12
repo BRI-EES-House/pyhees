@@ -1,43 +1,31 @@
 # ============================================================================
-# 付録A 密閉形太陽熱温水器（直圧式）
+# 付録C 開放形太陽熱温水器
 # ============================================================================
 
 import numpy as np
 from pyhees.util import util
 
 # ============================================================================
-# A.3 貯湯部
+# C.3 貯湯部
 # ============================================================================
 
 # ============================================================================
-# A.3.1 熱交換器の温度効率
+# C.3.1 熱交換器の温度効率
 # ============================================================================
 
-def get_epsilon_t_hx_d_t(c_p_htm, UA_hx, G_htm_d_t):
+def get_epsilon_t_hx_d_t():
     """熱交換器の温度効率 (-) (1)
 
     Args:
-      c_p_htm(float): 熱媒の定圧比熱 (kJ/(kg･K))
-      UA_hx(float): 熱交換器の伝熱係数 (-)
-      G_htm_d_t(ndarray): 1時間当たりの熱媒の循環量 (kg/h)
 
     Returns:
       ndarray: 熱交換器の温度効率 (-)
     """
-    epsilon_t_hx_d_t = np.zeros(24 * 365)
-
-    f1 = G_htm_d_t == 0
-    epsilon_t_hx_d_t[f1] = 1
-
-    f2 = G_htm_d_t > 0
-    exp_tmp = - UA_hx / (c_p_htm * G_htm_d_t[f2] * 10 ** 3 / 3600)
-    epsilon_t_hx_d_t[f2] = 1 - np.exp(exp_tmp)
-
-    return epsilon_t_hx_d_t
+    return np.ones(24 * 365)
 
 
 # ============================================================================
-# A.3.2 貯湯タンク内の水の利用可否
+# C.3.2 貯湯タンク内の水の利用可否
 # ============================================================================
 
 def get_isAvailable_w_tank(Theta_wtr, Theta_ex_p6h_Ave, Theta_w_tank_mixed_prev, Theta_w_tank_upper_prev, t_hc_start_d):
@@ -93,13 +81,7 @@ def get_Theta_ex_p6h_Ave(Theta_ex_d_t, dt):
     # 6時間分のデータにそれぞれ1/6を掛けて加算する→平均が求まる
     Theta_ex_p6h_Ave_d_t = np.convolve(tmp,  np.ones(6) / 6, mode='valid')
 
-    # 当該日の6時のインデックスを取得
-    d = dt // 24
-    dt_p6h = 24 * d + 5
-
-    Theta_ex_p6h_Ave = Theta_ex_p6h_Ave_d_t[dt_p6h]
-
-    return Theta_ex_p6h_Ave
+    return Theta_ex_p6h_Ave_d_t[dt]
 
 
 def get_Theta_ex_p6h_Ave_lmt():
@@ -114,30 +96,31 @@ def get_Theta_ex_p6h_Ave_lmt():
 
 
 # ============================================================================
-# A.4 集熱部
+# C.4 集熱部
 # ============================================================================
 
 # ============================================================================
-# A.4.1 温度効率
+# C.4.1 温度効率
 # ============================================================================
+
 def get_epsilon_t_stc_d_t(A_stcp, b1, c_p_htm, G_htm_d_t):
-    """熱交換器の温度効率 (-) (4)
+    """集熱器の温度効率 (-) (4)
 
     Args:
       A_stcp(float): 集熱部の有効集熱面積(m2)
       b1(float): 集熱器の集熱効率特性線図一次近似式の傾き (W/(m2・K))
       c_p_htm(float): 熱媒の定圧比熱 (kJ/(kg･K))
-      G_htm_d_t(ndarray): 1時間当たりの熱媒の循環量 (kg/h)
+      G_htm_d_t(ndarray): 熱媒の循環量 (kg/h)
 
     Returns:
-      ndarray: 熱交換器の温度効率 (-)
+      ndarray: 集熱器の温度効率 (-)
     """
     epsilon_t_stc_d_t = np.zeros(24 * 365)
 
-    f1 = G_htm_d_t == 0
-    epsilon_t_stc_d_t[f1] = 1
+    f1 = G_htm_d_t == 0.0
+    epsilon_t_stc_d_t[f1] = 1.0
 
-    f2 = G_htm_d_t > 0
+    f2 = G_htm_d_t > 0.0
     exp_tmp = - (b1 * A_stcp) / (c_p_htm * G_htm_d_t[f2] * 10 ** 3 / 3600)
     epsilon_t_stc_d_t[f2] = 1 - np.exp(exp_tmp)
 
@@ -156,7 +139,7 @@ def get_epsilon_t_stp_d_t():
 
 
 # ============================================================================
-# A.4.2 熱媒の循環量
+# C.4.2 熱媒の循環量
 # ============================================================================
 
 def get_G_htm_d_t(g_htm, I_s_d_t, Delta_tau_hc_d_t):
@@ -174,7 +157,7 @@ def get_G_htm_d_t(g_htm, I_s_d_t, Delta_tau_hc_d_t):
 
 
 # ============================================================================
-# A.4.3 集熱時間数および集熱開始時刻
+# C.4.3 集熱時間数および集熱開始時刻
 # ============================================================================
 
 def get_Delta_tau_hc_d_t(I_s_d_t):
@@ -192,7 +175,7 @@ def get_Delta_tau_hc_d_t(I_s_d_t):
     # 1時間当たりの集熱時間数の計算領域を確保
     Delta_tau_hc_d_t = np.zeros(24 * 365)
 
-    # I_s_d_t == I_s_lmt  の場合
+    # I_s_d_t == I_s_lmt の場合
     f1 = I_s_d_t == I_s_lmt
     Delta_tau_hc_d_t[f1] = 0
 
@@ -239,7 +222,7 @@ def get_I_s_lmt():
 
 
 # ============================================================================
-# A.4.4 循環ポンプの稼働時間数
+# C.4.4 循環ポンプの稼働時間数
 # ============================================================================
 
 def get_Delta_tau_pump_hc_d_t():
@@ -261,7 +244,7 @@ def get_Delta_tau_pump_non_hc_d_t():
 
 
 # ============================================================================
-# A.5 仕様
+# C.5 仕様
 # ============================================================================
 
 def get_b0(b0):
@@ -285,7 +268,7 @@ def get_b1(b1):
     """集熱器の集熱効率特性線図一次近似式の傾き W/(m2・K)
 
     Args:
-      b0(float): 集熱器の集熱効率特性線図一次近似式の傾き W/(m2・K)
+      b1(float): 集熱器の集熱効率特性線図一次近似式の傾き W/(m2・K)
 
     Returns:
       float: 集熱器の集熱効率特性線図一次近似式の傾き W/(m2・K)
@@ -315,23 +298,6 @@ def get_g_htm(g_htm):
         return table_2[3]
 
 
-def get_UA_hx(UA_hx):
-    """熱交換器の伝熱係数 (-)
-
-    Args:
-      UA_hx(float): 熱交換器の伝熱係数 (-)
-
-    Returns:
-      float: 熱交換器の伝熱係数 (-)
-    """
-    if UA_hx is not None:
-        return UA_hx
-    else:
-        # 表2 仕様を表す示すパラメータとその決定方法
-        table_2 = get_table_2()
-        return table_2[4]
-
-
 def get_eta_r_tank(eta_r_tank):
     """有効出湯効率 (%)
 
@@ -346,7 +312,7 @@ def get_eta_r_tank(eta_r_tank):
     else:
         # 表2 仕様を表す示すパラメータとその決定方法
         table_2 = get_table_2()
-        return table_2[6]
+        return table_2[5]
 
 
 def get_UA_tank(UA_tank):
@@ -363,7 +329,7 @@ def get_UA_tank(UA_tank):
     else:
         # 表2 仕様を表す示すパラメータとその決定方法
         table_2 = get_table_2()
-        return table_2[7]
+        return table_2[6]
 
 
 def get_P_pump_hc():
@@ -397,7 +363,6 @@ def get_table_2():
         0.73,
         7.65,
         0.164,
-        220,
         None,
         75.0,
         5.81

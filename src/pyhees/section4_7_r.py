@@ -755,13 +755,13 @@ def f_GU_G(q_GU, e_GU_rtd, q_GU_rtd, Theta_SW_hs):
     f_ex = np.zeros(24 * 365)
     q_body = np.zeros(24 * 365)
 
-    # Theta_SW_hs == 40 の場合
-    f1 = Theta_SW_hs == 40.0
+    # Theta_SW_hs == 35 の場合
+    f1 = Theta_SW_hs == 35.0
     f_ex[f1] = get_table_1()[0][0]
     q_body[f1] = get_table_1()[1][0]
 
-    # Theta_SW_hs == 60 の場合
-    f2 = Theta_SW_hs == 60.0
+    # Theta_SW_hs == 45 および 55 の場合
+    f2 = np.logical_or(Theta_SW_hs == 45.0, Theta_SW_hs == 55.0)
     f_ex[f2] = get_table_1()[0][1]
     q_body[f2] = get_table_1()[1][1]
 

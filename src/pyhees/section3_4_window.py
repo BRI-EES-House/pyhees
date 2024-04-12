@@ -1,7 +1,6 @@
 # 6 大部分がガラスで構成されている窓等の開口部
 
 # 6.1 日射熱取得率
-from pyhees.section3_3_5 import calc_Opening_U_i
 import pyhees.section3_4_b_1 as f
 import pyhees.section3_4_c as eater_d
 
@@ -38,10 +37,10 @@ def calc_eta_H_i_byDict(Region, Direction, window_part):
     # 取得日射熱補正係数
     # 1) 外壁に設置される開口部の場合、方法イ）、ロ）及びハ）を用いることができる
     if Direction in ['S', 'SW', 'W', 'NW', 'N', 'NE', 'E', 'SE', 'Bottom']:
-        # イ)地域の区分、方位及び日除けの形状に依らず定められた値を用いる方法
+        # イ)地域の区分、方位及び日よけの形状に依らず定められた値を用いる方法
         if window_part['FcMethod'] == 'No':
             f_H_i = f.const.get_f_H_i()
-        # ロ)地域の区分、方位及び日除けの形状（オーバーハング型）に応じて簡易的に算出する方法
+        # ロ)地域の区分、方位及び日よけの形状（オーバーハング型）に応じて簡易的に算出する方法
         elif window_part['FcMethod'] == 'Simple':
             has_over_hang = {
                 'Yes': True,
@@ -51,7 +50,7 @@ def calc_eta_H_i_byDict(Region, Direction, window_part):
             y2 = window_part.get('WindowHeight')
             z  = window_part.get('EaveDepth')
             f_H_i = f.simple.get_f_H_i(Region, Direction, has_over_hang, y1, y2, z)
-        # ハ)地域の区分、方位及び日除けの形状に応じて算出した日除け効果係数と斜入射特性を用いる方法
+        # ハ)地域の区分、方位及び日よけの形状に応じて算出した日よけ効果係数と斜入射特性を用いる方法
         elif window_part['FcMethod'] == 'Accurate':
             f_ang_H = f.detail.get_table_b_1(Region, window_part['GlassSpecForCategory'], 'H', Direction)
             f_H_i = f.detail.get_f_H_i(f_ang_H, window_part['GammaH'], Direction)
@@ -59,10 +58,10 @@ def calc_eta_H_i_byDict(Region, Direction, window_part):
             raise ValueError(window_part['FcMethod'])
     # 2) 屋根又は屋根の直下の天井に設置されている開口部の場合、方法イ）及びハ）を用いることができる
     elif Direction == 'Top':
-        # イ)地域の区分、方位及び日除けの形状に依らず定められた値を用いる方法
+        # イ)地域の区分、方位及び日よけの形状に依らず定められた値を用いる方法
         if window_part['FcMethod'] == 'No':
             f_H_i = f.const.get_f_H_i()
-        # ハ)地域の区分、方位及び日除けの形状に応じて算出した日除け効果係数と斜入射特性を用いる方法
+        # ハ)地域の区分、方位及び日よけの形状に応じて算出した日よけ効果係数と斜入射特性を用いる方法
         elif window_part['FcMethod'] == 'Accurate':
             f_ang_H = f.detail.get_table_b_1(Region, window_part['GlassSpecForCategory'], 'H', Direction)
             f_H_i = f.detail.get_f_H_i(f_ang_H, window_part['GammaH'], Direction)
@@ -72,6 +71,12 @@ def calc_eta_H_i_byDict(Region, Direction, window_part):
         raise ValueError(Direction)
 
     # 垂直面日射熱取得率
+    # 付属部材のデフォルト処理
+    if 'AttachmentForEaterValue' not in window_part:
+        attachment = 'No'
+    else:
+        attachment = window_part['AttachmentForEaterValue']
+
     # 二重窓
     if window_part['IsSetWindow'] == 'Yes':
         if 'SolarHeatGainCoefficient' in window_part:
@@ -79,10 +84,10 @@ def calc_eta_H_i_byDict(Region, Direction, window_part):
         else:
             # 付属部材
             # 和障子の場合は室内側の窓の垂直面日射熱取得率に含める
-            if window_part['Attachment'] == 'Shoji':
+            if attachment == 'Shoji':
                 etr_g1_i = calc_etr_g_byKey(window_part['GlassType'], 'No')
             # 外付けブラインドの場合は外気側の窓の垂直面日射熱取得率に含める
-            elif window_part['Attachment'] == 'ExteriorBlind':
+            elif attachment == 'ExteriorBlind':
                 etr_g1_i = calc_etr_g_byKey(window_part['GlassType'], 'ExteriorBlind')
             else:
                 etr_g1_i = calc_etr_g_byKey(window_part['GlassType'], 'No')
@@ -92,10 +97,10 @@ def calc_eta_H_i_byDict(Region, Direction, window_part):
         else:
             # 付属部材
             # 和障子の場合は室内側の窓の垂直面日射熱取得率に含める
-            if window_part['Attachment'] == 'Shoji':
+            if attachment == 'Shoji':
                 etr_g2_i = calc_etr_g_byKey(window_part['GlassTypeForInnerWindow'], 'Shoji')
             # 外付けブラインドの場合は外気側の窓の垂直面日射熱取得率に含める
-            elif window_part['Attachment'] == 'ExteriorBlind':
+            elif attachment == 'ExteriorBlind':
                 etr_g2_i = calc_etr_g_byKey(window_part['GlassTypeForInnerWindow'], 'No')
             else:
                 etr_g2_i = calc_etr_g_byKey(window_part['GlassTypeForInnerWindow'], 'No')
@@ -134,7 +139,7 @@ def calc_eta_H_i_byDict(Region, Direction, window_part):
         if 'SolarHeatGainCoefficient' in window_part:
             etr_g_i = window_part['SolarHeatGainCoefficient']
         else:
-            etr_g_i = calc_etr_g_byKey(window_part['GlassType'], window_part['Attachment'])
+            etr_g_i = calc_etr_g_byKey(window_part['GlassType'], attachment)
         # 枠の影響を考慮しない場合
         if window_part['FrameRef'] == 'No':
             etr_d_i = eater_d.get_etr_d_i(etr_g_i, '影響がない')
@@ -182,10 +187,10 @@ def calc_eta_C_i_byDict(Region, Direction, window_part):
     # 取得日射熱補正係数
     # 1) 外壁に設置される開口部の場合、方法イ）、ロ）及びハ）を用いることができる
     if Direction in ['S', 'SW', 'W', 'NW', 'N', 'NE', 'E', 'SE', 'Bottom']:
-        # イ)地域の区分、方位及び日除けの形状に依らず定められた値を用いる方法
+        # イ)地域の区分、方位及び日よけの形状に依らず定められた値を用いる方法
         if window_part['FcMethod'] == 'No':
             f_C_i = f.const.get_f_C_i()
-        # ロ)地域の区分、方位及び日除けの形状（オーバーハング型）に応じて簡易的に算出する方法
+        # ロ)地域の区分、方位及び日よけの形状（オーバーハング型）に応じて簡易的に算出する方法
         elif window_part['FcMethod'] == 'Simple':
             has_over_hang = {
                 'Yes': True,
@@ -195,7 +200,7 @@ def calc_eta_C_i_byDict(Region, Direction, window_part):
             y2 = window_part.get('WindowHeight')
             z  = window_part.get('EaveDepth')
             f_C_i = f.simple.get_f_C_i(Region, Direction, has_over_hang, y1, y2, z)
-        # ハ)地域の区分、方位及び日除けの形状に応じて算出した日除け効果係数と斜入射特性を用いる方法
+        # ハ)地域の区分、方位及び日よけの形状に応じて算出した日よけ効果係数と斜入射特性を用いる方法
         elif window_part['FcMethod'] == 'Accurate':
             f_ang_C = f.detail.get_table_b_1(Region, window_part['GlassSpecForCategory'], 'C', Direction)
             f_C_i = f.detail.get_f_C_i(f_ang_C, window_part['GammaC'], Direction)
@@ -203,10 +208,10 @@ def calc_eta_C_i_byDict(Region, Direction, window_part):
             raise ValueError(window_part['FcMethod'])
     # 2) 屋根又は屋根の直下の天井に設置されている開口部の場合、方法イ）及びハ）を用いることができる
     elif Direction == 'Top':
-        # イ)地域の区分、方位及び日除けの形状に依らず定められた値を用いる方法
+        # イ)地域の区分、方位及び日よけの形状に依らず定められた値を用いる方法
         if window_part['FcMethod'] == 'No':
             f_C_i = f.const.get_f_C_i()
-        # ハ)地域の区分、方位及び日除けの形状に応じて算出した日除け効果係数と斜入射特性を用いる方法
+        # ハ)地域の区分、方位及び日よけの形状に応じて算出した日よけ効果係数と斜入射特性を用いる方法
         elif window_part['FcMethod'] == 'Accurate':
             f_ang_C = f.detail.get_table_b_1(Region, window_part['GlassSpecForCategory'], 'C', Direction)
             f_C_i = f.detail.get_f_C_i(f_ang_C, window_part['GammaC'], Direction)
@@ -214,6 +219,12 @@ def calc_eta_C_i_byDict(Region, Direction, window_part):
         raise ValueError(Direction)
 
     # 垂直面日射熱取得率
+    # 付属部材のデフォルト処理
+    if 'AttachmentForEaterValue' not in window_part:
+        attachment = 'No'
+    else:
+        attachment = window_part['AttachmentForEaterValue']
+
     # 二重窓
     if window_part['IsSetWindow'] == 'Yes':
         if 'SolarHeatGainCoefficient' in window_part:
@@ -221,10 +232,10 @@ def calc_eta_C_i_byDict(Region, Direction, window_part):
         else:
             # 付属部材
             # 和障子の場合は室内側の窓の垂直面日射熱取得率に含める
-            if window_part['Attachment'] == 'Shoji':
+            if attachment == 'Shoji':
                 etr_g1_i = calc_etr_g_byKey(window_part['GlassType'], 'No')
             # 外付けブラインドの場合は外気側の窓の垂直面日射熱取得率に含める
-            elif window_part['Attachment'] == 'ExteriorBlind':
+            elif attachment == 'ExteriorBlind':
                 etr_g1_i = calc_etr_g_byKey(window_part['GlassType'], 'ExteriorBlind')
             else:
                 etr_g1_i = calc_etr_g_byKey(window_part['GlassType'], 'No')
@@ -234,10 +245,10 @@ def calc_eta_C_i_byDict(Region, Direction, window_part):
         else:
             # 付属部材
             # 和障子の場合は室内側の窓の垂直面日射熱取得率に含める
-            if window_part['Attachment'] == 'Shoji':
+            if attachment == 'Shoji':
                 etr_g2_i = calc_etr_g_byKey(window_part['GlassTypeForInnerWindow'], 'Shoji')
             # 外付けブラインドの場合は外気側の窓の垂直面日射熱取得率に含める
-            elif window_part['Attachment'] == 'ExteriorBlind':
+            elif attachment == 'ExteriorBlind':
                 etr_g2_i = calc_etr_g_byKey(window_part['GlassTypeForInnerWindow'], 'No')
             else:
                 etr_g2_i = calc_etr_g_byKey(window_part['GlassTypeForInnerWindow'], 'No')
@@ -277,7 +288,7 @@ def calc_eta_C_i_byDict(Region, Direction, window_part):
         if 'SolarHeatGainCoefficient' in window_part:
             etr_g_i = window_part['SolarHeatGainCoefficient']
         else:
-            etr_g_i = calc_etr_g_byKey(window_part['GlassType'], window_part['Attachment'])
+            etr_g_i = calc_etr_g_byKey(window_part['GlassType'], attachment)
         # 枠の影響を考慮しない場合
         if window_part['FrameRef'] == 'No':
             etr_d_i = eater_d.get_etr_d_i(etr_g_i, '影響がない')

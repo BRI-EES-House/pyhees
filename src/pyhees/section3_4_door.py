@@ -8,7 +8,7 @@ def get_eta_H_i(gamma_H_i, U_i, alpha = None):
     """開口部の暖房期の日射熱取得率  ((W/m)/(W/m2)) (6)
 
     Args:
-      gamma_H_i(float): 開口部の暖房期の日除けの効果係数 (-)
+      gamma_H_i(float): 開口部の暖房期の日よけの効果係数 (-)
       U_i(float): 開口部の熱貫流率 (W/m2K)
       alpha(float, optional): 外気側表⾯の日射吸収率 (-), defaults to None
 
@@ -34,15 +34,20 @@ def calc_eta_H_i_byDict(Region, door_part):
       float: 開口部の暖房期の日射熱取得率
 
     """
-    U_i = calc_OpeningPart_U_i(door_part, 'Door')
+
+    if 'Attachment' not in door_part:
+      attachment = 'No'
+    else:
+      attachment = door_part['Attachment']
+    U_i = calc_OpeningPart_U_i(attachment, door_part, 'Door')
     
-    # 日除けがない場合
-    # 日除けの効果係数→1.0
+    # 日よけの効果係数を指定しない場合
+    # 日よけの効果係数→1.0
     if door_part['HasShade'] == 'No':
         gamma_H_i = gamma.get_gamma_H_i_default()
 
-    # 日除けがある場合
-    # 日除けの効果係数→式(1)
+    # 日よけの効果係数を指定する場合
+    # 日よけの効果係数→式(1)
     else:
         gamma_H_i = door_part['GammaH']
 
@@ -58,7 +63,7 @@ def get_eta_C_i(gamma_C_i, U_i, alpha = None):
     """開口部の冷房期の日射熱取得率  ((W/m)/(W/m2)) (7)
 
     Args:
-      gamma_C_i(float): 一般部位iの冷房期の日除けの効果係数
+      gamma_C_i(float): 一般部位iの冷房期の日よけの効果係数
       U_i(float): 一般部位iの熱貫流率 （W/m2K）
       alpha(float, optional): 外気側表⾯の日射吸収率 (-), defaults to None
 
@@ -85,15 +90,20 @@ def calc_eta_C_i_byDict(Region, door_part):
 
     """
 
-    U_i = calc_OpeningPart_U_i(door_part, 'Door')
+    # Uiを求める
+    if 'Attachment' not in door_part:
+      attachment = 'No'
+    else:
+      attachment = door_part['Attachment']
+    U_i = calc_OpeningPart_U_i(attachment, door_part, 'Door')
     
-    # 日除けがない場合
-    # 日除けの効果係数→1.0
+    # 日よけの効果係数を指定しない場合
+    # 日よけの効果係数→1.0
     if door_part['HasShade'] == 'No':
         gamma_C_i = gamma.get_gamma_C_i_default()
 
-    # 日除けがある場合
-    # 日除けの効果係数→式(1)
+    # 日よけの効果係数を指定する場合
+    # 日よけの効果係数→式(1)
     else:
         gamma_C_i = door_part['GammaC']
 

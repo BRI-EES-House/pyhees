@@ -2,3 +2,4 @@ include src/pyhees/data/*
 include src/pyhees/data/3-1_HukaData_151019_unifyLDK/*
 include src/pyhees/data/climate/*
 include src/pyhees/data/solar/*
+include src/pyhees/util/*

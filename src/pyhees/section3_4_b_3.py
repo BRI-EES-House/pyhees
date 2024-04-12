@@ -1,4 +1,4 @@
-# B.3 地域の区分、方位及び日除けの形状（オーバーハング型）に応じて簡易的に算出する方法
+# B.3 地域の区分、方位及び開口部の上方の日よけ（オーバーハング）の形状に応じて簡易的に算出する方法
 
 def get_f_H_i(region, direction, has_over_hang, y1, y2, z):
     """開口部iの暖房期の取得日射熱補正係数
@@ -7,9 +7,9 @@ def get_f_H_i(region, direction, has_over_hang, y1, y2, z):
       region(int): 省エネルギー地域区分
       direction(str): 外皮の部位の方位
       has_over_hang(bool): 日よけの有無
-      y1(float): 日除け下端から窓上端までの垂直方向の距離 (mm)
+      y1(float): 日よけ下端から窓上端までの垂直方向の距離 (mm)
       y2(float): 窓の開口高さ寸法 (mm)
-      z(float): 壁面からの日除けの張り出し寸法（ひさし等のオーバーハング型日除けの出寸法は壁表面から先端までの寸法とする）(mm)
+      z(float): 壁面からの日よけの張り出し寸法（ひさし等のオーバーハング型日よけの出寸法は壁表面から先端までの寸法とする）(mm)
 
     Returns:
       float: 開口部iの暖房期の取得日射熱補正係数
@@ -39,9 +39,9 @@ def get_f_C_i(region, direction, has_over_hang, y1, y2, z):
       region(int): 省エネルギー地域区分
       direction(str): 外皮の部位の方位
       has_over_hang(bool): 日よけの有無
-      y1(float): 日除け下端から窓上端までの垂直方向の距離 (mm)
+      y1(float): 日よけ下端から窓上端までの垂直方向の距離 (mm)
       y2(float): 窓の開口高さ寸法 (mm)
-      z(float): 壁面からの日除けの張り出し寸法（ひさし等のオーバーハング型日除けの出寸法は壁表面から先端までの寸法とする）(mm)
+      z(float): 壁面からの日よけの張り出し寸法（ひさし等のオーバーハング型日よけの出寸法は壁表面から先端までの寸法とする）(mm)
 
     Returns:
       float: 開口部iの冷房期の取得日射熱補正係数

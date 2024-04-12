@@ -181,8 +181,8 @@ Wall_direct---Wall要素のノード名をkey、値をvalueとして持つ辞書
 |--'Direction': 方位
 |       'Top'(屋根上面) または 'N'(北) または 'NE'(北東) または 'E'(東) または 'SE'(南東) または 
 |       'S'(南) または 'SW'(南西) または 'W'(西) または 'NW'(北西) または 'Bottom'(下面)
-|--'GammaH': 暖房期の日除けの効果係数
-|--'GammaC': 冷房期の日除けの効果係数
+|--'GammaH': 暖房期の日よけの効果係数
+|--'GammaC': 冷房期の日よけの効果係数
 |--'UValue': 熱貫流率
 |--'UValueInfo': 熱貫流率の入力根拠
 """
@@ -211,8 +211,8 @@ Wall_accurate---Wall要素のノード名をkey、値をvalueとして持つ辞�
 |       'BoundaryWall'(界壁) または 'BoundaryCeiling'(上階側界床) または 'BoundaryFloor'(下階側界床)
 |--'Outside': 室外側は外気か？
 |       'Yes'(外気) または 'No'(外気以外（通気層、小屋裏、床裏等）)
-|--'GammaH': 暖房期の日除けの効果係数
-|--'GammaC': 冷房期の日除けの効果係数
+|--'GammaH': 暖房期の日よけの効果係数
+|--'GammaC': 冷房期の日よけの効果係数
 |--'GeneralPart': 含まれる一般部分のリスト＝GeneralPart_accurateの形式を持つ辞書のリスト
     |   例：'GeneralPart':[GeneralPart1,GeneralPart2,...,GeneralPart5]
     |
@@ -303,8 +303,8 @@ Wall_simple---Wall要素のノード名をkey、値をvalueとして持つ辞書
 |       'RoofBeamInterval'(桁・梁間) または 'RafterInterval'(たるき間)または
 |--'Outside': 室外側は外気か？
 |       'Yes'(外気) または 'No'(外気以外（通気層、小屋裏、床裏等）)
-|--'GammaH': 暖房期の日除けの効果係数
-|--'GammaC': 冷房期の日除けの効果係数
+|--'GammaH': 暖房期の日よけの効果係数
+|--'GammaC': 冷房期の日よけの効果係数
 |--'GeneralPart': 含まれる一般部分のリスト＝GeneralPart_simpleの形式を持つ辞書のリスト
 |   |   例：'GeneralPart':[GeneralPart1] (要素数は1を想定)要素数が2以上の場合でも一番先頭要素のみを計算に使用する
 |   |
@@ -485,8 +485,8 @@ Wall_rc---Wall要素のノード名をkey、値をvalueとして持つ辞書
 |       'BoundaryWall'(界壁) または 'BoundaryCeiling'(上階側界床) または 'BoundaryFloor'(下階側界床)
 |--'Outside': 室外側は外気か？
 |       'Yes'(外気) または 'No'(外気以外（通気層、小屋裏、床裏等）)
-|--'GammaH': 暖房期の日除けの効果係数
-|--'GammaC': 冷房期の日除けの効果係数
+|--'GammaH': 暖房期の日よけの効果係数
+|--'GammaC': 冷房期の日よけの効果係数
 |--'GeneralPart': 含まれる一般部分のリスト＝GeneralPart_rcの形式を持つ辞書のリスト
     |   例：'GeneralPart':[GeneralPart1] (要素数は1を想定)要素数が2以上の場合でも一番先頭要素のみを計算に使用する
     |
@@ -563,8 +563,8 @@ Wall_steel---Wall要素のノード名をkey、値をvalueとして持つ辞書
 |       'Under1.1'(1.1未満0.9以上) または 'Under0.9'(0.9未満0.7以上) または 
 |       'Under0.7'(0.7未満0.5以上) または 'Under0.5'(0.5未満0.3以上) または 
 |       'Under0.3'(0.3未満0.1以上) または 'Under0.1'(0.1未満)
-|--'GammaH': 暖房期の日除けの効果係数
-|--'GammaC': 冷房期の日除けの効果係数
+|--'GammaH': 暖房期の日よけの効果係数
+|--'GammaC': 冷房期の日よけの効果係数
 |--'GeneralPart': 含まれる一般部分のリスト＝GeneralPart_steelの形式を持つ辞書のリスト
     |   例：'GeneralPart':[GeneralPart1] (要素数は1を想定)要素数が2以上の場合でも一番先頭要素のみを計算に使用する
     |
@@ -659,7 +659,7 @@ Window---Window要素のノード名をkey、値をvalueとして持つ辞書
     |--'Area': 面積
     |--'OuterHeatTransferOpeningArea': 二重窓における外気側窓の伝熱開口面積
     |--'InternalHeatTransferOpeningArea': 二重窓における室内側窓の伝熱開口面積
-    |--'HasShade': 日除けの有無
+    |--'HasShade': 日よけの有無
     |       'Yes'(あり) または 'No'(なし)
     |--'SashSpec': 建具仕様
     |       'WoodenOrResin'(木製建具又は樹脂製建具) または 'Mix'(木と金属の複合材料製建具又は樹脂と金属の複合材料製建具) または 
@@ -705,11 +705,11 @@ Window---Window要素のノード名をkey、値をvalueとして持つ辞書
     |       'No'(計算しない) または 'Simple'(簡易法) または 'Accurate'(詳細法)
     |--'FrameRef': 枠の影響の有無
     |       'Yes'(枠の影響がある場合) または 'No'(枠の影響がない場合)
-    |--'WindowTopToEaveHeight': 日除け下端から窓上端までの垂直方向の距離
+    |--'WindowTopToEaveHeight': 日よけ下端から窓上端までの垂直方向の距離
     |--'WindowHeigt': 窓の開口高さ寸法
-    |--'EaveDepth': 窓面からの日除けの張り出し寸法
-    |--'GammaH': 暖房期の日除けの効果係数
-    |--'GammaC': 冷房期の日除けの効果係数
+    |--'EaveDepth': 窓面からの日よけの張り出し寸法
+    |--'GammaH': 暖房期の日よけの効果係数
+    |--'GammaC': 冷房期の日よけの効果係数
 """
 ## 出力
 """
@@ -737,10 +737,10 @@ Door---Door要素のノード名をkey、値をvalueとして持つ辞書
     DoorPart---ドア部分についてのパラメータ名をキー、パラメータの値を値として持つ辞書
     |
     |--'Area': 面積
-    |--'HasShade': 日除けの有無
+    |--'HasShade': 日よけの有無
     |       'Yes'(あり) または 'No'(なし)
-    |--'GammaH': 暖房期の日除けの効果係数
-    |--'GammaC': 冷房期の日除けの効果係数
+    |--'GammaH': 暖房期の日よけの効果係数
+    |--'GammaC': 冷房期の日よけの効果係数
     |--'UValue': 熱貫流率
     |--'UValueInfo': 熱貫流率の入力根拠
     |--'Attachment': 付属品部材
@@ -764,8 +764,8 @@ LinearHeatBridge_wood--LinearHeatBridge要素のノード名をkey、値をvalue
 |--'ComponentNames': 接する部位の名前のリスト
 |--'Length':長さ
 |--'LinearThermalTransmittance':線熱貫流率
-|--'GammaH': 暖房期の日除けの効果係数
-|--'GammaC': 冷房期の日除けの効果係数
+|--'GammaH': 暖房期の日よけの効果係数
+|--'GammaC': 冷房期の日よけの効果係数
 """
 ## 出力
 """
@@ -783,8 +783,8 @@ LinearHeatBridge_rc--LinearHeatBridge要素のノード名をkey、値をvalue�
 |--'ComponentNames': 接する部位の名前のリスト
 |--'Length':長さ
 |--'LinearThermalTransmittance':線熱貫流率　※付録Cの表を見て入力する
-|--'GammaH': 暖房期の日除けの効果係数
-|--'GammaC': 冷房期の日除けの効果係数
+|--'GammaH': 暖房期の日よけの効果係数
+|--'GammaC': 冷房期の日よけの効果係数
 """
 ## 出力
 """
@@ -815,8 +815,8 @@ LinearHeatBridge_steel--LinearHeatBridge要素のノード名をkey、値をvalu
 |       'Under200'(200未満100以上) または 'Under100'(100未満)
 |--'BeamInterval': 梁見付寸法
 |       'Over400'(400以上) または 'Under400'(400未満200以上) または 'Under200'(200未満)
-|--'GammaH': 暖房期の日除けの効果係数
-|--'GammaC': 冷房期の日除けの効果係数
+|--'GammaH': 暖房期の日よけの効果係数
+|--'GammaC': 冷房期の日よけの効果係数
 """
 ## 出力
 """

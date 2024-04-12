@@ -374,7 +374,7 @@ def calc_eta_A_C(envelope):
         else:
             raise ValueError("invalid value in ['Method']")
 
-        # 日除けの効果係数
+        # 日よけの効果係数
 
         # 日射熱取得率を計算
         if Solar_Gain != 'No':

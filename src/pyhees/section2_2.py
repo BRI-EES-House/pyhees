@@ -192,7 +192,7 @@ def calc_E_T(spec) -> Tuple[DesignedPrimaryEnergyTotal, DesignedPrimaryEnergyTot
 
     # ---- 外皮の計算 ----
 
-    U_A, r_env, _, _, Q_dash, mu_H, mu_C, _ = calc_insulation_performance(spec['tatekata'], **spec['ENV'])
+    U_A, r_env, eta_A_H, eta_A_C, Q_dash, mu_H, mu_C, _ = calc_insulation_performance(spec['tatekata'], **spec['ENV'])
     # 外皮の断熱性能の計算
     if spec['ENV'] is not None:
         # 熱損失係数
@@ -339,7 +339,7 @@ def calc_E_T(spec) -> Tuple[DesignedPrimaryEnergyTotal, DesignedPrimaryEnergyTot
 
     # エネルギー利用効率化設備による設計一次エネルギー消費量の削減量
     E_E_CG_h = get_E_E_CG_h(E_E_CG_h_d_t)
-    E_S, E_S_CG, E_R = calc_E_S(spec['region'], spec['sol_region'], spec['PV'], spec['CG'], E_E_dmd_d_t, E_E_CG_gen_d_t,
+    E_S, E_S_CG, E_R, E_S_PV_h, E_S_CG_h, E_S_sell = calc_E_S(spec['region'], spec['sol_region'], spec['PV'], spec['CG'], E_E_dmd_d_t, E_E_CG_gen_d_t,
                    E_E_TU_aux_d_t, E_E_CG_h, E_G_CG_ded, e_BB_ave, Q_CG_h)
 
     E_E_gen = np.sum(calc_E_E_PV_d_t(spec['PV'], solrad) + E_E_CG_gen_d_t)
@@ -362,7 +362,7 @@ def calc_E_T(spec) -> Tuple[DesignedPrimaryEnergyTotal, DesignedPrimaryEnergyTot
         'E_S': E_S,
         'E_S_CG': E_S_CG,
         'E_R': E_R,
-        'E_M': E_M,
+        'E_M': E_M
     }
 
     # 各設備における設計二次エネルギー消費量／削減量
@@ -376,7 +376,21 @@ def calc_E_T(spec) -> Tuple[DesignedPrimaryEnergyTotal, DesignedPrimaryEnergyTot
         'E_K': E_K,
     }
 
-    return E_T_dict, E_dash_T_dict, E_pri_dict, E_sec_dict
+    # 太陽光発電設備（PV）、コージェネレーション設備（CGS）における設計一次エネルギー消費量／削減量　
+    E_S_dict = {
+        'E_S_PV_h': E_S_PV_h,
+        'E_S_CG_h': E_S_CG_h,
+        'E_S_sell': E_S_sell
+    }
+
+    # 外皮性能
+    env_dict = {
+        'U_A' : U_A,
+        'eta_A_H' : eta_A_H,
+        'eta_A_C' : eta_A_C,
+    }
+
+    return E_T_dict, E_dash_T_dict, E_pri_dict, E_sec_dict, E_S_dict, env_dict
 
 
 # ============================================================================
@@ -1390,7 +1404,8 @@ def calc_E_CG_d_t(A_A, region, sol_region, HW, SHC, CG, H_A=None, H_MR=None, H_O
             'shower_watersaving_A': spec_HW['shower_watersaving_A'],
             'shower_watersaving_B': spec_HW['shower_watersaving_B'],
             'washbowl_watersaving_C': spec_HW['washbowl_watersaving_C'],
-            'bath_insulation': spec_HW['bath_insulation']
+            'bath_insulation': spec_HW['bath_insulation'],
+            'hw_type': spec_HW['hw_type']
         }
         if SHC is not None:
             if SHC['type'] == '液体集熱式':
@@ -1410,7 +1425,8 @@ def calc_E_CG_d_t(A_A, region, sol_region, HW, SHC, CG, H_A=None, H_MR=None, H_O
                     'UA_hx': SHC['UA_hx'],
                     'UA_stp': SHC['UA_stp'],
                     'UA_tank': SHC['UA_tank'],
-                    'W_tnk_ss': SHC['V_tank']
+                    'W_tnk_ss': SHC['V_tank'],
+                    'solar_water_tap': SHC['solar_water_tap'],
                 })
             elif SHC['type'] == '空気集熱式':
                 args.update({
@@ -1814,7 +1830,7 @@ def calc_E_S(region, sol_region, PV, CG, E_E_dmd_d_t, E_E_CG_gen_d_t, E_E_TU_aux
     # 1年当たりの再生可能エネルギー源の利用に資する設備で生成されるエネルギー量（誘導設計一次エネルギー消費量の算定で考慮されるものを除く）（MJ/yr） (53)
     E_R = get_E_R(E_S_PV_h, E_PV_sell)
 
-    return E_S, E_S_CG, E_R
+    return E_S, E_S_CG, E_R, E_S_PV_h, E_S_CG_h, E_S_sell
 
 
 def get_E_S(E_S_h, E_S_sell):
@@ -2004,7 +2020,7 @@ def calc_E_G_CG_sell(E_CG_sell, E_E_CG_self, E_E_CG_h, E_G_CG_ded, e_BB_ave, Q_C
 
     if has_CG == False:
         # コージェネレーション設備を採用しない場合 (46-1)
-        E_G_CG_sell = np.zeros_like(E_CG_sell)
+        E_G_CG_sell = 0.0
     else:
         # 電気の量 1kWh を熱量に換算する係数
         f_prim = get_f_prim()

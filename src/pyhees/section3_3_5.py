@@ -647,29 +647,40 @@ def calc_Opening_U_i(opening_i):
 
     """
 
-    #### 熱貫流率計算(2020.09.10 HEESENV-74 時点) ####
+    #### 熱貫流率計算 ####
     #### ○データ構造
-    #### Window>WindowPart>Attachment Door>DoorPart>Attachment
+    #### Window>WindowPart>AttachmentForUValue Door>DoorPart>Attachment
     #### ①窓・ドア
     #### 窓・ドアの熱貫流率を求め(5.2.4)、付属部材(5.2.1~3)の有無に応じて付属部材込みの熱貫流率を求める
 
 
     # 窓
     if opening_i['Method'] == 'Window':
-        U_i = calc_OpeningPart_U_i(opening_i['WindowPart'], 'Window')
+        if 'AttachmentForUValue' not in opening_i['WindowPart']:
+          attachment = 'No'
+        else:
+          attachment = opening_i['WindowPart']['AttachmentForUValue']
+        U_i = calc_OpeningPart_U_i(attachment, opening_i['WindowPart'], 'Window')
         opening_i['U_i'] = U_i
         return U_i, opening_i
     # ドア
     elif opening_i['Method'] == 'Door':
-        U_i = calc_OpeningPart_U_i(opening_i['DoorPart'], 'Door')
+        if 'Attachment' not in opening_i['DoorPart']:
+          attachment = 'No'
+        else:
+          attachment = opening_i['DoorPart']['Attachment']
+        U_i = calc_OpeningPart_U_i(attachment, opening_i['DoorPart'], 'Door')
         opening_i['U_i'] = U_i
         return U_i, opening_i
+    else:
+        raise ValueError("invalid value in Method")
 
 
-def calc_OpeningPart_U_i(opening_part, opening_type):
+def calc_OpeningPart_U_i(attachment, opening_part, opening_type):
     """開口部𝑖の窓(窓部分)・ドア(ドア部分)の熱貫流率
 
     Args:
+      attachment(str(No/Shutter/Shoji/WindbreakSpace)): 熱貫流率の計算に使用する付属部材
       opening_part(dict(WindowPart/DoorPart)): 開口部i
       opening_type(str(Window/Door)): 開口部の種類
 
@@ -678,16 +689,18 @@ def calc_OpeningPart_U_i(opening_part, opening_type):
 
     """
 
-    # 付属部材が付与されない場合（熱貫流率の計算では付属部材として外付けブラインドを考慮しないため付属部材が付与されないとして扱います）
-    if 'Attachment' not in opening_part or opening_part['Attachment'] == 'No' or opening_part['Attachment'] == 'ExteriorBlind':
+    # 付属部材が付与されない場合
+    if attachment == 'No':
         return calc_No_Attachment_U_i(opening_part, opening_type)
     # 風除室に面する場合
-    elif opening_part['Attachment'] == 'WindbreakSpace':
+    elif attachment == 'WindbreakSpace':
         return calc_Windbreak_U_i(opening_part, opening_type)
     # 付属部材が付与される場合（シャッターまたは障子が付与される場合）
+    elif attachment == 'Shutter' or attachment == 'Shoji':
+        return calc_Attachment_U_i(attachment, opening_part, opening_type)
     else:
-        return calc_Attachment_U_i(opening_part, opening_type)
-
+        raise ValueError("invalid value in AttachmentForUValue")
+        
 
 # ============================================================================
 # 5.2.1 付属部材が付与されずかつ風除室に面しない場合
@@ -717,10 +730,11 @@ def calc_No_Attachment_U_i(opening_part, opening_type):
 # ============================================================================
 
 
-def calc_Attachment_U_i(opening_part, opening_type):
+def calc_Attachment_U_i(attachment, opening_part, opening_type):
     """付属部材が付与される場合の開口部𝑖の熱貫流率 (6)
 
     Args:
+      attachment(str(No/Shutter/Shoji/WindbreakSpace)): 熱貫流率の計算に使用する付属部材
       opening_part(dict(WindowPart/DoorPart)): 開口部i
       opening_type(str(Window/Door)): 開口部の種類
 
@@ -735,8 +749,8 @@ def calc_Attachment_U_i(opening_part, opening_type):
     # 計算結果は「ERROR」とする
     except ValueError:
         return 'ERROR'
-        
-    U_d_r_i = calc_Attachment_U_d_r_i(opening_part['Attachment'], U_d_i)
+      
+    U_d_r_i = calc_Attachment_U_d_r_i(attachment, U_d_i)
 
     return get_Attachment_U_i(U_d_i, U_d_r_i)
 
@@ -772,8 +786,8 @@ def calc_Attachment_U_d_r_i(attachment, U_d_i):
     return 1.0 / ((1.0 / U_d_i) + delta_R_arc)
 
 
-def get_table_8(Attachment):
-    """表8 付属部材の熱抵抗
+def get_table_8(attachment):
+    """表8 付属部材の熱抵抗(同一の開口部に対して複数の付属部材がある場合は、いずれか１つを評価する)
 
     Args:
       Attachment(dict): 付属部材
@@ -785,11 +799,13 @@ def get_table_8(Attachment):
     """
 
     # シャッター又は雨戸
-    if Attachment == 'Shutter':
+    if attachment == 'Shutter':
         return 0.10
     # 障子
-    elif Attachment == 'Shoji':
+    elif attachment == 'Shoji':
         return 0.18
+    else:
+      raise ValueError("invalid value in AttachmentForUValue")
 
 
 # ============================================================================
