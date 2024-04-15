@@ -210,7 +210,7 @@ def get_q_hs_H_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply_d_t, C_df_H_d_
       region: 地域区分
 
     Returns:
-      日付dの時刻tにおける1時間当たりの熱源機の平均暖房能力（-）
+      日付dの時刻tにおける1時間当たりの熱源機の平均暖房能力（W）
 
     """
     H, C, M = get_season_array_d_t(region)
@@ -244,7 +244,7 @@ def get_q_hs_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t,
       region: 地域区分
 
     Returns:
-      日付dの時刻tにおける1時間当たりの熱源機の平均冷房能力（-）
+      日付dの時刻tにおける1時間当たりの熱源機の平均冷房能力（W）
 
     """
     H, C, M = get_season_array_d_t(region)
@@ -281,7 +281,7 @@ def get_E_E_comp_H_d_t(q_hs_H_d_t, e_hs_H_d_t):
     """(5)
 
     Args:
-      q_hs_H_d_t: 日付dの時刻tにおける1時間当たりの熱源機の平均暖房能力（-）
+      q_hs_H_d_t: 日付dの時刻tにおける1時間当たりの熱源機の平均暖房能力（W）
       e_hs_H_d_t: 日付dの時刻tにおける暖房時の熱源機の効率（-）
 
     Returns:
@@ -301,7 +301,7 @@ def get_E_E_comp_C_d_t(q_hs_C_d_t, e_hs_C_d_t):
     """(6)
 
     Args:
-      q_hs_C_d_t: 日付dの時刻tにおける1時間当たりの熱源機の平均冷房能力（-）
+      q_hs_C_d_t: 日付dの時刻tにおける1時間当たりの熱源機の平均冷房能力（W）
       e_hs_C_d_t: 日付dの時刻tにおける冷房時の熱源機の効率（-）
 
     Returns:
@@ -357,7 +357,7 @@ def get_e_r_H_d_t(q_hs_H_d_t, q_hs_rtd_H, q_hs_min_H, q_hs_mid_H, e_r_mid_H, e_r
     """(9-1)(9-2)(9-3)(9-4)
 
     Args:
-      q_hs_H_d_t: 日付dの時刻tにおける1時間当たりの熱源機の平均暖房能力（-）
+      q_hs_H_d_t: 日付dの時刻tにおける1時間当たりの熱源機の平均暖房能力（W）
       q_hs_rtd_H: 熱源機の定格暖房能力（-）
       q_hs_min_H: 熱源機の最小暖房能力（-）
       q_hs_mid_H: 熱源機の中間暖房能力（-）
@@ -402,10 +402,10 @@ def get_e_r_C_d_t(q_hs_C_d_t, q_hs_rtd_C, q_hs_min_C, q_hs_mid_C, e_r_mid_C, e_r
     """(10-1)(10-2)(10-3)(10-4)
 
     Args:
-      q_hs_C_d_t: 日付dの時刻tにおける1時間当たりの熱源機の平均冷房能力（-）
-      q_hs_rtd_C: 熱源機の定格冷房能力（-）
-      q_hs_min_C: 熱源機の最小冷房能力（-）
-      q_hs_mid_C: 熱源機の中間冷房能力（-）
+      q_hs_C_d_t: 日付dの時刻tにおける1時間当たりの熱源機の平均冷房能力（W）
+      q_hs_rtd_C: 熱源機の定格冷房能力（W）
+      q_hs_min_C: 熱源機の最小冷房能力（W）
+      q_hs_mid_C: 熱源機の中間冷房能力（W）
       e_r_mid_C: 中間冷房能力運転時のヒートポンプサイクルの理論効率に対する熱源機の効率の比（-）
       e_r_min_C: 最小冷房能力運転時のヒートポンプサイクルの理論効率に対する熱源機の効率の比（-）
       e_r_rtd_C: 定格冷房能力運転時のヒートポンプサイクルの理論効率に対する熱源機の効率の比（-）
@@ -479,7 +479,7 @@ def get_e_r_rtd_C(e_th_rtd_C, q_hs_rtd_C, P_hs_rtd_C, P_fan_rtd_C):
 
     Args:
       e_th_rtd_C: 定格冷房能力運転時のヒートポンプサイクルの理論効率（-）
-      q_hs_rtd_C: 熱源機の定格冷房能力（-）
+      q_hs_rtd_C: 熱源機の定格冷房能力（W）
       P_hs_rtd_C: 熱源機の定格冷房消費電力（W）
       P_fan_rtd_C: 定格冷房能力運転時の送風機の消費電力（W）
 
@@ -781,10 +781,8 @@ def calc_e_th_rtd_C(V_fan_rtd_C, q_hs_rtd_C):
     """(21)
 
     Args:
-      V_fan_rtd_H: 定格冷房能力運転時の送風機の風量（m3/h）
-      q_hs_rtd_H: 定格冷房能力（W）
-      V_fan_rtd_C: param q_hs_rtd_C:
-      q_hs_rtd_C: 
+      V_fan_rtd_C: 定格冷房能力運転時の送風機の風量（m3/h）
+      q_hs_rtd_C: 定格冷房能力（W）
 
     Returns:
       定格冷房能力運転時のヒートポンプサイクルサイクルの理論効率（-）
@@ -837,10 +835,8 @@ def calc_e_th_mid_C(V_fan_mid_C, q_hs_mid_C):
     """(22)
 
     Args:
-      V_fan_rtd_H: 定格冷房能力運転時の送風機の風量（m3/h）
-      q_hs_rtd_H: 定格冷房能力（W）
-      V_fan_mid_C: param q_hs_mid_C:
-      q_hs_mid_C: 
+      V_fan_mid_C: 中間冷房能力運転時の送風機の風量（m3/h）
+      q_hs_mid_C: 熱源機の中間冷房能力（W）
 
     Returns:
       定格冷房能力運転時のヒートポンプサイクルサイクルの理論効率（-）
@@ -1310,9 +1306,9 @@ def get_E_E_fan_H_d_t(P_fan_rtd_H, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_H, 
     Args:
       P_fan_rtd_H: 定格暖房能力運転時の送風機の消費電力（W）
       V_hs_vent_d_t: 日付dの時刻tにおける熱源機の風量のうちの全般換気分（m3/h）
-      V_hs_supply_d_t: param V_hs_dsgn_H:暖房時の設計風量（m3/h）
-      q_hs_H_d_t: 日付dの時刻tにおける1時間当たりの熱源機の平均暖房能力（-）
-      V_hs_dsgn_H: returns: 日付dの時刻tにおける1時間当たりの送風機の消費電力量のうちの暖房設備への付加分（kWh/h）
+      V_hs_supply_d_t: 日付dの時刻tにおける熱源機の風量（m3/h）
+      V_hs_dsgn_H: 暖房時の設計風量（m3/h）
+      q_hs_H_d_t: 日付dの時刻tにおける1時間当たりの熱源機の平均暖房能力（W）
 
     Returns:
       日付dの時刻tにおける1時間当たりの送風機の消費電力量のうちの暖房設備への付加分（kWh/h）
@@ -1360,9 +1356,9 @@ def get_E_E_fan_C_d_t(P_fan_rtd_C, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_C, 
     Args:
       P_fan_rtd_C: 定格冷房能力運転時の送風機の消費電力（W）
       V_hs_vent_d_t: 日付dの時刻tにおける熱源機の風量のうちの全般換気分（m3/h）
-      V_hs_supply_d_t: param V_hs_dsgn_C:冷房時の設計風量（m3/h）
-      q_hs_C_d_t: 日付dの時刻tにおける1時間当たりの熱源機の平均冷房能力（-）
-      V_hs_dsgn_C: returns: 日付dの時刻tにおける1時間当たりの送風機の消費電力量のうちの暖房設備への付加分（kWh/h）
+      V_hs_supply_d_t: 日付dの時刻tにおける熱源機の風量（m3/h）
+      V_hs_dsgn_C: 冷房時の設計風量（m3/h）
+      q_hs_C_d_t: 日付dの時刻tにおける1時間当たりの熱源機の平均冷房能力（W）
 
     Returns:
       日付dの時刻tにおける1時間当たりの送風機の消費電力量のうちの暖房設備への付加分（kWh/h）
