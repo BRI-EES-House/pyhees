@@ -764,7 +764,7 @@ def calc_e_th_mid_H(V_fan_mid_H, q_hs_mid_H):
     # (24)
     Theta_ref_evp_H = get_Theta_ref_evp_H(7, Theta_ref_cnd_H)
 
-     # (25)
+    # (25)
     Theta_ref_SC_H = get_Theta_ref_SC_H(Theta_ref_cnd_H)
 
     # (26)

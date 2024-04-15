@@ -18,7 +18,6 @@ from pyhees.section4_3_a import \
     get_q_max_C
 
 from pyhees.section11_1 import \
-    load_outdoor, \
     load_climate, \
     get_Theta_ex, \
     get_X_ex, \
@@ -369,7 +368,7 @@ def calc_s_i_eq8(i):
       float: 係数s_i (i=0,1,2,10..42)
 
     """
-    table_3 = get_table_3()    
+    table_3 = get_table_3()
     return table_3[4 - floor(i / 10)][(2 - (i % 10)) * 2]
 
 

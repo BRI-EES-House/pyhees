@@ -20,7 +20,7 @@ import pyhees.section4_7_l as hwfloor
 from pyhees.section4_8_a import calc_e_ref_H_th
 
 # 地域の区分と外気条件
-from pyhees.section11_1 import load_outdoor, load_climate, get_Theta_ex, get_X_ex, calc_h_ex
+from pyhees.section11_1 import load_climate, get_Theta_ex, get_X_ex, calc_h_ex
 
 
 # ============================================================================
