@@ -22,7 +22,6 @@ from pyhees.section4_7_i import \
     get_A_A_R
 
 from pyhees.section11_1 import \
-    load_outdoor, \
     get_Theta_ex, \
     get_X_ex, \
     load_climate, \
@@ -49,7 +48,7 @@ def calc_Q_UT_A(A_A, A_MR, A_OR, r_env, mu_H, mu_C, q_hs_rtd_H, q_hs_rtd_C, V_hs
 
     Args:
       A_A: param A_MR:
-      A_OR: param A_env:
+      A_OR: param r_env:
       mu_H: param mu_C:
       q_hs_rtd_H: param q_hs_rtd_C:
       V_hs_dsgn_H: param V_hs_dsgn_C:
@@ -2895,7 +2894,6 @@ def get_Theta():
 # デバッグ用コード
 # ============================================================================
 if __name__ == '__main__':
-    from section11_1 import load_outdoor
     from section2_2 import get_E_H_d_t, get_E_C_d_t
     from section3_1 import get_Q
     from section3_2 import calc_r_env, get_Q_dash, get_mu_H, get_mu_C
