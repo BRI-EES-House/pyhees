@@ -4,6 +4,9 @@ from pyhees.section3_4_b_2 import get_glass_spec_category
 from pyhees.section3_4 import common, window, door, heatbridge, earthfloor
 from pyhees.section3_3_5 import *
 from pyhees.section3_3_6 import *
+from pyhees.util.env_types import EnvelopeData, HeatBridgeData, T_Direction, T_Adjacent
+import typing
+from typing import Any
 
 # ============================================================================
 # 8. 当該住戸の外皮の部位の面積等を用いて外皮性能を評価する方法
@@ -13,7 +16,7 @@ from pyhees.section3_3_6 import *
 # 8.1 外皮平均熱貫流率
 # ============================================================================
 
-def calc_U_A(envelope):
+def calc_U_A(envelope : EnvelopeData) -> tuple[Any,Any]:
     """外皮平均熱貫流率 (4)
 
     Args:
@@ -72,33 +75,23 @@ def calc_U_A(envelope):
 
     sigma_L_j_psi_j_H_j = 0
     # 熱橋及び土間床等の外周部
-    heatbridge_list = envelope['LinearHeatBridge']
-    for j in range(len(heatbridge_list)):
-        heatbridge_j = heatbridge_list[j]
+    heatbridge_list : list[HeatBridgeData] = envelope['LinearHeatBridge']
+    for heatbridge_j in heatbridge_list:
         # 温度差係数
-        H_j = 0
-        for i in range(len(heatbridge_j['ComponentNames'])):
-            # 接する部位に関するパラメータを持つ辞書を名前から得る
-            componentname = heatbridge_j['ComponentNames'][i]
-            component_i = get_component_byName(wall_list, componentname)
-            # 2個目に部位がない場合はbreak
-            if component_i is None:
-                break
-            i_H_j = calc_H_byKey(component_i['Adjacent'], Region)
-            # (3章2節付録B)熱橋の温度差係数において複数の種類の隣接空間に接する場合は、温度差係数の大きい方の隣接空間の種類の値を採用する
-            if H_j < i_H_j:
-                H_j = i_H_j
-
+        adjacent = heatbridge_j['Adjacent']
+        H_j = calc_H_byKey(adjacent, Region)
         L_j = heatbridge_j['Length']
+        structure_type = heatbridge_j['StructureType']
 
-        if heatbridge_j['StructureType'] == 'Wood':
-            psi_j, heatbridge_j = get_Wood_psi_j(heatbridge_j)
-        elif heatbridge_j['StructureType'] == 'RC':
-            psi_j, heatbridge_j = get_RC_psi_j(heatbridge_j)
-        elif heatbridge_j['StructureType'] == 'Steel':    
-            psi_j, heatbridge_j = calc_Steel_psi_j(heatbridge_j)
-        else:
-            raise ValueError("invalid value in ['StructureType']")
+        match structure_type:
+            case 'Wood':
+                psi_j, heatbridge_j = get_Wood_psi_j(heatbridge_j)
+            case 'RC':
+                psi_j, heatbridge_j = get_RC_psi_j(heatbridge_j)
+            case 'Steel':
+                psi_j, heatbridge_j = calc_Steel_psi_j(heatbridge_j)
+            case _:
+                raise ValueError("invalid value in ['StructureType']")
             
         sigma_L_j_psi_j_H_j += L_j * psi_j * H_j
 
@@ -119,16 +112,14 @@ def calc_U_A(envelope):
 
     U_A = math.ceil(U_A_raw * 10 ** 2) / (10 ** 2)
 
-    envelope['U_A'] = U_A
-
-    return U_A_raw, U_A, envelope
+    return U_A_raw, U_A
 
 
 # ============================================================================
 # 8.2 暖房期の平均日射熱取得率及び冷房期の平均日射熱取得率
 # ============================================================================
 
-def calc_eta_A_H(envelope):
+def calc_eta_A_H(envelope: EnvelopeData) -> tuple[Any, Any]:
     """暖房期の平均日射熱取得率 (5)
 
     Args:
@@ -143,22 +134,15 @@ def calc_eta_A_H(envelope):
     Region = envelope['Region']
 
     if Region in [8, '8']:
-        return None, None, envelope
+        return None, None
 
     A_i_eta_H_i_nu_H_i = 0.0
     L_j_eta_H_i_nu_H_i = 0.0
 
     # 窓を除く外皮等
     wall_list = envelope['Wall']
-    for i in range(len(wall_list)):
-        wall_i = wall_list[i]
+    for wall_i in wall_list:
         A_i = wall_i['Area']
-
-        if 'SolarGain' in wall_i:
-            Solar_Gain = wall_i['SolarGain'] 
-        else:
-            # デフォルト値・Yes
-            Solar_Gain = 'Yes'
 
         if wall_i['Method'] == 'Direct':
             U_i, wall_i  = get_Wood_Direct_U_i(wall_i)
@@ -173,9 +157,18 @@ def calc_eta_A_H(envelope):
         else:
             raise ValueError("invalid value in ['Method']")
 
-        
+        # 方位係数(付録C)
+
+        # 隣接空間の種類が外気の場合に方位係数を取得する
+        if wall_i['Adjacent'] == 'Outside':
+            nu_H_i = calc_nu_byKey(Region, wall_i['Direction'], 'H')
+        else:
+            # 隣接空間の種類が外気に通じる空間・外気に通じていない空間・外気に通じる床裏・住戸及び住戸と同様の熱的環境の空間・外気に通じていない床裏等の日射が当たらない場合の方位係数は0とする。
+            nu_H_i = 0.0
+
         # 日射熱取得率を計算
-        if Solar_Gain != 'No':
+        # 方位係数が0の場合、最終的な日射熱取得率は0になるためここより下の日射熱取得率の計算を実施しない
+        if nu_H_i > 0.0:
             gamma_H_i = wall_i['GammaH']
             # 外気側表⾯の日射吸収率を指定する場合
             if ('SolarAbsorptance' in wall_i):
@@ -186,121 +179,90 @@ def calc_eta_A_H(envelope):
         else:
             eta_H_i = 0.0
 
-        # 方位係数(付録C)
-        # 隣接空間の種類が外気に通じる空間・外気に通じていない空間・外気に通じる床裏・住戸及び住戸と同様の熱的環境の空間・外気に通じていない床裏の場合の方位係数は0とする。
-        # ⇒隣接空間の種類が外気の場合のみ方位と地域から方位係数を求める
-        if wall_i['Adjacent'] == 'Outside':
-            nu_H_i = calc_nu_byKey(Region, wall_i['Direction'], 'H')
-        else:
-            nu_H_i = 0.0
-
         A_i_eta_H_i_nu_H_i += A_i * eta_H_i * nu_H_i
 
     # 窓
     window_list = envelope['Window']
-    for i in range(len(window_list)):
-        window_i = window_list[i]
+    for window_i in window_list:
         A_i = window_i['WindowPart']['Area']
 
-        if 'SolarGain' in window_i:
-            Solar_Gain = window_i['SolarGain'] 
-        else:
-            # デフォルト値・Yes
-            Solar_Gain = 'Yes'
-
-        # 日射熱取得率
-        if Solar_Gain == 'No':
-            eta_H_i = 0.0
-        else:
-            eta_H_i = window.calc_eta_H_i_byDict(Region, window_i['Direction'], window_i['WindowPart'])
-
-
         # 方位係数(付録C)
-        # 隣接空間の種類が外気に通じる空間・外気に通じていない空間・外気に通じる床裏・住戸及び住戸と同様の熱的環境の空間・外気に通じていない床裏の場合の方位係数は0とする。
-        # ⇒隣接空間の種類が外気の場合のみ方位と地域から方位係数を求める
+
+        # 隣接空間の種類が外気か有の場合に方位係数を取得する
         if window_i['Adjacent'] == 'Outside':
             nu_H_i = calc_nu_byKey(Region, window_i['Direction'], 'H')
         else:
+            # 隣接空間の種類が外気に通じる空間・外気に通じていない空間・外気に通じる床裏・住戸及び住戸と同様の熱的環境の空間・外気に通じていない床裏等の日射が当たらない場合の方位係数は0とする。
             nu_H_i = 0.0
+
+        # 日射熱取得率
+        # 方位係数が0の場合、最終的な日射熱取得率は0になるためここより下の日射熱取得率の計算を実施しない
+        if nu_H_i > 0.0:
+            eta_H_i = window.calc_eta_H_i_byDict(Region, window_i['Direction'], window_i['WindowPart'])
+        else:
+            eta_H_i = 0.0
 
         A_i_eta_H_i_nu_H_i += A_i * eta_H_i * nu_H_i
     
     # ドア
     door_list = envelope['Door']
-    for i in range(len(door_list)):
-        door_i = door_list[i]
+    for door_i in door_list:
         A_i = door_i['DoorPart']['Area']
 
-        if 'SolarGain' in door_i:
-            Solar_Gain = door_i['SolarGain'] 
-        else:
-            # デフォルト値・Yes
-            Solar_Gain = 'Yes'
-
-        # 日射熱取得率
-        if Solar_Gain == 'No':
-            eta_H_i = 0.0
-        else:
-            eta_H_i = door.calc_eta_H_i_byDict(Region, door_i['DoorPart'])
-
-
         # 方位係数(付録C)
-        # 隣接空間の種類が外気に通じる空間・外気に通じていない空間・外気に通じる床裏・住戸及び住戸と同様の熱的環境の空間・外気に通じていない床裏の場合の方位係数は0とする。
-        # ⇒隣接空間の種類が外気の場合のみ方位と地域から方位係数を求める
+
+        # 隣接空間の種類が外気の場合に方位係数を取得する
         if door_i['Adjacent'] == 'Outside':
             nu_H_i = calc_nu_byKey(Region, door_i['Direction'], 'H')
         else:
+            # 隣接空間の種類が外気に通じる空間・外気に通じていない空間・外気に通じる床裏・住戸及び住戸と同様の熱的環境の空間・外気に通じていない床裏等の日射が当たらない場合の方位係数は0とする。
             nu_H_i = 0.0
+
+        # 日射熱取得率
+        # 方位係数が0の場合、最終的な日射熱取得率は0になるためここより下の日射熱取得率の計算を実施しない
+        if nu_H_i > 0.0:
+            eta_H_i = door.calc_eta_H_i_byDict(Region, door_i['DoorPart'])
+        else:
+            eta_H_i = 0.0
 
         A_i_eta_H_i_nu_H_i += A_i * eta_H_i * nu_H_i
 
 
     # 熱橋
     heatbridge_list = envelope['LinearHeatBridge']
-    for j in range(len(heatbridge_list)):
-        heatbridge_j = heatbridge_list[j]
-
-        if 'SolarGain' in heatbridge_j:
-            Solar_Gain = heatbridge_j['SolarGain'] 
-        else:
-            # デフォルト値・Yes
-            Solar_Gain = 'Yes'
-
-        eta_H_i_sum = 0.0
-        nu_H_i_sum = 0.0
-
+    for heatbridge_j in heatbridge_list:
+        structure_type = heatbridge_j['StructureType']
         # 木造
-        if heatbridge_j['StructureType'] == 'Wood':
-            psi_i_j, heatbridge_j = get_Wood_psi_j(heatbridge_j)
-        # 鉄筋コンクリート造等
-        elif heatbridge_j['StructureType'] == 'RC':
-            psi_i_j, heatbridge_j = get_RC_psi_j(heatbridge_j)
-        # 鉄骨造
-        elif heatbridge_j['StructureType'] == 'Steel':
-            psi_i_j, heatbridge_j = calc_Steel_psi_j(heatbridge_j)
-        else:
-            raise ValueError("invalid value in ['StructureType']")
+        match structure_type:
+            case "Wood": #木造
+                psi_i_j, heatbridge_j = get_Wood_psi_j(heatbridge_j)
+            case "RC": # 鉄筋コンクリート造等
+                psi_i_j, heatbridge_j = get_RC_psi_j(heatbridge_j)
+            case "Steel": # 鉄骨造
+                psi_i_j, heatbridge_j = calc_Steel_psi_j(heatbridge_j)
+            case _:
+                raise ValueError("invalid value in ['StructureType']")
         
         L_i_j = heatbridge_j['Length']
-
-
         nu_H_i_sum = 0
-        for i in range(len(heatbridge_j['ComponentNames'])):
-            component_i_name = heatbridge_j['ComponentNames'][i]
-            component_i = get_component_byName(wall_list, component_i_name)
-
+        # カンマ区切りの方位を取得
+        directions = typing.cast(list[T_Direction], heatbridge_j.get('Direction','').split(','))
+        for direction in directions:
             # 方位係数(付録C)
             # 方位の異なる外皮の部位（一般部位又は開口部）に接する熱橋等の方位係数は、異なる方位の方位係数の平均値とする
-            # 隣接空間の種類が外気に通じる空間・外気に通じていない空間・外気に通じる床裏・住戸及び住戸と同様の熱的環境の空間・外気に通じていない床裏の場合の方位係数は0とする。
-            # ⇒隣接空間の種類が外気の場合のみ方位と地域から方位係数を求める
-            if component_i['Adjacent'] == 'Outside':
-                nu_H_i_sum += calc_nu_byKey(Region, component_i['Direction'], 'H')
+
+            # 隣接空間の種類が外気の場合に方位係数を取得する
+            if heatbridge_j.get('Adjacent') == 'Outside':
+                nu = calc_nu_byKey(Region, direction, 'H')
+                nu_H_i_sum += nu if nu is not None else 0.0
             else:
+                # 隣接空間の種類が外気に通じる空間・外気に通じていない空間・外気に通じる床裏・住戸及び住戸と同様の熱的環境の空間・外気に通じていない床裏等の日射が当たらない場合の方位係数は0とする。
                 nu_H_i_sum += 0.0
 
         # 日射熱取得率を計算
-        if Solar_Gain != 'No':
-            gamma_H_i = heatbridge_j['GammaH']
+        # 方位係数が0の場合、最終的な日射熱取得率は0になるためここより下の日射熱取得率の計算を実施しない
+        if nu_H_i_sum > 0.0:
+            gamma_H_i = heatbridge_j.get('GammaH')
             # 外気側表⾯の日射吸収率を指定する場合
             if ('SolarAbsorptance' in heatbridge_j):
                 alpha = heatbridge_j['SolarAbsorptance']
@@ -310,7 +272,9 @@ def calc_eta_A_H(envelope):
         else:
             eta_H_i = 0.0
 
-        nu_H_i = nu_H_i_sum / len(heatbridge_j['ComponentNames'])
+        n =  len(directions)
+        # 方位係数の平均値
+        nu_H_i = nu_H_i_sum / n if n != 0 else 0.0
 
         L_j_eta_H_i_nu_H_i += L_i_j * eta_H_i * nu_H_i
 
@@ -324,13 +288,11 @@ def calc_eta_A_H(envelope):
 
     eta_A_H = math.floor(eta_A_H_raw * 10 ** 1) / (10 ** 1)
 
-    envelope['eta_A_H'] = eta_A_H
-
-    return eta_A_H_raw, eta_A_H, envelope
+    return eta_A_H_raw, eta_A_H
 
 
 
-def calc_eta_A_C(envelope):
+def calc_eta_A_C(envelope: EnvelopeData) -> tuple[Any, Any]:
     """冷房期の平均日射熱取得率 (5)
 
     Args:
@@ -351,15 +313,8 @@ def calc_eta_A_C(envelope):
 
     # 窓を除く外皮等
     wall_list = envelope['Wall']
-    for i in range(len(wall_list)):
-        wall_i = wall_list[i]
+    for wall_i in wall_list:
         A_i = wall_i['Area']
-
-        if 'SolarGain' in wall_i:
-            Solar_Gain = wall_i['SolarGain'] 
-        else:
-            # デフォルト値・Yes
-            Solar_Gain = 'Yes'
 
         if wall_i['Method'] == 'Direct':
             U_i, wall_i  = get_Wood_Direct_U_i(wall_i)
@@ -376,8 +331,18 @@ def calc_eta_A_C(envelope):
 
         # 日よけの効果係数
 
+        # 方位係数(付録C)
+
+        # 隣接空間の種類が外気の場合に方位係数を取得する
+        if wall_i['Adjacent'] == 'Outside':
+            nu_C_i = calc_nu_byKey(Region, wall_i['Direction'], 'C')
+        else:
+            # 隣接空間の種類が外気に通じる空間・外気に通じていない空間・外気に通じる床裏・住戸及び住戸と同様の熱的環境の空間・外気に通じていない床裏等の日射が当たらない場合の方位係数は0とする。
+            nu_C_i = 0.0
+
         # 日射熱取得率を計算
-        if Solar_Gain != 'No':
+        # 方位係数が0の場合、最終的な日射熱取得率は0になるためここより下の日射熱取得率の計算を実施しない
+        if nu_C_i > 0.0:
             gamma_C_i = wall_i['GammaC']
             # 外気側表⾯の日射吸収率を指定する場合
             if ('SolarAbsorptance' in wall_i):
@@ -388,119 +353,89 @@ def calc_eta_A_C(envelope):
         else:
             eta_C_i = 0.0
 
-        # 方位係数(付録C)
-        # 隣接空間の種類が外気に通じる空間・外気に通じていない空間・外気に通じる床裏・住戸及び住戸と同様の熱的環境の空間・外気に通じていない床裏の場合の方位係数は0とする。
-        # ⇒隣接空間の種類が外気の場合のみ方位と地域から方位係数を求める
-        if wall_i['Adjacent'] == 'Outside':
-            nu_C_i = calc_nu_byKey(Region, wall_i['Direction'], 'C')
-        else:
-            nu_C_i = 0.0
-
         A_i_eta_C_i_nu_C_i += A_i * eta_C_i * nu_C_i
 
     # 窓
     window_list = envelope['Window']
-    for i in range(len(window_list)):
-        window_i = window_list[i]
+    for window_i in window_list:
         A_i = window_i['WindowPart']['Area']
 
-        if 'SolarGain' in window_i:
-            Solar_Gain = window_i['SolarGain'] 
-        else:
-            # デフォルト値・Yes
-            Solar_Gain = 'Yes'
-
-        # 日射熱取得率
-        if Solar_Gain == 'No':
-            eta_C_i = 0.0
-        else:
-            eta_C_i = window.calc_eta_C_i_byDict(Region, window_i['Direction'], window_i['WindowPart'])
-
         # 方位係数(付録C)
-        # 隣接空間の種類が外気に通じる空間・外気に通じていない空間・外気に通じる床裏・住戸及び住戸と同様の熱的環境の空間・外気に通じていない床裏の場合の方位係数は0とする。
-        # ⇒隣接空間の種類が外気の場合のみ方位と地域から方位係数を求める
+
+        # 隣接空間の種類が外気の場合に方位係数を取得する
         if window_i['Adjacent'] == 'Outside':
             nu_C_i = calc_nu_byKey(Region, window_i['Direction'], 'C')
         else:
+            # 隣接空間の種類が外気に通じる空間・外気に通じていない空間・外気に通じる床裏・住戸及び住戸と同様の熱的環境の空間・外気に通じていない床裏等の日射が当たらない場合の方位係数は0とする。
             nu_C_i = 0.0
 
+        # 日射熱取得率
+        # 方位係数が0の場合、最終的な日射熱取得率は0になるためここより下の日射熱取得率の計算を実施しない
+        if nu_C_i > 0.0:
+            eta_C_i = window.calc_eta_C_i_byDict(Region, window_i['Direction'], window_i['WindowPart'])
+        else:
+            eta_C_i = 0.0
+
         A_i_eta_C_i_nu_C_i += A_i * eta_C_i * nu_C_i
-    
+
     # ドア
     door_list = envelope['Door']
-    for i in range(len(door_list)):
-        door_i = door_list[i]
+    for door_i in door_list:
         A_i = door_i['DoorPart']['Area']
 
-        if 'SolarGain' in door_i:
-            Solar_Gain = door_i['SolarGain'] 
-        else:
-            # デフォルト値・Yes
-            Solar_Gain = 'Yes'
-
-        # 日射熱取得率 7
-        if Solar_Gain == 'No':
-            eta_C_i = 0.0
-        else:
-            eta_C_i = door.calc_eta_C_i_byDict(Region, door_i['DoorPart'])
-
-
         # 方位係数(付録C)
-        # 隣接空間の種類が外気に通じる空間・外気に通じていない空間・外気に通じる床裏・住戸及び住戸と同様の熱的環境の空間・外気に通じていない床裏の場合の方位係数は0とする。
-        # ⇒隣接空間の種類が外気の場合のみ方位と地域から方位係数を求める
+
+        # 隣接空間の種類が外気の場合に方位係数を取得する
         if door_i['Adjacent'] == 'Outside':
             nu_C_i = calc_nu_byKey(Region, door_i['Direction'], 'C')
         else:
+            # 隣接空間の種類が外気に通じる空間・外気に通じていない空間・外気に通じる床裏・住戸及び住戸と同様の熱的環境の空間・外気に通じていない床裏等の日射が当たらない場合の方位係数は0とする。
             nu_C_i = 0.0
+
+        # 日射熱取得率
+        # 方位係数が0の場合、最終的な日射熱取得率は0になるためここより下の日射熱取得率の計算を実施しない
+        if nu_C_i > 0.0:
+            eta_C_i = door.calc_eta_C_i_byDict(Region, door_i['DoorPart'])
+        else:
+            eta_C_i = 0.0
 
         A_i_eta_C_i_nu_C_i += A_i * eta_C_i * nu_C_i
 
 
     # 熱橋
     heatbridge_list = envelope['LinearHeatBridge']
-    for j in range(len(heatbridge_list)):
-        heatbridge_j = heatbridge_list[j]
-
-        if 'SolarGain' in heatbridge_j:
-            Solar_Gain = heatbridge_j['SolarGain'] 
-        else:
-            # デフォルト値・Yes
-            Solar_Gain = 'Yes'
-
-        eta_C_i_sum = 0
-        nu_C_i_sum = 0
-
-        # 木造
-        if heatbridge_j['StructureType'] == 'Wood':
-            psi_i_j, heatbridge_j = get_Wood_psi_j(heatbridge_j)
-        # 鉄筋コンクリート造等
-        elif heatbridge_j['StructureType'] == 'RC':
-            psi_i_j, heatbridge_j = get_RC_psi_j(heatbridge_j)
-        # 鉄骨造
-        elif heatbridge_j['StructureType'] == 'Steel':
-            psi_i_j, heatbridge_j = calc_Steel_psi_j(heatbridge_j)
-        else:
-            raise ValueError("invalid value in ['StructureType']")
+    for heatbridge_j in heatbridge_list:
+        structure_type = heatbridge_j.get('StructureType')
+        match structure_type:
+            case 'Wood': # 木造
+                psi_i_j, heatbridge_j = get_Wood_psi_j(heatbridge_j)
+            case 'RC': # 鉄筋コンクリート造等
+                psi_i_j, heatbridge_j = get_RC_psi_j(heatbridge_j)
+            case 'Steel': # 鉄骨造
+                psi_i_j, heatbridge_j = calc_Steel_psi_j(heatbridge_j)
+            case _:
+                raise ValueError("invalid value in ['StructureType']")
 
         L_i_j = heatbridge_j['Length']
-
         nu_C_i_sum = 0
-        for i in range(len(heatbridge_j['ComponentNames'])):
-            component_i_name = heatbridge_j['ComponentNames'][i]
-            component_i = get_component_byName(wall_list, component_i_name)    
-
+        # カンマ区切りの方位を取得
+        directions = typing.cast(list[T_Direction], heatbridge_j.get('Direction','').split(','))
+        for direction in directions:
             # 方位係数(付録C)
             # 方位の異なる外皮の部位（一般部位又は開口部）に接する熱橋等の方位係数は、異なる方位の方位係数の平均値とする
-            # 隣接空間の種類が外気に通じる空間・外気に通じていない空間・外気に通じる床裏・住戸及び住戸と同様の熱的環境の空間・外気に通じていない床裏の場合の方位係数は0とする。
-            # ⇒隣接空間の種類が外気の場合のみ方位と地域から方位係数を求める
-            if component_i['Adjacent'] == 'Outside':
-                nu_C_i_sum += calc_nu_byKey(Region, component_i['Direction'], 'C')
+
+            # 隣接空間の種類が外気の場合に方位係数を取得する
+            if heatbridge_j['Adjacent'] == 'Outside':
+                nu = calc_nu_byKey(Region,direction,'C')
+                nu_C_i_sum += nu if nu is not None else 0.0
             else:
+                # 隣接空間の種類が外気に通じる空間・外気に通じていない空間・外気に通じる床裏・住戸及び住戸と同様の熱的環境の空間・外気に通じていない床裏等の日射が当たらない場合の方位係数は0とする。
                 nu_C_i_sum += 0.0
 
         # 日射熱取得率を計算
-        if Solar_Gain != 'No':
-            gamma_C_i = heatbridge_j['GammaC']
+        # 方位係数が0の場合、最終的な日射熱取得率は0になるためここより下の日射熱取得率の計算を実施しない
+        if nu_C_i_sum > 0.0:
+            gamma_C_i = heatbridge_j.get('GammaC')
             # 外気側表⾯の日射吸収率を指定する場合
             if ('SolarAbsorptance' in heatbridge_j):
                 alpha = heatbridge_j['SolarAbsorptance']
@@ -510,10 +445,12 @@ def calc_eta_A_C(envelope):
         else:
             eta_C_i = 0.0
 
-        nu_C_i = nu_C_i_sum / len(heatbridge_j['ComponentNames'])
+        n =  len(directions)
+        # 方位係数の平均値
+        nu_C_i = nu_C_i_sum / n if n != 0 else 0.0
 
         L_j_eta_C_i_nu_C_i += L_i_j * eta_C_i * nu_C_i
-    
+
     # 土間床等の外周部の暖房期の日射熱取得率及び冷房期の日射熱取得率は0 (W/mK)/(W/m2K) とする。
     L_j_eta_C_i_nu_C_i += earthfloor.get_eta_dash_C_j()
 
@@ -523,9 +460,7 @@ def calc_eta_A_C(envelope):
 
     eta_A_C = math.ceil(eta_A_C_raw * 10 ** 1) / (10 ** 1)
 
-    envelope['eta_A_C'] = eta_A_C
-
-    return eta_A_C_raw, eta_A_C, envelope
+    return eta_A_C_raw, eta_A_C
 
 
 # ============================================================================
@@ -548,7 +483,7 @@ def get_r_env(A_env, A_A):
 
 
 
-def get_A_env(envelope):
+def get_A_env(envelope) -> float:
     """外皮の部位の面積の合計 式(8)
 
     Args:
@@ -584,7 +519,7 @@ def get_A_env(envelope):
 
 
 
-def calc_H_byKey(adjacent_type, region):
+def calc_H_byKey(adjacent_type : T_Adjacent, region):
     """パラメータの値から温度差係数の表を参照する
 
     Args:
@@ -597,7 +532,7 @@ def calc_H_byKey(adjacent_type, region):
     """
 
     # ノードの値と関数get_H内の隣接空間の種類名を対応づける
-    adjacent_dict = {
+    adjacent_dict : dict[T_Adjacent, str] = {
         'Outside': '外気',
         'Open': '外気に通じる空間',
         'Connected': '外気・外気に通じる空間',
@@ -609,7 +544,7 @@ def calc_H_byKey(adjacent_type, region):
     return get_H(adjacent_dict[adjacent_type], region)
 
 
-def calc_nu_byKey(region, Direction, season):
+def calc_nu_byKey(region, Direction : T_Direction, season) -> float|None:
     """パラメータの値から暖房期・冷房期の方位係数の表を参照する
 
     Args:
@@ -623,7 +558,7 @@ def calc_nu_byKey(region, Direction, season):
     """
     
     # ノードの値と関数get_nu_H/get_nu_C内方位名を対応づける
-    Direction_dict = {'Top':'上面', 'N':'北', 'NE':'北東', 'E':'東', 'SE':'南東', 
+    Direction_dict : dict[T_Direction, str] = {'Top':'上面', 'N':'北', 'NE':'北東', 'E':'東', 'SE':'南東', 
                     'S':'南', 'SW':'南西', 'W':'西', 'NW':'北西', 'Bottom':'下面'}
     
     # 暖房期
@@ -637,7 +572,7 @@ def calc_nu_byKey(region, Direction, season):
 
 
 
-def get_component_byName(wall_list, componentname):
+def get_component_by_name(wall_list : list, componentname : str) -> dict:
     """名前から部位のパラメータを持つ辞書を得る
 
     Args:
@@ -653,3 +588,4 @@ def get_component_byName(wall_list, componentname):
     for wall_i in wall_list:
         if wall_i['Name'] == componentname:
             return wall_i
+    raise ValueError(f"指定した名前'{componentname}'を持つ部位は存在しませんでした。")

@@ -17,7 +17,7 @@ def get_nu_boundary():
     return 0.0
 
 
-def get_nu_H(region, direction):
+def get_nu_H(region : int, direction : str) -> float|None:
     """外皮の部位の暖房期の方位係数
 
     Args:
@@ -45,7 +45,7 @@ def get_nu_H(region, direction):
     return table_1[direction][region - 1]
 
 
-def get_nu_C(region, direction):
+def get_nu_C(region : int, direction : str) -> float:
     """外皮の部位の冷房期の方位係数
 
     Args:

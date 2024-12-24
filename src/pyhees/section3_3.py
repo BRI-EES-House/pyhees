@@ -291,11 +291,8 @@ Wall_simple---Wall要素のノード名をkey、値をvalueとして持つ辞書
 |       'FrameRigidFloor'(軸組構法（剛床工法）) または
 |       'FrameSameLevel'(軸組構法（床梁土台同面工法）) または
 |       'FrameWall'(軸組構法（外壁）) または
-|       'FrameCeiling'(軸組構法（天井）) または
-|       'FrameRoof'(軸組構法（屋根）) または
 |       'WallFloor'(枠組構法（床）) または
-|       'WallWall'(枠組構法（外壁）) または
-|       'WallRoof'(枠組構法（屋根）)
+|       'WallWall'(枠組構法（外壁）)
 |--'InsulationPlace': 断熱箇所
 |       'FloorJoistInterval'(根太間) または 'FloorBeamInterval'(大引間) または
 |       'FloorJoistBeamInterval'(根太間＋大引間) または 'PillarInterval'(柱・間柱間) または

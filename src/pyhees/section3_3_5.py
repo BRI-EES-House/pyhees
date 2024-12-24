@@ -192,7 +192,7 @@ def calc_Wood_Simple1_a_i_k(portion_i, part_k):
         a_i_k_dict = {'HeatBridge':0.15,'GeneralPart':0.85}
         return a_i_k_dict[part_k['part_Name']]
     # 床
-    elif portion_Type == 'Floor':
+    elif portion_Type == 'Floor' or portion_Type == 'BoundaryFloor' or portion_Type == 'BoundaryCeiling':
         return get_table_3_1(portion_i['ConstructionMethod'], portion_i['InsulationPlace'], part_k)
     # 外壁または界壁
     elif portion_Type == 'ExternalWall' or portion_Type == 'BoundaryWall':

@@ -20,28 +20,24 @@ class BEI(TypedDict):
         BEI_gn_du (Optional[float]):
             建築物エネルギー消費性能基準（気候風土適応住宅を除く）における単位住戸のBEI (-)
             住宅の種類が「一般住宅」以外の場合はNone
-        BEI_trad_du (Optional[float]):
-            建築物エネルギー消費性能基準（気候風土適応住宅）における単位住戸のBEI (-)
-            住宅の種類が「行政庁認定住宅」以外の場合はNone
         BEI_indc_du (Optional[float]):
             建築物エネルギー消費性能誘導基準における単位住戸のBEI (-)
             住宅の種類が「一般住宅」以外の場合はNone
         BEI_rb_du (Optional[float]):
             特定建築主基準における単位住戸のBEI (-)
-            住宅の種類が「事業主基準」以外の場合はNone
+            住宅の種類が「一般住宅」以外の場合はNone
         BEI_lcb_du (Optional[float]):
             建築物に係るエネルギーの使用の合理化の一層の促進のために誘導すべき基準における単位住戸のBEI (-)
             住宅の種類が「一般住宅」以外の場合はNone
     """
 
     BEI_gn_du: Optional[float]
-    BEI_trad_du: Optional[float]
     BEI_indc_du: Optional[float]
     BEI_rb_du: Optional[float]
     BEI_lcb_du: Optional[float]
 
 
-def calc_BEI(E_dash_T_dict, E_dash_ST_dict, type) -> BEI:
+def calc_BEI(E_dash_T_dict, E_dash_ST_dict) -> BEI:
     """各適合基準におけるBEI算出結果を取得
 
     Args:
@@ -54,26 +50,13 @@ def calc_BEI(E_dash_T_dict, E_dash_ST_dict, type) -> BEI:
     Returns:
         BEI: 各適合基準におけるBEi算出結果を格納する辞書
     """
-    BEI_gn_du = None
-    BEI_trad_du = None
-    BEI_indc_du = None
-    BEI_rb_du = None
-    BEI_lcb_du = None
-
-    if type == '一般住宅':
-        BEI_gn_du = get_BEI_gn_du(E_dash_T_dict['E_dash_T_gn_du'], E_dash_ST_dict['E_dash_ST_gn_du'])
-        BEI_indc_du = get_BEI_indc_du(E_dash_T_dict['E_dash_T_indc_du'], E_dash_ST_dict['E_dash_ST_indc_du'])
-        BEI_lcb_du = get_BEI_lcb_du(E_dash_T_dict['E_dash_T_lcb_du'], E_dash_ST_dict['E_dash_ST_lcb_du'])
-    elif type == '事業主基準':
-        BEI_rb_du = get_BEI_rb_du(E_dash_T_dict['E_dash_T_rb_du'], E_dash_ST_dict['E_dash_ST_rb_du'])
-    elif type == '行政庁認定住宅':
-        BEI_trad_du = get_BEI_trad_du(E_dash_T_dict['E_dash_T_trad_du'], E_dash_ST_dict['E_dash_ST_trad_du'])
-    else:
-        raise ValueError(type)
+    BEI_gn_du = get_BEI_gn_du(E_dash_T_dict['E_dash_T_gn_du'], E_dash_ST_dict['E_dash_ST_gn_du'])
+    BEI_indc_du = get_BEI_indc_du(E_dash_T_dict['E_dash_T_indc_du'], E_dash_ST_dict['E_dash_ST_indc_du'])
+    BEI_lcb_du = get_BEI_lcb_du(E_dash_T_dict['E_dash_T_lcb_du'], E_dash_ST_dict['E_dash_ST_lcb_du'])
+    BEI_rb_du = get_BEI_rb_du(E_dash_T_dict['E_dash_T_rb_du'], E_dash_ST_dict['E_dash_ST_rb_du'])
 
     return {
         'BEI_gn_du': BEI_gn_du,
-        'BEI_trad_du': BEI_trad_du,
         'BEI_indc_du': BEI_indc_du,
         'BEI_rb_du': BEI_rb_du,
         'BEI_lcb_du': BEI_lcb_du,
@@ -97,35 +80,10 @@ def get_BEI_gn_du(E_dash_T_gn_du, E_dash_ST_gn_du):
         float: 式(1) 建築物エネルギー消費性能基準における単位住戸のBEI (-)
     """
     # 丸め誤差回避のため、独自に定義した関数を使用
-    BEI_gn_du_raw = _division(E_dash_T_gn_du, E_dash_ST_gn_du, digit=1)
+    BEI_gn_du_raw = division(E_dash_T_gn_du, E_dash_ST_gn_du, digit=1)
 
     # 小数点以下二位未満の端数を切り上げ
     return ceil(BEI_gn_du_raw * 100) / 100
-
-
-# ============================================================================
-# 5.3 建築物エネルギー消費性能基準（気候風土適応住宅）におけるBEI
-# ============================================================================
-
-def get_BEI_trad_du(E_dash_T_trad_du, E_dash_ST_trad_du):
-    """式(5) 建築物エネルギー消費性能基準（気候風土適応住宅）における単位住戸のBEI (-)
-
-    Args:
-        E_dash_T_trad_du (float):
-            建築物エネルギー消費性能基準（気候風土適応住宅）における単位住戸の設計一次エネルギー消費量（その他の設計一次エネルギー消費量を除く） (GJ/年)
-        E_dash_ST_trad_du (float):
-            建築物エネルギー消費性能基準（気候風土適応住宅）における単位住戸の基準一次エネルギー消費量（その他の基準一次エネルギー消費量を除く） (GJ/年)
-
-    Returns:
-        float: 式(5) 建築物エネルギー消費性能基準（気候風土適応住宅）における単位住戸のBEI (-)
-
-    """
-    # 丸め誤差回避のため、独自に定義した関数を使用
-    BEI_trad_du_raw = _division(E_dash_T_trad_du, E_dash_ST_trad_du, digit=1)
-
-    # 小数点以下二位未満の端数を切り上げ
-    return ceil(BEI_trad_du_raw * 100) / 100
-
 
 # ============================================================================
 # 5.4 建築物エネルギー消費性能誘導基準における誘導BEI
@@ -144,7 +102,7 @@ def get_BEI_indc_du(E_dash_T_indc_du, E_dash_ST_indc_du):
         float: 式(6) 建築物エネルギー消費性能誘導基準における単位住戸のBEI (-)
     """
     # 丸め誤差回避のため、独自に定義した関数を使用
-    BEI_indc_du_raw = _division(E_dash_T_indc_du, E_dash_ST_indc_du, digit=1)
+    BEI_indc_du_raw = division(E_dash_T_indc_du, E_dash_ST_indc_du, digit=1)
 
     # 小数点以下二位未満の端数を切り上げ
     return ceil(BEI_indc_du_raw * 100) / 100
@@ -167,7 +125,7 @@ def get_BEI_rb_du(E_dash_T_rb_du, E_dash_ST_rb_du):
         式(10) 特定建築主基準における単位住戸のBEI (-)
     """
     # 丸め誤差回避のため、独自に定義した関数を使用
-    BEI_rb_du_raw = _division(E_dash_T_rb_du, E_dash_ST_rb_du, digit=1)
+    BEI_rb_du_raw = division(E_dash_T_rb_du, E_dash_ST_rb_du, digit=1)
 
     # 小数点以下二位未満の端数を切り上げ
     return ceil(BEI_rb_du_raw * 100) / 100
@@ -192,7 +150,7 @@ def get_BEI_lcb_du(E_dash_T_lcb_du, E_dash_ST_lcb_du):
         float: 式(11) 建築物に係るエネルギーの使用の合理化の一層の促進のために誘導すべき基準における単位住戸のBEI (-)
     """
     # 丸め誤差回避のため、独自に定義した関数を使用
-    BEI_lcb_du_raw = _division(E_dash_T_lcb_du, E_dash_ST_lcb_du, digit=1)
+    BEI_lcb_du_raw = division(E_dash_T_lcb_du, E_dash_ST_lcb_du, digit=1)
 
     # 小数点以下二位未満の端数を切り上げ
     return ceil(BEI_lcb_du_raw * 100) / 100
@@ -202,7 +160,7 @@ def get_BEI_lcb_du(E_dash_T_lcb_du, E_dash_ST_lcb_du):
 # 以下、共通の処理を定義
 # =============================================================================
 
-def _division(numerator: float, denominator: float, digit: int) -> float:
+def division(numerator: float, denominator: float, digit: int) -> float:
     """丸め誤差の回避を目的として利用される関数
 
     Args:

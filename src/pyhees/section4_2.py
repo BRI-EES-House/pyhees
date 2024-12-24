@@ -2968,7 +2968,7 @@ if __name__ == '__main__':
     V_fan_mid_H = dc_spec.get_V_fan_mid_H(q_hs_mid_H)
     P_fan_rtd_H = dc_spec.get_P_fan_rtd_H(V_fan_rtd_H)
     P_fan_mid_H = dc_spec.get_P_fan_mid_H(V_fan_mid_H)
-    P_hs_mid_H = np.NAN
+    P_hs_mid_H = np.nan
     V_hs_dsgn_H = dc_spec.get_V_fan_dsgn_H(V_fan_rtd_H)
 
     # セントラル冷房機器の仕様
@@ -2980,7 +2980,7 @@ if __name__ == '__main__':
     V_fan_mid_C = dc_spec.get_V_fan_mid_C(q_hs_mid_C)
     P_fan_rtd_C = dc_spec.get_P_fan_rtd_C(V_fan_rtd_C)
     P_fan_mid_C = dc_spec.get_P_fan_mid_C(V_fan_mid_C)
-    P_hs_mid_C = np.NAN
+    P_hs_mid_C = np.nan
     V_hs_dsgn_C = dc_spec.get_V_fan_dsgn_C(V_fan_rtd_C)
 
     # 外皮平均熱貫流率(UA値)

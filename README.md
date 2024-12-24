@@ -22,7 +22,7 @@ This programe is developed as a part of the activities of the progmae SWG (resid
 
 ## Requirement
 
-Python 3.8.5
+Python 3.10.12
 
 ## Quick Start
 

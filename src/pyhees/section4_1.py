@@ -1628,7 +1628,7 @@ def calc_E_E_H_hs_A_d_t(A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, H_A, L_H_d_t_i, L
         V_fan_mid_H = dc_spec. get_V_fan_mid_H(q_hs_mid_H)
         P_fan_rtd_H = dc_spec.get_P_fan_rtd_H(V_fan_rtd_H)
         P_fan_mid_H = dc_spec.get_P_fan_mid_H(V_fan_mid_H)
-        P_hs_mid_H = np.NAN
+        P_hs_mid_H = np.nan
     elif H_A['EquipmentSpec'] == '定格能力試験の値を入力する':
         EquipmentSpec = '定格能力試験の値を入力する'
         q_hs_rtd_H = H_A['q_hs_rtd_H']
@@ -1639,7 +1639,7 @@ def calc_E_E_H_hs_A_d_t(A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, H_A, L_H_d_t_i, L
         q_hs_min_H = dc_spec.get_q_hs_min_H(q_hs_rtd_H)
         V_fan_mid_H = dc_spec. get_V_fan_mid_H(q_hs_mid_H)
         P_fan_mid_H = dc_spec.get_P_fan_mid_H(V_fan_mid_H)
-        P_hs_mid_H = np.NAN
+        P_hs_mid_H = np.nan
     elif H_A['EquipmentSpec'] == '定格能力試験と中間能力試験の値を入力する':
         EquipmentSpec = '定格能力試験と中間能力試験の値を入力する'
         q_hs_rtd_H = H_A['q_hs_rtd_H']
@@ -2663,7 +2663,7 @@ def calc_E_E_C_hs_d_t(region, A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, C_A, C_MR, 
             V_fan_mid_C = dc_spec.get_V_fan_mid_C(q_hs_mid_C)
             P_fan_rtd_C = dc_spec.get_P_fan_rtd_C(V_fan_rtd_C)
             P_fan_mid_C = dc_spec.get_P_fan_mid_C(V_fan_mid_C)
-            P_hs_mid_C = np.NAN
+            P_hs_mid_C = np.nan
         elif C_A['EquipmentSpec'] == '定格能力試験の値を入力する':
             EquipmentSpec = '定格能力試験の値を入力する'
             q_hs_rtd_C = C_A['q_hs_rtd_C']
@@ -2674,7 +2674,7 @@ def calc_E_E_C_hs_d_t(region, A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, C_A, C_MR, 
             q_hs_min_C = dc_spec.get_q_hs_min_C(q_hs_rtd_C)
             V_fan_mid_C = dc_spec.get_V_fan_mid_C(q_hs_mid_C)
             P_fan_mid_C = dc_spec.get_P_fan_mid_C(V_fan_mid_C)
-            P_hs_mid_C = np.NAN
+            P_hs_mid_C = np.nan
         elif C_A['EquipmentSpec'] == '定格能力試験と中間能力試験の値を入力する':
             EquipmentSpec = '定格能力試験と中間能力試験の値を入力する'
             q_hs_rtd_C = C_A['q_hs_rtd_C']

@@ -1,8 +1,7 @@
 from pyhees.section2_2 import calc_E_T 
 
 if __name__ == '__main__':
-    spec = {"region": 6, "type": "一般住宅", "reference": {"reference_year": None
-        }, "tatekata": "戸建住宅", "sol_region": None, "A_A": 120.08, "A_MR": 29.81, "A_OR": 51.34, "NV_MR": 0, "NV_OR": 0, "TS": False, "r_A_ufvnt": None, "underfloor_insulation": None, "mode_H": "居室のみを暖房する方式でかつ主たる居室とその他の居室ともに温水暖房を設置する場合に該当しない場合", "mode_C": "居室のみを冷房する方式", "H_A": None, "H_MR": {"type": "ルームエアコンディショナー", "e_class": None, "dualcompressor": False
+    spec = {"region": 6, "type": "一般住宅", "evaluation_method": "住戸全体を対象に評価する", "tatekata": "戸建住宅", "sol_region": None, "A_A": 120.08, "A_MR": 29.81, "A_OR": 51.34, "NV_MR": 0, "NV_OR": 0, "TS": False, "r_A_ufvnt": None, "underfloor_insulation": None, "mode_H": "居室のみを暖房する方式でかつ主たる居室とその他の居室ともに温水暖房を設置する場合に該当しない場合", "mode_C": "居室のみを冷房する方式", "H_A": None, "H_MR": {"type": "ルームエアコンディショナー", "e_class": None, "dualcompressor": False
         }, "H_OR": {"type": "ルームエアコンディショナー", "e_class": None, "dualcompressor": False
         }, "H_HS": None, "C_A": None, "C_MR": {"type": "ルームエアコンディショナー", "e_class": None, "dualcompressor": False
         }, "C_OR": {"type": "ルームエアコンディショナー", "e_class": None, "dualcompressor": False

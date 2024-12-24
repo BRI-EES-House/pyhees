@@ -1,14 +1,18 @@
 # ============================================================================
 # 第二章 住宅部分の一次エネルギー消費量
 # 第三節 基準一次エネルギー消費量
-# Ver.13（エネルギー消費性能計算プログラム（住宅版）Ver.2022.10～）
+# Ver.15（エネルギー消費性能計算プログラム（住宅版）Ver.2024.12～）
 # ============================================================================
 
 
 from math import ceil, floor
 from typing import Tuple, TypedDict, Optional
 
-from pyhees.section2_2 import calc_E_C, calc_E_H
+from pyhees.section2_2 import calc_E_C, calc_E_H, get_spec_H, get_spec_C
+import pyhees.section2_3_a as sc2_3_a
+import pyhees.section2_3_b as sc2_3_b
+import pyhees.section2_3_c as sc2_3_c
+import pyhees.section2_5_c as sc2_5_c
 from pyhees.section4_1 import calc_cooling_load, calc_heating_load, get_virtual_heating_devices, calc_heating_mode
 
 
@@ -24,14 +28,6 @@ class StandardPrimaryEnergyTotal(TypedDict):
             建築物エネルギー消費性能基準における単位住戸の基準一次エネルギー消費量
             （平成28年4月1日時点で現存する住宅） (GJ/年)
             住宅の種類が「一般住宅」以外の場合はNone
-        E_ST_trad_du_p (Optional[float]):
-            建築物エネルギー消費性能基準における単位住戸の基準一次エネルギー消費量
-            （平成28年4月1日時点で現存しない住宅） (GJ/年)
-            住宅の種類が「行政庁認定基準」以外の場合はNone
-        E_ST_trad_du_e (Optional[float]):
-            建築物エネルギー消費性能基準における単位住戸の基準一次エネルギー消費量
-            （平成28年4月1日時点で現存する住宅） (GJ/年)
-            住宅の種類が「行政庁認定基準」以外の場合はNone
         E_ST_indc_du_p (Optional[float]):
             建築物エネルギー消費性能誘導基準における単位住戸の基準一次エネルギー消費量
             （令和4年10月1日時点で現存しない住宅） (GJ/年)
@@ -43,11 +39,11 @@ class StandardPrimaryEnergyTotal(TypedDict):
         E_ST_rb_du_cy1 (Optional[float]):
             特定建築主基準における単位住戸の基準一次エネルギー消費量
             （令和2年3月までに新築する住宅） (GJ/年)
-            住宅の種類が「事業主基準」以外の場合はNone
+            住宅の種類が「一般住宅」以外の場合はNone
         E_ST_rb_du_cy2 (Optional[float]):
             特定建築主基準における単位住戸の基準一次エネルギー消費量
             （令和2年4月以降に新築する住宅） (GJ/年)
-            住宅の種類が「事業主基準」以外の場合はNone
+            住宅の種類が「一般住宅」以外の場合はNone
         E_ST_lcb_du_p  (Optional[float]):
             建築物に係るエネルギーの使用の合理化の一層の促進のために誘導すべき基準における
             単位住戸の基準一次エネルギー消費量（令和4年10月1日時点で現存しない住宅） (GJ/年)
@@ -63,8 +59,6 @@ class StandardPrimaryEnergyTotal(TypedDict):
 
     E_ST_gn_du_p: Optional[float]
     E_ST_gn_du_e: Optional[float]
-    E_ST_trad_du_p: Optional[float]
-    E_ST_trad_du_e: Optional[float]
     E_ST_indc_du_p: Optional[float]
     E_ST_indc_du_e: Optional[float]
     E_ST_rb_du_cy1: Optional[float]
@@ -82,10 +76,6 @@ class StandardPrimaryEnergyTotalDash(TypedDict):
             建築物エネルギー消費性能基準における単位住戸の基準一次エネルギー消費量
             （その他の基準一次エネルギー消費量を除く） (GJ/年)
             住宅の種類が「一般住宅」以外の場合はNone
-        E_dash_ST_trad_du (Optional[float]):
-            建築物エネルギー消費性能基準における単位住戸の基準一次エネルギー消費量
-            （その他の基準一次エネルギー消費量を除く） (GJ/年)
-            住宅の種類が「行政庁認定基準」以外の場合はNone
         E_dash_ST_indc_du (Optional[float]):
             建築物エネルギー消費性能誘導基準における単位住戸の基準一次エネルギー消費量
             （その他の基準一次エネルギー消費量を除く） (GJ/年)
@@ -93,7 +83,7 @@ class StandardPrimaryEnergyTotalDash(TypedDict):
         E_dash_ST_rb_du (Optional[float]):
             特定建築主基準における単位住戸の基準一次エネルギー消費量
             （その他の基準一次エネルギー消費量を除く） (GJ/年)
-            住宅の種類が「事業主基準」以外の場合はNone
+            住宅の種類が「一般住宅」以外の場合はNone
         E_dash_ST_lcb_du (Optional[float]):
             建築物に係るエネルギーの使用の合理化の一層の促進のために誘導すべき基準における
             単位住戸の基準一次エネルギー消費量（その他の基準一次エネルギー消費量を除く） (GJ/年)
@@ -101,7 +91,6 @@ class StandardPrimaryEnergyTotalDash(TypedDict):
     """
 
     E_dash_ST_gn_du: Optional[float]
-    E_dash_ST_trad_du: Optional[float]
     E_dash_ST_indc_du: Optional[float]
     E_dash_ST_rb_du: Optional[float]
     E_dash_ST_lcb_du: Optional[float]
@@ -141,32 +130,44 @@ def calc_E_ST(spec) -> Tuple[StandardPrimaryEnergyTotal, StandardPrimaryEnergyTo
         E_std_detail (StandardPrimaryEnergyDetail):
             各設備における基準一次エネルギー消費量を格納する辞書
     """
+    # 一次エネルギー消費量の算定に係る設定
+    evaluation_method = spec['evaluation_method']
+    if evaluation_method == '住戸全体を対象に評価する':
+        A_A, A_MR, A_OR = sc2_3_a.get_A(spec)
+    elif evaluation_method == '増改築部分を対象に評価する':
+        A_A, A_MR, A_OR = sc2_5_c.get_A(spec['tatekata'])
+    else:
+        raise ValueError(evaluation_method)
+
+    _, H_MR_in, H_OR_in, _ = get_spec_H(spec)
+    _, C_MR_in, C_OR_in    = get_spec_C(spec)
+
     # 1年当たりの機械換気設備の基準一次エネルギー消費量
-    E_SV = calc_E_SV(spec['A_A'])
+    E_SV = calc_E_SV(A_A)
 
     # 1 時間当たりの暖房設備の基準一次エネルギー消費量
-    E_SH = calc_E_SH(spec['type'], spec['tatekata'], spec['region'], spec['sol_region'], spec['A_A'],
-                     spec['A_MR'], spec['A_OR'], spec['ENV'], spec['mode_H'], spec['mode_C'], spec['NV_MR'], spec['NV_OR'], spec['H_MR'], spec['H_OR'])
+    E_SH = calc_E_SH(spec['tatekata'], spec['region'], spec['sol_region'], A_A,
+                     A_MR, A_OR, spec['ENV'], spec['mode_H'], spec['mode_C'], spec['NV_MR'], spec['NV_OR'], H_MR_in, H_OR_in)
 
     # 1 時間当たりの冷房設備の基準一次エネルギー消費量
-    E_SC = calc_E_SC(spec['type'], spec['tatekata'], spec['region'], spec['A_A'], spec['A_MR'],
-                     spec['A_OR'], spec['ENV'], spec['mode_C'], spec['mode_H'], spec['H_MR'], spec['H_OR'], spec['TS'], spec['HEX'],
+    E_SC = calc_E_SC(spec['tatekata'], spec['region'], A_A, A_MR,
+                     A_OR, spec['ENV'], spec['mode_C'], C_MR_in, C_OR_in, spec['mode_H'], H_MR_in, H_OR_in, spec['TS'], spec['HEX'],
                      spec['sol_region'], spec['NV_MR'], spec['NV_OR'])
 
     # 1年当たりの給湯設備の基準一次エネルギー消費量
-    E_SW = calc_E_SW(spec['region'], spec['A_A'], spec['HW'])
+    E_SW = calc_E_SW(spec['region'], A_A, spec['HW'])
 
     # 1年当たりの照明設備の基準一次エネルギー消費量
-    E_SL = calc_E_SL(spec['A_A'], spec['A_MR'], spec['A_OR'])
+    E_SL = calc_E_SL(A_A, A_MR, A_OR)
 
     # 1年当たりのその他の基準一次エネルギー消費量
-    E_SM = calc_E_SM(spec['A_A'])
+    E_SM = calc_E_SM(A_A)
 
     # 各適合基準における基準一次エネルギー消費量合計値
-    E_ST_dict = calc_E_ST_dict(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM, spec['type'])
+    E_ST_dict = calc_E_ST_dict(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
 
     # 各適合基準における基準一次エネルギー消費量合計値(その他一次エネルギー消費量を除く)
-    E_dash_ST_dict = calc_E_dash_ST_dict(E_SH, E_SC, E_SV, E_SL, E_SW, spec['type'])
+    E_dash_ST_dict = calc_E_dash_ST_dict(E_SH, E_SC, E_SV, E_SL, E_SW)
 
     # 各設備における基準一次エネルギー消費量
     E_std_detail = {
@@ -185,7 +186,7 @@ def calc_E_ST(spec) -> Tuple[StandardPrimaryEnergyTotal, StandardPrimaryEnergyTo
 # 5. 基準一次エネルギー消費量および誘導基準一次エネルギー消費量
 # ============================================================================
 
-def calc_E_ST_dict(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM, type) -> StandardPrimaryEnergyTotal:
+def calc_E_ST_dict(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM) -> StandardPrimaryEnergyTotal:
     """各適合基準における基準一次エネルギー消費量合計値を算出する関数
 
     Args:
@@ -195,45 +196,23 @@ def calc_E_ST_dict(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM, type) -> StandardPrimaryE
         E_SL (float): 1年当たりの照明設備の基準一次エネルギー消費量 (MJ/年)
         E_SW (float): 1年当たりの給湯設備(コージェネレーション設備を含む)の基準一次エネルギー消費量 (MJ/年)
         E_SM (float): 1年当たりのその他の基準一次エネルギー消費量 (MJ/年)
-        type (str): 住宅の種類
 
     Returns:
         StandardPrimaryEnergyTotal: 各適合基準における基準一次エネルギー消費量合計値を格納する辞書
     """
-    E_ST_gn_du_p = None
-    E_ST_gn_du_e = None
-    E_ST_trad_du_p = None
-    E_ST_trad_du_e = None
-    E_ST_indc_du_p = None
-    E_ST_indc_du_e = None
-    E_ST_rb_du_cy1 = None
-    E_ST_rb_du_cy2 = None
-    E_ST_lcb_du_p  = None
-    E_ST_lcb_du_e  = None
-    E_ST_enh_du  = None
-
-    if type == '一般住宅':
-        E_ST_gn_du_p = get_E_ST_gn_du_p(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
-        E_ST_gn_du_e = get_E_ST_gn_du_e(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
-        E_ST_indc_du_p = get_E_ST_indc_du_p(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
-        E_ST_indc_du_e = get_E_ST_indc_du_e(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
-        E_ST_lcb_du_p = get_E_ST_lcb_du_p(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
-        E_ST_lcb_du_e = get_E_ST_lcb_du_e(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
-        E_ST_enh_du = get_E_ST_enh_du(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
-    elif type == '事業主基準':
-        E_ST_rb_du_cy1 = get_E_ST_rb_du_cy1(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
-        E_ST_rb_du_cy2 = get_E_ST_rb_du_cy2(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
-    elif type == '行政庁認定住宅':
-        E_ST_trad_du_p = get_E_ST_trad_du_p(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
-        E_ST_trad_du_e = get_E_ST_trad_du_e(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
-    else:
-        raise ValueError(type)
+    E_ST_gn_du_p = get_E_ST_gn_du_p(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
+    E_ST_gn_du_e = get_E_ST_gn_du_e(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
+    E_ST_indc_du_p = get_E_ST_indc_du_p(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
+    E_ST_indc_du_e = get_E_ST_indc_du_e(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
+    E_ST_lcb_du_p = get_E_ST_lcb_du_p(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
+    E_ST_lcb_du_e = get_E_ST_lcb_du_e(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
+    E_ST_enh_du = get_E_ST_enh_du(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
+    E_ST_rb_du_cy1 = get_E_ST_rb_du_cy1(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
+    E_ST_rb_du_cy2 = get_E_ST_rb_du_cy2(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
 
     return {
         'E_ST_gn_du_p': E_ST_gn_du_p,
         'E_ST_gn_du_e': E_ST_gn_du_e,
-        'E_ST_trad_du_p': E_ST_trad_du_p,
-        'E_ST_trad_du_e': E_ST_trad_du_e,
         'E_ST_indc_du_p': E_ST_indc_du_p,
         'E_ST_indc_du_e': E_ST_indc_du_e,
         'E_ST_rb_du_cy1': E_ST_rb_du_cy1,
@@ -322,88 +301,6 @@ def get_E_star_ST_gn_du_e(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
         式(4) 建築物エネルギー消費性能基準における単位住戸の1年当たりの基準一次エネルギー消費量（平成28年4月1日時点で現存する住宅） (MJ/年)
     """
     return (E_SH + E_SC + E_SV + E_SL + E_SW) * 1.1 + E_SM
-
-
-# ============================================================================
-# 5.3 建築物エネルギー消費性能基準（気候風土適応住宅）における基準一次エネルギー消費量
-# ============================================================================
-
-
-def get_E_ST_trad_du_p(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
-    """式(5) 建築物エネルギー消費性能基準（気候風土適応住宅）における単位住戸の基準一次エネルギー消費量（平成28年4月1日時点で現存しない住宅） (GJ/年)
-
-    Args:
-        E_SH (float): 1年当たりの暖房設備の基準一次エネルギー消費量 (MJ/年)
-        E_SC (float): 1年当たりの冷房設備の基準一次エネルギー消費量 (MJ/年)
-        E_SV (float): 1年当たりの機械換気設備の基準一次エネルギー消費量 (MJ/年)
-        E_SL (float): 1年当たりの照明設備の基準一次エネルギー消費量 (MJ/年)
-        E_SW (float): 1年当たりの給湯設備(コージェネレーション設備を含む)の基準一次エネルギー消費量 (MJ/年)
-        E_SM (float): 1年当たりのその他の基準一次エネルギー消費量 (MJ/年)
-
-    Returns:
-        式(5) 建築物エネルギー消費性能基準（気候風土適応住宅）における単位住戸の基準一次エネルギー消費量（平成28年4月1日時点で現存しない住宅） (GJ/年)
-    """
-    # 式(7) 建築物エネルギー消費性能基準（気候風土適応住宅）における単位住戸の1年当たりの基準一次エネルギー消費量（平成28年4月1日時点で現存しない住宅） (MJ/年)
-    E_star_ST_trad_du_p = get_E_star_ST_trad_du_p(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
-
-    # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_star_ST_trad_du_p / 100) / 10
-
-
-def get_E_ST_trad_du_e(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
-    """式(6) 建築物エネルギー消費性能基準（気候風土適応住宅）における単位住戸の基準一次エネルギー消費量（平成28年4月1日時点で現存する住宅） (GJ/年)
-
-    Args:
-        E_SH (float): 1年当たりの暖房設備の基準一次エネルギー消費量 (MJ/年)
-        E_SC (float): 1年当たりの冷房設備の基準一次エネルギー消費量 (MJ/年)
-        E_SV (float): 1年当たりの機械換気設備の基準一次エネルギー消費量 (MJ/年)
-        E_SL (float): 1年当たりの照明設備の基準一次エネルギー消費量 (MJ/年)
-        E_SW (float): 1年当たりの給湯設備(コージェネレーション設備を含む)の基準一次エネルギー消費量 (MJ/年)
-        E_SM (float): 1年当たりのその他の基準一次エネルギー消費量 (MJ/年)
-
-    Returns:
-        式(6) 建築物エネルギー消費性能基準（気候風土適応住宅）における単位住戸の基準一次エネルギー消費量（平成28年4月1日時点で現存する住宅） (GJ/年)
-    """
-    # 式(8) 建築物エネルギー消費性能基準（気候風土適応住宅）における単位住戸の1年当たりの基準一次エネルギー消費量（平成28年4月1日時点で現存する住宅） (MJ/年)
-    E_star_ST_trad_du_e = get_E_star_ST_trad_du_e(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
-
-    # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_star_ST_trad_du_e / 100) / 10
-
-
-def get_E_star_ST_trad_du_p(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
-    """式(7) 建築物エネルギー消費性能基準（気候風土適応住宅）における単位住戸の1年当たりの基準一次エネルギー消費量（平成28年4月1日時点で現存しない住宅） (MJ/年)
-
-    Args:
-        E_SH (float): 1年当たりの暖房設備の基準一次エネルギー消費量 (MJ/年)
-        E_SC (float): 1年当たりの冷房設備の基準一次エネルギー消費量 (MJ/年)
-        E_SV (float): 1年当たりの機械換気設備の基準一次エネルギー消費量 (MJ/年)
-        E_SL (float): 1年当たりの照明設備の基準一次エネルギー消費量 (MJ/年)
-        E_SW (float): 1年当たりの給湯設備(コージェネレーション設備を含む)の基準一次エネルギー消費量 (MJ/年)
-        E_SM (float): 1年当たりのその他の基準一次エネルギー消費量 (MJ/年)
-
-    Returns:
-        式(7) 建築物エネルギー消費性能基準（気候風土適応住宅）における単位住戸の1年当たりの基準一次エネルギー消費量（平成28年4月1日時点で現存しない住宅） (MJ/年)
-    """
-    return E_SH + E_SC + E_SV + E_SL + E_SW + E_SM
-
-
-def get_E_star_ST_trad_du_e(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
-    """式(8) 建築物エネルギー消費性能基準（気候風土適応住宅）における単位住戸の1年当たりの基準一次エネルギー消費量（平成28年4月1日時点で現存する住宅） (MJ//年)
-
-    Args:
-        E_SH (float): 1年当たりの暖房設備の基準一次エネルギー消費量 (MJ/年)
-        E_SC (float): 1年当たりの冷房設備の基準一次エネルギー消費量 (MJ/年)
-        E_SV (float): 1年当たりの機械換気設備の基準一次エネルギー消費量 (MJ/年)
-        E_SL (float): 1年当たりの照明設備の基準一次エネルギー消費量 (MJ/年)
-        E_SW (float): 1年当たりの給湯設備(コージェネレーション設備を含む)の基準一次エネルギー消費量 (MJ/年)
-        E_SM (float): 1年当たりのその他の基準一次エネルギー消費量 (MJ/年)
-
-    Returns:
-        式(8) 建築物エネルギー消費性能基準（気候風土適応住宅）における単位住戸の1年当たりの基準一次エネルギー消費量（平成28年4月1日時点で現存する住宅） (MJ/年)
-    """
-    return (E_SH + E_SC + E_SV + E_SL + E_SW) * 1.1 + E_SM
-
 
 # ============================================================================
 # 5.4 建築物エネルギー消費性能誘導基準における誘導基準一次エネルギー消費量
@@ -695,40 +592,27 @@ def get_E_star_ST_enh_du(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
 # 6. 基準一次エネルギー消費量(その他の基準一次エネルギー消費量を除く)
 # ============================================================================
 
-def calc_E_dash_ST_dict(E_SH, E_SC, E_SV, E_SL, E_SW, type) -> StandardPrimaryEnergyTotalDash:
+def calc_E_dash_ST_dict(E_SH, E_SC, E_SV, E_SL, E_SW) -> StandardPrimaryEnergyTotalDash:
     """各適合基準における基準一次エネルギー消費量合計値(その他一次エネルギー消費量を除く)を算出する関数
 
     Args:
+         (str): 住戸の評価方法
         E_SH (float): 1年当たりの暖房設備の基準一次エネルギー消費量 (MJ/年)
         E_SC (float): 1年当たりの冷房設備の基準一次エネルギー消費量 (MJ/年)
         E_SV (float): 1年当たりの機械換気設備の基準一次エネルギー消費量 (MJ/年)
         E_SL (float): 1年当たりの照明設備の基準一次エネルギー消費量 (MJ/年)
         E_SW (float): 1年当たりの給湯設備(コージェネレーション設備を含む)の基準一次エネルギー消費量 (MJ/年)
-        type (str): 住宅の種類
 
     Returns:
         StandardPrimaryEnergyTotalDash: 各適合基準における基準一次エネルギー消費量合計値(その他一次エネルギー消費量を除く)を格納する辞書
     """
-    E_dash_ST_gn_du = None
-    E_dash_ST_trad_du = None
-    E_dash_ST_indc_du = None
-    E_dash_ST_rb_du = None
-    E_dash_ST_lcb_du = None
-
-    if type == '一般住宅':
-        E_dash_ST_gn_du = get_E_dash_ST_gn_du(E_SH, E_SC, E_SV, E_SL, E_SW)
-        E_dash_ST_indc_du = get_E_dash_ST_indc_du(E_SH, E_SC, E_SV, E_SL, E_SW)
-        E_dash_ST_lcb_du = get_E_dash_ST_lcb_du(E_SH, E_SC, E_SV, E_SL, E_SW)
-    elif type == '事業主基準':
-        E_dash_ST_rb_du = get_E_dash_ST_rb_du(E_SH, E_SC, E_SV, E_SL, E_SW)
-    elif type == '行政庁認定住宅':
-        E_dash_ST_trad_du = get_E_dash_ST_trad_du(E_SH, E_SC, E_SV, E_SL, E_SW)
-    else:
-        raise ValueError(type)
+    E_dash_ST_gn_du = get_E_dash_ST_gn_du(E_SH, E_SC, E_SV, E_SL, E_SW)
+    E_dash_ST_indc_du = get_E_dash_ST_indc_du(E_SH, E_SC, E_SV, E_SL, E_SW)
+    E_dash_ST_lcb_du = get_E_dash_ST_lcb_du(E_SH, E_SC, E_SV, E_SL, E_SW)
+    E_dash_ST_rb_du = get_E_dash_ST_rb_du(E_SH, E_SC, E_SV, E_SL, E_SW)
 
     return {
         'E_dash_ST_gn_du': E_dash_ST_gn_du,
-        'E_dash_ST_trad_du': E_dash_ST_trad_du,
         'E_dash_ST_indc_du': E_dash_ST_indc_du,
         'E_dash_ST_rb_du': E_dash_ST_rb_du,
         'E_dash_ST_lcb_du': E_dash_ST_lcb_du,
@@ -774,48 +658,6 @@ def get_E_dash_star_ST_gn_du(E_SH, E_SC, E_SV, E_SL, E_SW):
         式(24) 建築物エネルギー消費性能基準における単位住戸の1年当たりの基準一次エネルギー消費量（その他の基準一次エネルギー消費量を除く） (MJ/年)
     """
     return E_SH + E_SC + E_SV + E_SL + E_SW
-
-
-# ============================================================================
-# 6.3 建築物エネルギー消費性能基準（気候風土適応住宅）における
-#   基準一次エネルギー消費量(その他の基準一次エネルギー消費量を除く)
-# ============================================================================
-
-def get_E_dash_ST_trad_du(E_SH, E_SC, E_SV, E_SL, E_SW):
-    """式(25) 建築物エネルギー消費性能基準（気候風土適応住宅）における単位住戸の基準一次エネルギー消費量（その他の基準一次エネルギー消費量を除く） (GJ/年)
-
-    Args:
-        E_SH (float): 1年当たりの暖房設備の基準一次エネルギー消費量 (MJ/年)
-        E_SC (float): 1年当たりの冷房設備の基準一次エネルギー消費量 (MJ/年)
-        E_SV (float): 1年当たりの機械換気設備の基準一次エネルギー消費量 (MJ/年)
-        E_SL (float): 1年当たりの照明設備の基準一次エネルギー消費量 (MJ/年)
-        E_SW (float): 1年当たりの給湯設備(コージェネレーション設備を含む)の基準一次エネルギー消費量 (MJ/年)
-
-    Returns:
-        式(25) 建築物エネルギー消費性能基準（気候風土適応住宅）における単位住戸の基準一次エネルギー消費量（その他の基準一次エネルギー消費量を除く） (GJ/年)
-    """
-    # 式(26) 建築物エネルギー消費性能基準（気候風土適応住宅）における単位住戸の1年当たりの基準一次エネルギー消費量（その他の基準一次エネルギー消費量を除く） (MJ/年)
-    E_dash_star_ST_trad_du = get_E_dash_star_ST_trad_du(E_SH, E_SC, E_SV, E_SL, E_SW)
-
-    # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_dash_star_ST_trad_du / 100) / 10
-
-
-def get_E_dash_star_ST_trad_du(E_SH, E_SC, E_SV, E_SL, E_SW):
-    """式(26) 建築物エネルギー消費性能基準（気候風土適応住宅）における単位住戸の1年当たりの基準一次エネルギー消費量（その他の基準一次エネルギー消費量を除く） (MJ/年)
-
-    Args:
-        E_SH (float): 1年当たりの暖房設備の基準一次エネルギー消費量 (MJ/年)
-        E_SC (float): 1年当たりの冷房設備の基準一次エネルギー消費量 (MJ/年)
-        E_SV (float): 1年当たりの機械換気設備の基準一次エネルギー消費量 (MJ/年)
-        E_SL (float): 1年当たりの照明設備の基準一次エネルギー消費量 (MJ/年)
-        E_SW (float): 1年当たりの給湯設備(コージェネレーション設備を含む)の基準一次エネルギー消費量 (MJ/年)
-
-    Returns:
-        式(26) 建築物エネルギー消費性能基準（気候風土適応住宅）における単位住戸の1年当たりの基準一次エネルギー消費量（その他の基準一次エネルギー消費量を除く） (MJ/年)
-    """
-    return E_SH + E_SC + E_SV + E_SL + E_SW
-
 
 # ============================================================================
 # 6.4 建築物エネルギー消費性能誘導基準における誘導基準一次エネルギー消費量
@@ -946,11 +788,10 @@ def get_E_dash_star_ST_lcb_du(E_SH, E_SC, E_SV, E_SL, E_SW):
 # ============================================================================
 
 
-def calc_E_SH(type, tatekata, region, sol_region, A_A, A_MR, A_OR, ENV, mode_H, mode_C, NV_MR, NV_OR, H_MR, H_OR):
+def calc_E_SH(tatekata, region, sol_region, A_A, A_MR, A_OR, ENV, mode_H, mode_C, NV_MR, NV_OR, H_MR_in, H_OR_in):
     """暖房設備の設計一次エネルギー消費量
 
     Args:
-      type(str): description]
       tatekata(str): 建て方
       region(int): 省エネルギー地域区分
       sol_region(int): 年間の日射地域区分(1-5)
@@ -962,18 +803,18 @@ def calc_E_SH(type, tatekata, region, sol_region, A_A, A_MR, A_OR, ENV, mode_H, 
       mode_C(str): 冷房方式
       NV_MR(float): 主たる居室における通風の利用における相当換気回数
       NV_OR(float): その他の居室における通風の利用における相当換気回数
-      H_MR(dict): 暖房機器の仕様
-      H_OR(dict): 暖房機器の仕様
+      H_MR_in(dict): 主たる居室の暖房機器の仕様(入力値)
+      H_OR_in(dict): その他の居室の暖房機器の仕様(入力値)
 
     Returns:
       float: 暖房設備の設計一次エネルギー消費量
 
     """
     # 暖房基準値計算用仕様の取得
-    mode_H, H_A, H_MR, H_OR, H_HS, mode_MR, mode_OR = calc_heating_reference_spec(region, mode_H, H_MR, H_OR)
+    mode_H, H_A, H_MR, H_OR, H_HS, mode_MR, mode_OR = calc_heating_reference_spec(region, mode_H, H_MR_in, H_OR_in)
 
     # 外皮の基準値計算用仕様の取得
-    Q, eta_H, eta_C, r_env = calc_env_reference_spec(type, tatekata, region, A_A, ENV)
+    Q, eta_H, eta_C, r_env = calc_env_reference_spec(tatekata, region, A_A, ENV)
 
     # 暖房負荷の取得
     L_T_H_d_t_i, L_dash_H_R_d_t_i = calc_heating_load(
@@ -995,14 +836,14 @@ def calc_E_SH(type, tatekata, region, sol_region, A_A, A_MR, A_OR, ENV, mode_H, 
     return E_SH
 
 
-def calc_heating_reference_spec(region, mode_H, H_MR, H_OR):
+def calc_heating_reference_spec(region, mode_H, H_MR_in, H_OR_in):
     """暖房設備の基準一次エネルギー消費量
 
     Args:
       region(int): 省エネルギー地域区分
       mode_H(str): 暖房方式
-      H_MR(dict): 暖房機器の仕様
-      H_OR(dict): 暖房機器の仕様
+      H_MR_in(dict): 主たる居室の暖房機器の仕様(入力値)
+      H_OR_in(dict): その他の居室の暖房機器の仕様(入力値)
 
     Returns:
       tuple: mode_H, H_A, H_MR, H_OR, H_HS, mode_MR, mode_OR (暖房方式及び運転方法の区分)
@@ -1020,117 +861,11 @@ def calc_heating_reference_spec(region, mode_H, H_MR, H_OR):
     if region == 8:
         return None, None, None, None, None, None, None
 
-    if mode_H == '住戸全体を連続的に暖房する方式':
-        H_A = {
-            'type': 'ダクト式セントラル空調機',
-            'duct_insulation': '全てもしくは一部が断熱区画外である',
-            'VAV': False,
-            'general_ventilation': True,
-            'EquipmentSpec': '入力しない'
-        }
-        H_MR = None
-        H_OR = None
-        H_HS = None
-    elif mode_H == '居室のみを暖房する方式でかつ主たる居室とその他の居室ともに温水暖房を設置する場合に該当しない場合' or \
-            mode_H == '設置しない' or mode_H is None:
-
-        # 実質的な暖房機器の仕様を取得
-        spec_MR, spec_OR = get_virtual_heating_devices(region, H_MR, H_OR)
-        if spec_MR is None and spec_OR is None:
-            return None, None, None, None, None, None, None
-
-        # 暖房方式及び運転方法の区分
-        mode_MR, mode_OR = calc_heating_mode(region=region, H_MR=spec_MR, H_OR=spec_OR)
-
-        H_A = None
-        H_HS = None
-
-        if mode_MR == 'ろ':
-            if region in [1,2,3,4]:
-                H_MR = {
-                    'type': '温水暖房用パネルラジエーター',
-                }
-                H_HS = {
-                    'type': '石油従来型温水暖房機',
-                    'e_rtd_hs': 0.83,
-                    'pipe_insulation': True,
-                    'underfloor_pipe_insulation': False
-                }
-            elif region in [5,6,7]:
-                H_MR = {
-                    'type': '温水暖房用パネルラジエーター',
-                }
-                H_HS = {
-                    'type': 'ガス従来型温水暖房機',
-                    'e_rtd_hs': 0.825,
-                    'pipe_insulation': True,
-                    'underfloor_pipe_insulation': False
-                }
-            else:
-                raise ValueError(region)
-        elif mode_MR == 'は':
-            if region in [1,2,3,4]:
-                H_MR = {
-                    'type': 'FF暖房機',
-                    'e_rtd': 0.86
-                }
-            elif region in [5,6,7]:
-                H_MR = {
-                    'type': 'ルームエアコンディショナー',
-                    'e_class': 'ろ',
-                    'dualcompressor': False
-                }
-            else:
-                raise ValueError(region)
-        else:
-            raise ValueError(mode_MR)
-
-        if mode_OR == 'ろ':
-            if region in [1,2,3,4]:
-                H_OR = {
-                    'type': '温水暖房用パネルラジエーター',
-                }
-                H_HS = {
-                    'type': '石油従来型温水暖房機',
-                    'e_rtd_hs': 0.83,
-                    'pipe_insulation': True,
-                    'underfloor_pipe_insulation': False
-                }
-            elif region in [5,6,7]:
-                H_OR = {
-                    'type': '温水暖房用パネルラジエーター',
-                }
-                H_HS = {
-                    'type': 'ガス従来型温水暖房機',
-                    'e_rtd_hs': 0.825,
-                    'pipe_insulation': True,
-                    'underfloor_pipe_insulation': False
-                }
-            else:
-                raise ValueError(region)
-        elif mode_OR == 'は':
-            if region in [1,2,3,4]:
-                H_OR = {
-                    'type': 'FF暖房機',
-                    'e_rtd': 0.86
-                }
-            elif region in [5,6,7]:
-                H_OR = {
-                    'type': 'ルームエアコンディショナー',
-                    'e_class': 'ろ',
-                    'dualcompressor': False
-                }
-            else:
-                raise ValueError(region)
-        elif mode_OR is None:
-            pass
-        else:
-            raise ValueError(mode_OR)
-    else:
-        raise ValueError(mode_H)
-
-    if mode_H is None:
+    if mode_H == '設置しない':
         mode_H = '居室のみを暖房する方式でかつ主たる居室とその他の居室ともに温水暖房を設置する場合に該当しない場合'
+
+    # 暖房設備の基準一次エネルギー消費量の算定に係る設定
+    H_A, H_MR, H_OR, H_HS = sc2_3_b.get_reference_spec_H(region, mode_H, H_MR_in, H_OR_in)
 
     # 暖房方式及び運転方法の区分
     mode_MR, mode_OR = calc_heating_mode(region=region, H_MR=H_MR, H_OR=H_OR)
@@ -1138,11 +873,10 @@ def calc_heating_reference_spec(region, mode_H, H_MR, H_OR):
     return mode_H, H_A, H_MR, H_OR, H_HS, mode_MR, mode_OR
 
 
-def calc_env_reference_spec(type, tatekata, region, A_A, ENV):
+def calc_env_reference_spec(tatekata, region, A_A, ENV):
     """熱損失係数, 熱取得率（暖房）, 熱取得率（冷房）を計算する
 
     Args:
-      type(str): description]
       tatekata(str): 建て方
       region(int): 省エネルギー地域区分
       A_A(float): 床面積の合計 (m2)
@@ -1157,54 +891,32 @@ def calc_env_reference_spec(type, tatekata, region, A_A, ENV):
     if ENV is None:
         return None, None, None, None
 
-    if type != '行政庁認定住宅':
-        from pyhees.section2_3_a import get_U_A, get_etr_A_H, get_etr_A_C
+    from pyhees.section2_3_a import get_U_A, get_etr_A_H, get_etr_A_C
 
-        U_A = get_U_A(tatekata, region)
-        etr_A_H = get_etr_A_H(tatekata, region)
-        etr_A_C = get_etr_A_C(tatekata, region)
+    U_A = get_U_A(tatekata, region)
+    etr_A_H = get_etr_A_H(tatekata, region)
+    etr_A_C = get_etr_A_C(tatekata, region)
 
-        from pyhees.section3_2 import get_Q_dash, get_mu_H, get_mu_C
+    from pyhees.section3_2 import get_Q_dash, get_mu_H, get_mu_C
 
-        if ENV['method'] == '当該住宅の外皮面積の合計を用いて評価する':
-            A_env = ENV['A_env']
-            r_env = A_env / A_A  # 床面積の合計に対する外皮の部位の面積の合計の比
-        elif ENV['method'] == '簡易的に求めた外皮面積の合計を用いて評価する':
-            from pyhees.section3_2_9 import get_A_dash_env, get_A_dash_A, get_r_env
+    if ENV['method'] == '当該住宅の外皮面積の合計を用いて評価する':
+        A_env = ENV['A_env']
+        r_env = A_env / A_A  # 床面積の合計に対する外皮の部位の面積の合計の比
+    elif ENV['method'] in ['仕様基準により外皮性能を評価する方法',
+                           '誘導仕様基準により外皮性能を評価する方法（住戸全体を対象に評価）',
+                           '誘導仕様基準により外皮性能を評価する方法（増改築部分を対象に評価）']:
+        from pyhees.section3_2_9 import get_A_dash_env, get_A_dash_A, get_r_env
 
-            U_spec = ENV['U_spec']
-            floor_bath_insulation = U_spec['floor_bath_insulation']
-
-            A_dash_env = get_A_dash_env(ENV['house_insulation_type'], floor_bath_insulation)
-            A_dash_A = get_A_dash_A()
-            r_env = get_r_env(A_dash_env, A_dash_A)
-        elif ENV['method'] == '当該住戸の外皮の部位の面積等を用いて外皮性能を評価する方法':
-            from pyhees.section3_2_9 import get_A_dash_env, get_A_dash_A, get_r_env
-            from pyhees.section3_2 import calc_insulation_performance
-
-            U_spec = ENV['U_spec']
-            floor_bath_insulation = U_spec['floor_bath_insulation']
-
-            _, _, _, _, _, _, _, house_insulation_type = calc_insulation_performance(tatekata, **ENV)
-            A_dash_env = get_A_dash_env(house_insulation_type, floor_bath_insulation)
-            A_dash_A = get_A_dash_A()
-            r_env = get_r_env(A_dash_env, A_dash_A)
-        elif ENV['method'] == '仕様基準により外皮性能を評価する方法' or ENV['method'] == '誘導仕様基準により外皮性能を評価する方法':
-            from pyhees.section3_2_10 import get_A_dash_env, get_A_dash_A, get_r_env
-
-            A_dash_env = get_A_dash_env(tatekata)
-            A_dash_A = get_A_dash_A(tatekata)
-            r_env = get_r_env(A_dash_env, A_dash_A)
-        else:
-            raise ValueError(ENV['method'])
-
-        Q_dash = get_Q_dash(U_A, r_env)
-
-        mu_H = get_mu_H(etr_A_H, r_env)
-        mu_C = get_mu_C(etr_A_C, r_env)
+        A_dash_env = get_A_dash_env(tatekata)
+        A_dash_A = get_A_dash_A(tatekata)
+        r_env = get_r_env(A_dash_env, A_dash_A)
     else:
-        from pyhees.section3_2 import calc_insulation_performance
-        U_A, r_env, eta_A_H, eta_A_C, Q_dash, mu_H, mu_C,_ = calc_insulation_performance(tatekata, **ENV)
+        raise ValueError(ENV['method'])
+
+    Q_dash = get_Q_dash(U_A, r_env)
+
+    mu_H = get_mu_H(etr_A_H, r_env)
+    mu_C = get_mu_C(etr_A_C, r_env)
 
     Q = get_Q(Q_dash)
 
@@ -1215,12 +927,11 @@ def calc_env_reference_spec(type, tatekata, region, A_A, ENV):
 # 8. 冷房設備の基準一次エネルギー消費量
 # ============================================================================
 
-def calc_E_SC(type, tatekata, region, A_A, A_MR, A_OR, ENV, mode_C, mode_H, H_MR, H_OR, TS, HEX,
+def calc_E_SC(tatekata, region, A_A, A_MR, A_OR, ENV, mode_C, C_MR_in, C_OR_in, mode_H, H_MR_in, H_OR_in, TS, HEX,
               sol_region, NV_MR, NV_OR):
     """1 年当たりの冷房設備の設計一次エネルギー消費量
 
     Args:
-        type(str): description]
         tatekata(str): 建て方
         region(int): 省エネルギー地域区分
         A_A(float): 床面積の合計 (m2)
@@ -1229,8 +940,10 @@ def calc_E_SC(type, tatekata, region, A_A, A_MR, A_OR, ENV, mode_C, mode_H, H_MR
         ENV(dict): description]
         mode_C(str): 冷房方式
         mode_H(str): 暖房方式
-        H_MR(dict): 暖房機器の仕様
-        H_OR(dict): 暖房機器の仕様
+        C_MR_in(dict): 主たる居室の冷房機器の仕様(入力値)
+        C_OR_in(dict): その他の居室の冷房機器の仕様(入力値)
+        H_MR_in(dict): 主たる居室の暖房機器の仕様(入力値)
+        H_OR_in(dict): その他の居室の暖房機器の仕様(入力値)
         TS(bool): 蓄熱の利用
         HEX(dict): 熱交換器型設備仕様辞書
         sol_region: param NV_MR:
@@ -1247,39 +960,20 @@ def calc_E_SC(type, tatekata, region, A_A, A_MR, A_OR, ENV, mode_C, mode_H, H_MR
     if ENV is None:
         return 0.0
 
-    if mode_C == '住戸全体を連続的に冷房する方式':
-        C_A = {
-            'type': 'ダクト式セントラル空調機',
-            'duct_insulation': '全てもしくは一部が断熱区画外である',
-            'VAV': False,
-            'general_ventilation': True,
-            'EquipmentSpec': '入力しない'
-        }
-        C_MR = None
-        C_OR = None
-    elif mode_C == '居室のみを冷房する方式' or mode_C == '設置しない' or mode_C is None:
-        C_A = None
-        C_MR = {
-            'type': 'ルームエアコンディショナー',
-            'e_class': 'ろ',
-            'dualcompressor': False
-        }
-        C_OR = {
-            'type': 'ルームエアコンディショナー',
-            'e_class': 'ろ',
-            'dualcompressor': False
-        }
-    else:
-        raise ValueError(mode_C)
+    if mode_C == '設置しない':
+        mode_C = '居室のみを冷房する方式'
+
+    # 冷房基準値計算用仕様の取得
+    C_A, C_MR, C_OR = sc2_3_c.get_reference_spec_C(region, mode_C, C_MR_in, C_OR_in)
 
     if mode_C is None:
         mode_C = '居室のみを冷房する方式'
 
     # 暖房基準値計算用仕様の取得
-    mode_H, H_A, H_MR, H_OR, H_HS, mode_MR, mode_OR = calc_heating_reference_spec(region, mode_H, H_MR, H_OR)
+    mode_H, H_A, H_MR, H_OR, H_HS, mode_MR, mode_OR = calc_heating_reference_spec(region, mode_H, H_MR_in, H_OR_in)
 
     # 外皮の基準値計算用仕様の取得
-    Q, eta_H, eta_C, r_env = calc_env_reference_spec(type, tatekata, region, A_A, ENV)
+    Q, eta_H, eta_C, r_env = calc_env_reference_spec(tatekata, region, A_A, ENV)
 
     # 暖房負荷の取得
     L_T_H_d_t_i, L_dash_H_R_d_t_i = calc_heating_load(
