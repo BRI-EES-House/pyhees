@@ -1200,6 +1200,10 @@ def get_Theta_col_opg_j_d_t(V_col_j_d_t, A_col_j, U_c_j, Theta_col_nonopg_j_d_t,
       ndarray: 空気搬送ファン稼働時の集熱器群jの出口における空気温度 (℃)
 
     """
+    # 集熱器群jを構成する集熱器の総合熱損失係数U_(c,j)が未定義の場合は、日付dの時刻tにおける外気温度θ_(ex,d,t)に等しいとする。
+    if np.isnan(U_c_j):
+      return Theta_ex_d_t
+
     # 空気の密度 [kg/m3]
     ro_air = 1.20
 
@@ -1247,9 +1251,14 @@ def get_U_c_j(m_fan_test_j=None, d1_j=None):
         m_fan_test_j = 0.0107
     if d1_j is None:
         d1_j = 2.0
+        
+    # 以下の式の計算結果が 1 以上の場合、集熱器群jを構成する集熱器の総合熱損失係数は定義しない。
+    term = 1 / (c_p_air * m_fan_test_j * 10 ** 3) * d1_j
+    if term >= 1:
+      return np.nan
 
     # 集熱器群jを構成する集熱器の総合熱損失係数
-    U_c_j = - c_p_air * m_fan_test_j * 10 ** 3 * np.log(1 - 1 / (c_p_air * m_fan_test_j * 10 ** 3) * d1_j)
+    U_c_j = - c_p_air * m_fan_test_j * 10 ** 3 * np.log(1 - term)
 
     return U_c_j
 

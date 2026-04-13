@@ -8,6 +8,7 @@
 from math import ceil, floor
 from typing import Tuple, TypedDict, Optional
 
+from pyhees.util import util
 from pyhees.section2_2 import calc_E_C, calc_E_H, get_spec_H, get_spec_C
 import pyhees.section2_3_a as sc2_3_a
 import pyhees.section2_3_b as sc2_3_b
@@ -245,7 +246,7 @@ def get_E_ST_gn_du_p(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
     E_star_ST_gn_du_p = get_E_star_ST_gn_du_p(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_star_ST_gn_du_p / 100) / 10
+    return util.convert_to_gj(E_star_ST_gn_du_p)
 
 
 def get_E_ST_gn_du_e(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
@@ -266,7 +267,7 @@ def get_E_ST_gn_du_e(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
     E_star_ST_gn_du_e = get_E_star_ST_gn_du_e(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_star_ST_gn_du_e / 100) / 10
+    return util.convert_to_gj(E_star_ST_gn_du_e)
 
 
 def get_E_star_ST_gn_du_p(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
@@ -324,7 +325,7 @@ def get_E_ST_indc_du_p(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
     E_star_ST_indc_du_p = get_E_star_ST_indc_du_p(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_star_ST_indc_du_p / 100) / 10
+    return util.convert_to_gj(E_star_ST_indc_du_p)
 
 
 def get_E_ST_indc_du_e(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
@@ -345,7 +346,7 @@ def get_E_ST_indc_du_e(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
     E_star_ST_indc_du_e = get_E_star_ST_indc_du_e(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_star_ST_indc_du_e / 100) / 10
+    return util.convert_to_gj(E_star_ST_indc_du_e)
 
 
 def get_E_star_ST_indc_du_p(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
@@ -404,7 +405,7 @@ def get_E_ST_rb_du_cy1(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
     E_star_ST_rb_du_cy1 = get_E_star_ST_rb_du_cy1(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_star_ST_rb_du_cy1 / 100) / 10
+    return util.convert_to_gj(E_star_ST_rb_du_cy1)
 
 
 def get_E_ST_rb_du_cy2(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
@@ -425,7 +426,7 @@ def get_E_ST_rb_du_cy2(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
     E_star_ST_rb_du_cy2 = get_E_star_ST_rb_du_cy2(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_star_ST_rb_du_cy2 / 100) / 10
+    return util.convert_to_gj(E_star_ST_rb_du_cy2)
 
 
 def get_E_star_ST_rb_du_cy1(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
@@ -486,7 +487,7 @@ def get_E_ST_lcb_du_p(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
     E_star_ST_lcb_du_p = get_E_star_ST_lcb_du_p(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_star_ST_lcb_du_p / 100) / 10
+    return util.convert_to_gj(E_star_ST_lcb_du_p)
 
 
 def get_E_ST_lcb_du_e(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
@@ -507,7 +508,7 @@ def get_E_ST_lcb_du_e(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
     E_star_ST_lcb_du_e = get_E_star_ST_lcb_du_e(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_star_ST_lcb_du_e / 100) / 10
+    return util.convert_to_gj(E_star_ST_lcb_du_e)
 
 
 def get_E_star_ST_lcb_du_p(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
@@ -568,7 +569,7 @@ def get_E_ST_enh_du(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
     E_star_ST_enh_du = get_E_star_ST_enh_du(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_star_ST_enh_du / 100) / 10
+    return util.convert_to_gj(E_star_ST_enh_du)
 
 
 def get_E_star_ST_enh_du(E_SH, E_SC, E_SV, E_SL, E_SW, E_SM):
@@ -641,7 +642,7 @@ def get_E_dash_ST_gn_du(E_SH, E_SC, E_SV, E_SL, E_SW):
     E_dash_star_ST_gn_du = get_E_dash_star_ST_gn_du(E_SH, E_SC, E_SV, E_SL, E_SW)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_dash_star_ST_gn_du / 100) / 10
+    return util.convert_to_gj(E_dash_star_ST_gn_du)
 
 
 def get_E_dash_star_ST_gn_du(E_SH, E_SC, E_SV, E_SL, E_SW):
@@ -681,7 +682,7 @@ def get_E_dash_ST_indc_du(E_SH, E_SC, E_SV, E_SL, E_SW):
     E_dash_star_ST_indc_du = get_E_dash_star_ST_indc_du(E_SH, E_SC, E_SV, E_SL, E_SW)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_dash_star_ST_indc_du / 100) / 10
+    return util.convert_to_gj(E_dash_star_ST_indc_du)
 
 
 def get_E_dash_star_ST_indc_du(E_SH, E_SC, E_SV, E_SL, E_SW):
@@ -722,7 +723,7 @@ def get_E_dash_ST_rb_du(E_SH, E_SC, E_SV, E_SL, E_SW):
     E_dash_star_ST_rb_du = get_E_dash_star_ST_rb_du(E_SH, E_SC, E_SV, E_SL, E_SW)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_dash_star_ST_rb_du / 100) / 10
+    return util.convert_to_gj(E_dash_star_ST_rb_du)
 
 
 def get_E_dash_star_ST_rb_du(E_SH, E_SC, E_SV, E_SL, E_SW):
@@ -764,7 +765,7 @@ def get_E_dash_ST_lcb_du(E_SH, E_SC, E_SV, E_SL, E_SW):
     E_dash_star_ST_lcb_du = get_E_dash_star_ST_lcb_du(E_SH, E_SC, E_SV, E_SL, E_SW)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_dash_star_ST_lcb_du / 100) / 10
+    return util.convert_to_gj(E_dash_star_ST_lcb_du)
 
 
 def get_E_dash_star_ST_lcb_du(E_SH, E_SC, E_SV, E_SL, E_SW):

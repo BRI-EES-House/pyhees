@@ -9,6 +9,7 @@ from math import ceil
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Tuple, TypedDict, Optional
 import copy
+from pyhees.util import util
 
 from pyhees.section2_1_b import get_f_prim
 from pyhees.section2_1_c import get_n_p
@@ -433,8 +434,7 @@ def get_E_T_gn_du(E_H, E_C, E_V, E_L, E_W, E_S, E_M) -> Tuple[float, float]:
     E_star_T_gn_du = get_E_star_T_gn_du(E_H, E_C, E_V, E_L, E_W, E_S, E_M)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    E_T_gn_du = ceil(E_star_T_gn_du / 100) / 10
-
+    E_T_gn_du = util.convert_to_gj(E_star_T_gn_du)
     return E_T_gn_du, E_star_T_gn_du
 
 
@@ -478,7 +478,7 @@ def get_E_T_indc_du(E_H, E_C, E_V, E_L, E_W, E_S_CG, E_M) -> float:
     E_star_T_indc_du = get_E_star_T_indc_du(E_H, E_C, E_V, E_L, E_W, E_S_CG, E_M)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_star_T_indc_du / 100) / 10
+    return util.convert_to_gj(E_star_T_indc_du)
 
 
 def get_E_star_T_indc_du(E_H, E_C, E_V, E_L, E_W, E_S_CG, E_M):
@@ -521,7 +521,7 @@ def get_E_T_rb_du(E_H, E_C, E_V, E_L, E_W, E_S, E_M) -> float:
     E_star_T_rb_du = get_E_star_T_rb_du(E_H, E_C, E_V, E_L, E_W, E_S, E_M)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_star_T_rb_du / 100) / 10
+    return util.convert_to_gj(E_star_T_rb_du)
 
 
 def get_E_star_T_rb_du(E_H, E_C, E_V, E_L, E_W, E_S, E_M):
@@ -567,7 +567,7 @@ def get_E_T_lcb_du(E_H, E_C, E_V, E_L, E_W, E_S_CG, E_M) -> float:
     E_star_T_lcb_du = get_E_star_T_lcb_du(E_H, E_C, E_V, E_L, E_W, E_S_CG, E_M)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_star_T_lcb_du / 100) / 10
+    return util.convert_to_gj(E_star_T_lcb_du)
 
 
 def get_E_star_T_lcb_du(E_H, E_C, E_V, E_L, E_W, E_S_CG, E_M):
@@ -614,7 +614,7 @@ def get_E_T_enh_du(E_H, E_C, E_V, E_L, E_W, E_S_CG, E_R, E_M) -> float:
     E_star_T_enh_du = get_E_star_T_enh_du(E_H, E_C, E_V, E_L, E_W, E_S_CG, E_R, E_M)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_star_T_enh_du / 100) / 10
+    return util.convert_to_gj(E_star_T_enh_du)
 
 
 def get_E_star_T_enh_du(E_H, E_C, E_V, E_L, E_W, E_S_CG, E_R, E_M):
@@ -678,7 +678,7 @@ def get_E_dash_T_gn_du(E_H, E_C, E_V, E_L, E_W, E_S) -> float:
     E_dash_star_T_gn_du = get_E_dash_star_T_gn_du(E_H, E_C, E_V, E_L, E_W, E_S)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_dash_star_T_gn_du / 100) / 10
+    return util.convert_to_gj(E_dash_star_T_gn_du)
 
 
 def get_E_dash_star_T_gn_du(E_H, E_C, E_V, E_L, E_W, E_S):
@@ -720,7 +720,7 @@ def get_E_dash_T_indc_du(E_H, E_C, E_V, E_L, E_W, E_S_CG) -> float:
     E_dash_star_T_indc_du = get_E_dash_star_T_indc_du(E_H, E_C, E_V, E_L, E_W, E_S_CG)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_dash_star_T_indc_du / 100) / 10
+    return util.convert_to_gj(E_dash_star_T_indc_du)
 
 
 def get_E_dash_star_T_indc_du(E_H, E_C, E_V, E_L, E_W, E_S_CG):
@@ -763,7 +763,7 @@ def get_E_dash_T_rb_du(E_H, E_C, E_V, E_L, E_W, E_S) -> float:
     E_dash_star_T_rb_du = get_E_dash_star_T_rb_du(E_H, E_C, E_V, E_L, E_W, E_S)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_dash_star_T_rb_du / 100) / 10
+    return util.convert_to_gj(E_dash_star_T_rb_du)
 
 
 def get_E_dash_star_T_rb_du(E_H, E_C, E_V, E_L, E_W, E_S):
@@ -807,7 +807,7 @@ def get_E_dash_T_lcb_du(E_H, E_C, E_V, E_L, E_W, E_S_CG) -> float:
     E_dash_star_T_lcb_du = get_E_dash_star_T_lcb_du(E_H, E_C, E_V, E_L, E_W, E_S_CG)
 
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_dash_star_T_lcb_du / 100) / 10
+    return util.convert_to_gj(E_dash_star_T_lcb_du)
 
 
 def get_E_dash_star_T_lcb_du(E_H, E_C, E_V, E_L, E_W, E_S_CG):

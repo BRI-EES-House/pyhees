@@ -35,7 +35,7 @@ def calc_E_E_hs_d_t(L_dashdash_k_d_t, L_dashdash_s_d_t, L_dashdash_w_d_t, L_dash
       ndarray: 1日当たりの給湯機の消費電力量 (kWh/d)
 
     """
-    # 各用途における太陽熱補正給湯熱負荷 (37)
+    # 各用途における太陽熱補正給湯熱負荷 (36)
     L_dashdash_k_d = get_L_dashdash_k_d(L_dashdash_k_d_t)
     L_dashdash_s_d = get_L_dashdash_s_d(L_dashdash_s_d_t)
     L_dashdash_w_d = get_L_dashdash_w_d(L_dashdash_w_d_t)
@@ -44,7 +44,7 @@ def calc_E_E_hs_d_t(L_dashdash_k_d_t, L_dashdash_s_d_t, L_dashdash_w_d_t, L_dash
     L_dashdash_ba1_d = get_L_dashdash_ba1_d(L_dashdash_ba1_d_t)
     L_dashdash_ba2_d = get_L_dashdash_ba2_d(L_dashdash_ba2_d_t)
 
-    # 太陽熱補正給湯熱負荷 (36)
+    # 太陽熱補正給湯熱負荷 (35)
     L_dashdash_d = get_L_dashdash_d(L_dashdash_k_d, L_dashdash_s_d, L_dashdash_w_d, L_dashdash_b1_d, L_dashdash_b2_d,
                                     L_dashdash_ba1_d, L_dashdash_ba2_d)
 
@@ -57,9 +57,11 @@ def calc_E_E_hs_d_t(L_dashdash_k_d_t, L_dashdash_s_d_t, L_dashdash_w_d_t, L_dash
     theta_star_ex_frst_upper = get_theta_star_ex_frst_upper()  # 着霜領域(上限)条件
     theta_star_ex_frst_imd = get_theta_star_ex_frst_imd()  # 着霜領域(中間)条件
 
-    # e_rtdがNoneの場合は、e_APFからe_rtdへ換算 (35)
+    # e_rtdがNoneの場合は、規定値を用いる
     if e_rtd is None:
-        e_rtd = get_e_rtd()
+        e_rtd = get_e_rtd_default()
+    else:
+        e_rtd = get_e_rtd(e_rtd)
 
     # CO2HPがNoneの場合は、表7より給湯機の仕様の決定
     if CO2HP is None:
@@ -195,7 +197,7 @@ def calc_E_E_hs_d_t(L_dashdash_k_d_t, L_dashdash_s_d_t, L_dashdash_w_d_t, L_dash
     E_E_HP_cm2_hrs_bw_d_t_dic = {}
 
     for hrs_bw in hrs_bw_tbl:
-        # 日付dの沸き上げ熱量に応じる運転における沸き上げ時間帯の区分hrs_bwに対する平均外気温度（℃） (38)
+        # 日付dの沸き上げ熱量に応じる運転における沸き上げ時間帯の区分hrs_bwに対する平均外気温度（℃） (37)
         theta_ex_ave_hrs_bw_d = get_theta_ex_ave_hrs_bw_d(hrs_bw, theta_ex_d_t)
 
         # 沸き上げ時間帯の区分hrs_bwに対する沸き上げ時間帯の制御
@@ -1765,20 +1767,6 @@ def get_table_7_b():
     return table_7_b
 
 
-def get_e_rtd():
-    """e_APFからe_rtdへの換算
-
-    Args:
-
-    Returns:
-      float: 当該給湯器の効率
-
-    """
-    # 効率の決定
-    e_rtd = get_e_rtd_default()
-
-    return e_rtd
-
 
 def get_e_rtd_default():
     """規定の当該給湯機の効率
@@ -1791,29 +1779,18 @@ def get_e_rtd_default():
     """
     return 2.7
 
-# 式(35-1)(35-2)はインタフェイスのヘルプに式が記載されていて、
-# ユーザー自身が換算を行いe_rtdを入力するため、pyheesでこの関数の呼び出しはしない
-def get_e_rtd_from_e_APF(e_APF, bath_function):
-    """e_APFからe_rtdへの換算
+def get_e_rtd(e_rtd):
+    """3.6を超える場合、3.6にする。2.7を下回る場合、2.7にする。
 
-    Args:
-      e_APF(float): 日本冷凍空調工業 会標準規格 JRA4050:2007R に基づく年間給湯効率（APF）
-      bath_function(str): ふろ機能の種類
 
     Returns:
       float: 当該給湯器の効率
 
     """
-    # e_APFからe_rtdへの変換
-    if bath_function == 'ふろ給湯機(追焚あり)':
-        e_rtd = e_APF - 0.7  # (35-1)
-    elif bath_function == '給湯単機能' or bath_function == 'ふろ給湯機(追焚なし)':
-        e_rtd = e_APF - 0.5  # (35-2)
-    else:
-        raise NotImplementedError()
-
-    # 換算値が3.6を超える場合は3.6に等しいとする
+    # 3.6を超える場合は3.6に等しいとする
     e_rtd = min(3.6, e_rtd)
+    # 2.7を下回る場合は2.7に等しいとする
+    e_rtd = max(2.7, e_rtd)
 
     return e_rtd
 
@@ -1995,7 +1972,7 @@ def get_theta_start_ex_table():
 
 def get_L_dashdash_d(L_dashdash_k_d, L_dashdash_s_d, L_dashdash_w_d, L_dashdash_b1_d, L_dashdash_b2_d, L_dashdash_ba1_d,
                      L_dashdash_ba2_d):
-    """1日当たりの太陽熱補正給湯熱負荷 (36)
+    """1日当たりの太陽熱補正給湯熱負荷 (35)
 
     Args:
       L_dashdash_k_d(ndarray): 1日当たりの台所水栓における太陽熱補正給湯熱負荷 (MJ/d)
@@ -2115,7 +2092,7 @@ def get_L_dashdash_ba2_d(L_dashdash_ba2_d_t):
 # ============================================================================
 
 def get_theta_ex_ave_hrs_bw_d(hrs_bw, theta_ex_d_t):
-    """日付dの沸き上げ熱量に応じる運転における沸き上げ時間帯の区分hrs_bwに対する平均外気温度（℃） (38)
+    """日付dの沸き上げ熱量に応じる運転における沸き上げ時間帯の区分hrs_bwに対する平均外気温度（℃） (37)
 
     Args:
         hrs_bw (str): 沸き上げ時間帯の区分
@@ -2131,11 +2108,11 @@ def get_theta_ex_ave_hrs_bw_d(hrs_bw, theta_ex_d_t):
     # 日付d-1の時刻tにおける外気温度 (℃)
     tmp_d_1_t = np.roll(tmp_d_t, 1, axis=0)
 
-    # 沸き上げ時間帯の区分が夜間の場合、前日の23時から当日の7時までの外気温度の平均とする。 (38-1)
+    # 沸き上げ時間帯の区分が夜間の場合、前日の23時から当日の7時までの外気温度の平均とする。 (37-1)
     if hrs_bw == 'night':
         return (tmp_d_1_t[:, 23] + np.sum(tmp_d_t[:, 0:7], axis=1)) / 8
 
-    # 沸き上げ時間帯の区分が昼間の場合、当日の9時から16時までの外気温度の平均とする。 (38-2)
+    # 沸き上げ時間帯の区分が昼間の場合、当日の9時から16時までの外気温度の平均とする。 (37-2)
     elif hrs_bw == 'day':
         return np.sum(tmp_d_t[:, 9:16], axis=1) / 7
 

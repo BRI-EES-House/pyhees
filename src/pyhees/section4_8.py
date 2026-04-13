@@ -594,11 +594,11 @@ def get_E_aux_hs_d_t(q_out_H_hs_d_t, Q_dmd_H_hs_RAC_d_t):
 
     # Q_dmd_H_hs_RAC_d_t = 0 の場合
     f1 = Q_dmd_H_hs_RAC_d_t == 0
-    E_aux_hs_d_t[f1] = 0.034 * q_out_H_hs_d_t[f1] + 0.123
+    E_aux_hs_d_t[f1] = 0.0037 * q_out_H_hs_d_t[f1] + 0.0801
 
     # Q_dmd_H_hs_RAC_d_t > 0 の場合
     f2 = Q_dmd_H_hs_RAC_d_t > 0
-    E_aux_hs_d_t[f2] = 0.020 * q_out_H_hs_d_t[f2] + 0.132
+    E_aux_hs_d_t[f2] = 0.0139 * q_out_H_hs_d_t[f2] + 0.0805
 
     return E_aux_hs_d_t
 

@@ -7,6 +7,7 @@
 from math import ceil
 from typing import TypedDict
 from pyhees.section2_4 import division
+from pyhees.util import util
 
 
 class RenovationPartResult(TypedDict):
@@ -81,7 +82,7 @@ def get_BEI_gn_rdu(E_dash_T_gn_rdu, E_dash_ST_gn_rdu):
     BEI_gn_rdu_raw = division(E_dash_T_gn_rdu, E_dash_ST_gn_rdu, digit=1)
 
     # 小数点以下二位未満の端数を切り上げ
-    return ceil(BEI_gn_rdu_raw * 100) / 100
+    return util.ceil(BEI_gn_rdu_raw, 2)
 
 
 # ============================================================================
@@ -92,7 +93,7 @@ def get_BEI_gn_rdu(E_dash_T_gn_rdu, E_dash_ST_gn_rdu):
 def get_E_dash_T_gn_rdu(E_dash_star_T_gn_rdu):
     """式(9) 建築物エネルギー消費性能基準（気候風土適応住宅を除く）における設計一次エネルギー消費量（その他の設計一次エネルギー消費量を除く） (GJ/年)"""
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_dash_star_T_gn_rdu / 100) / 10
+    return util.convert_to_gj(E_dash_star_T_gn_rdu)
 
 
 def get_E_dash_star_T_gn_rdu(E_H, E_C, E_V, E_L, E_W, E_S):
@@ -108,7 +109,7 @@ def get_E_dash_star_T_gn_rdu(E_H, E_C, E_V, E_L, E_W, E_S):
 def get_E_dash_ST_gn_rdu(E_dash_star_ST_gn_rdu):
     """式(17) 建築物エネルギー消費性能基準（気候風土適応住宅を除く）における基準一次エネルギー消費量（その他の設計一次エネルギー消費量を除く） (GJ/年)"""
     # MJ -> GJ に変換 & 小数点以下一位未満の端数を切り上げ
-    return ceil(E_dash_star_ST_gn_rdu / 100) / 10
+    return util.convert_to_gj(E_dash_star_ST_gn_rdu)
 
 
 def get_E_dash_star_ST_gn_rdu(E_SH, E_SC, E_SV, E_SL, E_SW):

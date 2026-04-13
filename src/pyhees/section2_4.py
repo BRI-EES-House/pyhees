@@ -11,6 +11,7 @@
 
 from math import ceil
 from typing import TypedDict, Optional
+from pyhees.util import util
 
 
 class BEI(TypedDict):
@@ -83,7 +84,7 @@ def get_BEI_gn_du(E_dash_T_gn_du, E_dash_ST_gn_du):
     BEI_gn_du_raw = division(E_dash_T_gn_du, E_dash_ST_gn_du, digit=1)
 
     # 小数点以下二位未満の端数を切り上げ
-    return ceil(BEI_gn_du_raw * 100) / 100
+    return util.ceil(BEI_gn_du_raw, 2)
 
 # ============================================================================
 # 5.4 建築物エネルギー消費性能誘導基準における誘導BEI
@@ -105,7 +106,7 @@ def get_BEI_indc_du(E_dash_T_indc_du, E_dash_ST_indc_du):
     BEI_indc_du_raw = division(E_dash_T_indc_du, E_dash_ST_indc_du, digit=1)
 
     # 小数点以下二位未満の端数を切り上げ
-    return ceil(BEI_indc_du_raw * 100) / 100
+    return util.ceil(BEI_indc_du_raw, 2)
 
 
 # ============================================================================
@@ -128,7 +129,7 @@ def get_BEI_rb_du(E_dash_T_rb_du, E_dash_ST_rb_du):
     BEI_rb_du_raw = division(E_dash_T_rb_du, E_dash_ST_rb_du, digit=1)
 
     # 小数点以下二位未満の端数を切り上げ
-    return ceil(BEI_rb_du_raw * 100) / 100
+    return util.ceil(BEI_rb_du_raw, 2)
 
 
 # ============================================================================
@@ -153,7 +154,7 @@ def get_BEI_lcb_du(E_dash_T_lcb_du, E_dash_ST_lcb_du):
     BEI_lcb_du_raw = division(E_dash_T_lcb_du, E_dash_ST_lcb_du, digit=1)
 
     # 小数点以下二位未満の端数を切り上げ
-    return ceil(BEI_lcb_du_raw * 100) / 100
+    return util.ceil(BEI_lcb_du_raw, 2)
 
 
 # =============================================================================
