@@ -32,7 +32,7 @@ def load_solrad(region, sol_region):
     """
     posnum = get_position_num(region, sol_region)
     csvpath =  os.path.join(os.path.dirname(__file__), 'data', 'solar', '%s.csv' % posnum)
-    df = pd.read_csv(csvpath, skiprows=2, nrows=24 * 365,
+    df = pd.read_csv(csvpath, skiprows=2, nrows=24 * 365, usecols=[0, 1, 2, 3, 4],
                        names=('T_ex', 'I_DN', 'I_Sky', 'h', 'A'), encoding="cp932")
     # 「法線面直達日射量」と「水平面天空日射量」を（MJ/hm2）から（W/m2）に変換
     df['I_DN'] = df['I_DN'].values / 3.6 * 1000

@@ -123,7 +123,7 @@ def calc_E_E_hs_d_t(L_dashdash_k_d_t, L_dashdash_s_d_t, L_dashdash_w_d_t, L_dash
                           theta_star_ex_frst_upper, theta_ex_d_t, theta_hat_bw_sum_cm2, theta_hat_bw_imd_cm2,
                           theta_hat_bw_win_cm2, theta_hat_bw_frst_cm2, theta_hat_bw_win_cd_cm2)
 
-    # 試験時の等価貯湯温度 (29)
+    # 試験時の冬期給湯保温モード条件における等価貯湯温度 (29)
     theta_tnk_eq_test = get_theta_tnk_eq_test(Q_loss_test, R_tnk_test, theta_star_ex_win)
 
     # 冬期条件、着霜期条件および着霜領域（上限）における等価貯湯温度 (28)
@@ -750,7 +750,7 @@ def get_P_HP_cm_hrs_bw_d(q_HP_sum_std_test, q_HP_win_std_test, A_p, B_p, theta_h
     Args:
       q_HP_sum_std_test(float): 試験時の夏期標準加熱条件におけるヒートポンプの加熱能力(kW)
       q_HP_win_std_test(float): 試験時の冬期標準加熱条件におけるヒートポンプの加熱能力(kW)
-      A_p(float): ヒートポンプの消費電力を求める回帰式の傾き(kW/℃)
+      A_p(float): ヒートポンプの消費電力を求める回帰式の傾き(kW/K)
       B_p(float): ヒートポンプの消費電力を求める回帰式の切片(kW)
       theta_hat_bw_cm_d(float): 日付dの沸き上げ熱量に応じる運転における制御モードcmのM1スタンダードモード沸き上げ温度(℃)
       theta_ex_ave_hrs_bw_d(float): 日付dの沸き上げ熱量に応じる運転における沸き上げ時間帯の区分hrs_bwに対する平均外気温度(℃)
@@ -1154,7 +1154,7 @@ def get_Q_dot_HP_cm_d(L_dashdash_d, Q_dot_loss_cm_d):
 
 
 # ============================================================================
-# 9.2 貯湯損失熱量
+# 9.2 貯湯熱損失量
 # ============================================================================
 
 def get_Q_dot_loss_cm_d(theta_tnk_eq_cm_d, theta_ex_d_Ave_d, R_tnk_test):
@@ -1231,7 +1231,7 @@ def get_theta_tnk_eq(theta_tnk_eq_test):
     """冬期条件、着霜期条件および着霜領域（上限）における等価貯湯温度(28)
 
     Args:
-      theta_tnk_eq_test(float): 試験時の等価貯湯温度
+      theta_tnk_eq_test(float): 試験時の冬期給湯保温モード条件における等価貯湯温度
 
     Returns:
       tuple: 冬期条件、着霜期条件および着霜領域（上限）における等価貯湯温度
@@ -1250,15 +1250,15 @@ def get_theta_tnk_eq(theta_tnk_eq_test):
 
 
 def get_theta_tnk_eq_test(Q_loss_test, R_tnk_test, theta_star_ex_win):
-    """試験時の等価貯湯温度(℃)(29)
+    """試験時の冬期給湯保温モード条件における等価貯湯温度(℃)(29)
 
     Args:
-      Q_loss_test(float): 試験時の貯湯熱損失量
+      Q_loss_test(float): 試験時の冬期給湯保温モード条件における貯湯熱損失量
       R_tnk_test(float): 貯湯タンク総括熱抵抗
       theta_star_ex_win(float): 冬期条件の外気温度
 
     Returns:
-      float: 試験時の等価貯湯温度
+      float: 試験時の冬期給湯保温モード条件における等価貯湯温度
 
     """
     return Q_loss_test * (10 ** 6 / (3600 * 24)) * R_tnk_test + theta_star_ex_win
@@ -1833,7 +1833,7 @@ def get_daytime_heating_control(daytime_heating, R_E_day_in, daytime_heating_con
       str: 昼間沸き上げ時間帯の制御
 
     """
-    # 昼間沸上げを評価する場合、昼間沸上げ時間帯の制御は「エネルギー消費性能計算プログラムにおける昼間沸上げ形家庭用ヒートポンプ給湯機の運用管理要綱」に基づき判定された仕様とする。
+    # 昼間沸上げを評価する場合、昼間沸上げ時間帯の制御は「エネルギー消費性能計算プログラムにおける昼間沸上げ形家庭用ヒートポンプ給湯機の運用管理要綱」またはJRA 4090に基づき判定された仕様とする。
     # ただし、以下の①、②、もしくは①②の両方に該当する場合は、昼間沸き上げ時間帯の制御は「終了時刻制御」とする。
     #   ①昼間消費電力量比率についてJRA4085に規定する方法により得られる値が不明である場合
     #   ②昼間沸上げ時間帯の制御が終了時刻制御、開始時刻制御および中心時刻制御のいずれにも該当しないか不明である場合

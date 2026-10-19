@@ -1,6 +1,5 @@
 from pyhees.section3_2_b import get_H
 from pyhees.section3_2_c import get_nu_H, get_nu_C
-from pyhees.section3_4_b_2 import get_glass_spec_category
 from pyhees.section3_4 import common, window, door, heatbridge, earthfloor
 from pyhees.section3_3_5 import *
 from pyhees.section3_3_6 import *

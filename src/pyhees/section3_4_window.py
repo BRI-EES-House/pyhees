@@ -5,18 +5,18 @@ import pyhees.section3_4_b_1 as f
 import pyhees.section3_4_c as eater_d
 
 
-def get_eta_H_i(f_H_i, etr_d_i):
+def get_eta_H_i(f_H_i, etr_d_H_i):
     """開口部の暖房期の日射熱取得率 (-) …………式(3)
 
     Args:
       f_H_i(float): 開口部の暖房期の取得日射熱補正係数 (-)
-      etr_d_i(float): 開口部の垂直面日射熱出得率((W/m2)/(W/m2))
+      etr_d_H_i(float): 開口部の暖房期の垂直面日射熱取得率((W/m2)/(W/m2))
 
     Returns:
       float: 開口部の暖房期の日射熱取得率((W/m2)/(W/m2))
 
     """
-    return f_H_i * etr_d_i
+    return f_H_i * etr_d_H_i
 
 
 def calc_eta_H_i_byDict(Region, Direction, window_part):
@@ -49,7 +49,8 @@ def calc_eta_H_i_byDict(Region, Direction, window_part):
             y1 = window_part.get('WindowTopToEaveHeight')
             y2 = window_part.get('WindowHeight')
             z  = window_part.get('EaveDepth')
-            f_H_i = f.simple.get_f_H_i(Region, Direction, has_over_hang, y1, y2, z)
+            y_dash_2 = window_part.get('WindowBottomToEaveHeight')
+            f_H_i = f.simple.get_f_H_i(Region, Direction, has_over_hang, y1, y2, z, y_dash_2)
         # ハ)地域の区分、方位及び日よけの形状に応じて算出した日よけ効果係数と斜入射特性を用いる方法
         elif window_part['FcMethod'] == 'Accurate':
             f_ang_H = f.detail.get_table_b_1(Region, window_part['GlassSpecForCategory'], 'H', Direction)
@@ -72,102 +73,103 @@ def calc_eta_H_i_byDict(Region, Direction, window_part):
 
     # 垂直面日射熱取得率
     # 付属部材のデフォルト処理
-    if 'AttachmentForEaterValue' not in window_part:
-        attachment = 'No'
+    if 'AttachmentForEaterValueHeating' not in window_part:
+        attachment_H = 'No'
     else:
-        attachment = window_part['AttachmentForEaterValue']
+        attachment_H = window_part['AttachmentForEaterValueHeating']
 
     # 二重窓
     if window_part['IsSetWindow'] == 'Yes':
-        if 'SolarHeatGainCoefficient' in window_part:
-            etr_g1_i = window_part['SolarHeatGainCoefficient']
+        if 'SolarHeatGainCoefficientHeating' in window_part:
+            etr_gH1_i = window_part['SolarHeatGainCoefficientHeating']
         else:
             # 付属部材
-            # 和障子の場合は室内側の窓の垂直面日射熱取得率に含める
-            if attachment == 'Shoji':
-                etr_g1_i = calc_etr_g_byKey(window_part['GlassType'], 'No')
-            # 外付けブラインドの場合は外気側の窓の垂直面日射熱取得率に含める
-            elif attachment == 'ExteriorBlind':
-                etr_g1_i = calc_etr_g_byKey(window_part['GlassType'], 'ExteriorBlind')
+            # 和障子または内付け遮蔽部材の場合は、外窓には影響させない
+            if attachment_H in ['Shoji', 'InteriorShade']:
+                etr_gH1_i = calc_etr_g_byKey(window_part['GlassType'], 'No')
+            # 外付け日射遮蔽部材の場合は、外窓に含める
+            elif attachment_H == 'ExteriorShade':
+                etr_gH1_i = calc_etr_g_byKey(window_part['GlassType'], 'ExteriorShade')
             else:
-                etr_g1_i = calc_etr_g_byKey(window_part['GlassType'], 'No')
+                etr_gH1_i = calc_etr_g_byKey(window_part['GlassType'], 'No')
 
-        if 'SolarHeatGainCoefficientForInnerWindow' in window_part:
-            etr_g2_i = window_part['SolarHeatGainCoefficientForInnerWindow']
+        if 'SolarHeatGainCoefficientHeatingForInnerWindow' in window_part:
+            etr_gH2_i = window_part['SolarHeatGainCoefficientHeatingForInnerWindow']
         else:
             # 付属部材
-            # 和障子の場合は室内側の窓の垂直面日射熱取得率に含める
-            if attachment == 'Shoji':
-                etr_g2_i = calc_etr_g_byKey(window_part['GlassTypeForInnerWindow'], 'Shoji')
-            # 外付けブラインドの場合は外気側の窓の垂直面日射熱取得率に含める
-            elif attachment == 'ExteriorBlind':
-                etr_g2_i = calc_etr_g_byKey(window_part['GlassTypeForInnerWindow'], 'No')
+            # 和障子または内付け遮蔽部材の場合は、内窓に含めて計算する
+            if attachment_H == 'Shoji':
+                etr_gH2_i = calc_etr_g_byKey(window_part['GlassTypeForInnerWindow'], 'Shoji')
+            elif attachment_H == 'InteriorShade':
+                etr_gH2_i = calc_etr_g_byKey(window_part['GlassTypeForInnerWindow'], 'InteriorShade')
+            elif attachment_H == 'ExteriorShade':
+                etr_gH2_i = calc_etr_g_byKey(window_part['GlassTypeForInnerWindow'], 'No')
             else:
-                etr_g2_i = calc_etr_g_byKey(window_part['GlassTypeForInnerWindow'], 'No')
+                etr_gH2_i = calc_etr_g_byKey(window_part['GlassTypeForInnerWindow'], 'No')
 
         # 枠の影響を考慮しない場合
         if window_part['FrameRef'] == 'No':
-            etr_d1_i = eater_d.get_etr_d_i(etr_g1_i, '影響がない')
-            etr_d2_i = eater_d.get_etr_d_i(etr_g2_i, '影響がない')
+            etr_dH1_i = eater_d.get_etr_d_i(etr_gH1_i, '影響がない')
+            etr_dH2_i = eater_d.get_etr_d_i(etr_gH2_i, '影響がない')
         # 枠の影響を考慮する場合
         else:
             # 外窓
             # 木製建具又は樹脂製建具
             if window_part['SashSpec'] == 'WoodenOrResin':
-                etr_d1_i = eater_d.get_etr_d_i(etr_g1_i, '木製建具又は樹脂製建具')
+                etr_dH1_i = eater_d.get_etr_d_i(etr_gH1_i, '木製建具又は樹脂製建具')
             # 木と金属の複合材料製建具、樹脂と金属の複合材料製建具、金属製熱遮断構造建具又は金属製建具
             else:
-                etr_d1_i = eater_d.get_etr_d_i(etr_g1_i, '木と金属の複合材料製建具、樹脂と金属の複合材料製建具、金属製熱遮断構造建具又は金属製建具')
+                etr_dH1_i = eater_d.get_etr_d_i(etr_gH1_i, '木と金属の複合材料製建具、樹脂と金属の複合材料製建具、金属製熱遮断構造建具又は金属製建具')
             
             # 内窓
             # 木製建具又は樹脂製建具
             if window_part['SashSpecForInnerWindow'] == 'WoodenOrResin':
-                etr_d2_i = eater_d.get_etr_d_i(etr_g2_i, '木製建具又は樹脂製建具')
+                etr_dH2_i = eater_d.get_etr_d_i(etr_gH2_i, '木製建具又は樹脂製建具')
             # 木と金属の複合材料製建具、樹脂と金属の複合材料製建具、金属製熱遮断構造建具又は金属製建具
             else:
-                etr_d2_i = eater_d.get_etr_d_i(etr_g2_i, '木と金属の複合材料製建具、樹脂と金属の複合材料製建具、金属製熱遮断構造建具又は金属製建具')
+                etr_dH2_i = eater_d.get_etr_d_i(etr_gH2_i, '木と金属の複合材料製建具、樹脂と金属の複合材料製建具、金属製熱遮断構造建具又は金属製建具')
 
         if window_part['SashSpec'] == 'WoodenOrResin' and window_part['SashSpecForInnerWindow'] == 'WoodenOrResin':
             r_f = get_r_f('室内側の窓及び外気側の窓の両方の枠が木製建具又は樹脂製建具')
         else:
             r_f = get_r_f('それ以外')
         
-        etr_d_i = get_eta_d_i(etr_d1_i, etr_d2_i, r_f)
+        etr_d_H_i = get_eta_d_H_i(etr_dH1_i, etr_dH2_i, r_f)
 
     # 二重窓でない
     else:
-        if 'SolarHeatGainCoefficient' in window_part:
-            etr_g_i = window_part['SolarHeatGainCoefficient']
+        if 'SolarHeatGainCoefficientHeating' in window_part:
+            etr_gH_i = window_part['SolarHeatGainCoefficientHeating']
         else:
-            etr_g_i = calc_etr_g_byKey(window_part['GlassType'], attachment)
+            etr_gH_i = calc_etr_g_byKey(window_part['GlassType'], attachment_H)
         # 枠の影響を考慮しない場合
         if window_part['FrameRef'] == 'No':
-            etr_d_i = eater_d.get_etr_d_i(etr_g_i, '影響がない')
+            etr_d_H_i = eater_d.get_etr_d_i(etr_gH_i, '影響がない')
         # 枠の影響を考慮する場合
         else:
             # 木製建具又は樹脂製建具
             if window_part['SashSpec'] == 'WoodenOrResin':
-                etr_d_i = eater_d.get_etr_d_i(etr_g_i, '木製建具又は樹脂製建具')
+                etr_d_H_i = eater_d.get_etr_d_i(etr_gH_i, '木製建具又は樹脂製建具')
             # 木と金属の複合材料製建具、樹脂と金属の複合材料製建具、金属製熱遮断構造建具又は金属製建具
             else:
-                etr_d_i = eater_d.get_etr_d_i(etr_g_i, '木と金属の複合材料製建具、樹脂と金属の複合材料製建具、金属製熱遮断構造建具又は金属製建具')
+                etr_d_H_i = eater_d.get_etr_d_i(etr_gH_i, '木と金属の複合材料製建具、樹脂と金属の複合材料製建具、金属製熱遮断構造建具又は金属製建具')
     
-    return get_eta_H_i(f_H_i, etr_d_i)
+    return get_eta_H_i(f_H_i, etr_d_H_i)
 
 
 
-def get_eta_C_i(f_C_i, etr_d_i):
+def get_eta_C_i(f_C_i, etr_d_C_i):
     """開口部の冷房期の日射熱取得率 (-)…………式(4)
 
     Args:
       f_C_i(float): 開口部の冷房期の取得日射熱補正係数 (-)
-      etr_d_i(float): 開口部の垂直面日射熱出得率 ((W/m2)/(W/m2))
+      etr_d_C_i(float): 開口部の冷房期の垂直面日射熱取得率 ((W/m2)/(W/m2))
 
     Returns:
       開口部の冷房期の日射熱取得率((W/m2)/(W/m2))
 
     """
-    return f_C_i * etr_d_i
+    return f_C_i * etr_d_C_i
 
 
 def calc_eta_C_i_byDict(Region, Direction, window_part):
@@ -199,7 +201,8 @@ def calc_eta_C_i_byDict(Region, Direction, window_part):
             y1 = window_part.get('WindowTopToEaveHeight')
             y2 = window_part.get('WindowHeight')
             z  = window_part.get('EaveDepth')
-            f_C_i = f.simple.get_f_C_i(Region, Direction, has_over_hang, y1, y2, z)
+            y_dash_2 = window_part.get('WindowBottomToEaveHeight')
+            f_C_i = f.simple.get_f_C_i(Region, Direction, has_over_hang, y1, y2, z, y_dash_2)
         # ハ)地域の区分、方位及び日よけの形状に応じて算出した日よけ効果係数と斜入射特性を用いる方法
         elif window_part['FcMethod'] == 'Accurate':
             f_ang_C = f.detail.get_table_b_1(Region, window_part['GlassSpecForCategory'], 'C', Direction)
@@ -220,105 +223,121 @@ def calc_eta_C_i_byDict(Region, Direction, window_part):
 
     # 垂直面日射熱取得率
     # 付属部材のデフォルト処理
-    if 'AttachmentForEaterValue' not in window_part:
-        attachment = 'No'
+    if 'AttachmentForEaterValueCooling' not in window_part:
+        attachment_C = 'No'
     else:
-        attachment = window_part['AttachmentForEaterValue']
+        attachment_C = window_part['AttachmentForEaterValueCooling']
 
     # 二重窓
     if window_part['IsSetWindow'] == 'Yes':
-        if 'SolarHeatGainCoefficient' in window_part:
-            etr_g1_i = window_part['SolarHeatGainCoefficient']
+        if 'SolarHeatGainCoefficientCooling' in window_part:
+            etr_gC1_i = window_part['SolarHeatGainCoefficientCooling']
         else:
             # 付属部材
-            # 和障子の場合は室内側の窓の垂直面日射熱取得率に含める
-            if attachment == 'Shoji':
-                etr_g1_i = calc_etr_g_byKey(window_part['GlassType'], 'No')
-            # 外付けブラインドの場合は外気側の窓の垂直面日射熱取得率に含める
-            elif attachment == 'ExteriorBlind':
-                etr_g1_i = calc_etr_g_byKey(window_part['GlassType'], 'ExteriorBlind')
+            # 和障子または内付け遮蔽部材の場合は、外窓には影響させない
+            if attachment_C in ['Shoji', 'InteriorShade']:
+                etr_gC1_i = calc_etr_g_byKey(window_part['GlassType'], 'No')
+            # 外付け日射遮蔽部材の場合は、外窓に含める
+            elif attachment_C == 'ExteriorShade':
+                etr_gC1_i = calc_etr_g_byKey(window_part['GlassType'], 'ExteriorShade')
             else:
-                etr_g1_i = calc_etr_g_byKey(window_part['GlassType'], 'No')
+                etr_gC1_i = calc_etr_g_byKey(window_part['GlassType'], 'No')
 
-        if 'SolarHeatGainCoefficientForInnerWindow' in window_part:
-            etr_g2_i = window_part['SolarHeatGainCoefficientForInnerWindow']
+        if 'SolarHeatGainCoefficientCoolingForInnerWindow' in window_part:
+            etr_gC2_i = window_part['SolarHeatGainCoefficientCoolingForInnerWindow']
         else:
             # 付属部材
-            # 和障子の場合は室内側の窓の垂直面日射熱取得率に含める
-            if attachment == 'Shoji':
-                etr_g2_i = calc_etr_g_byKey(window_part['GlassTypeForInnerWindow'], 'Shoji')
-            # 外付けブラインドの場合は外気側の窓の垂直面日射熱取得率に含める
-            elif attachment == 'ExteriorBlind':
-                etr_g2_i = calc_etr_g_byKey(window_part['GlassTypeForInnerWindow'], 'No')
+            # 和障子または内付け遮蔽部材の場合は、内窓に含めて計算する
+            if attachment_C == 'Shoji':
+                etr_gC2_i = calc_etr_g_byKey(window_part['GlassTypeForInnerWindow'], 'Shoji')
+            elif attachment_C == 'InteriorShade':
+                etr_gC2_i = calc_etr_g_byKey(window_part['GlassTypeForInnerWindow'], 'InteriorShade')
+            elif attachment_C == 'ExteriorShade':
+                etr_gC2_i = calc_etr_g_byKey(window_part['GlassTypeForInnerWindow'], 'No')
             else:
-                etr_g2_i = calc_etr_g_byKey(window_part['GlassTypeForInnerWindow'], 'No')
+                etr_gC2_i = calc_etr_g_byKey(window_part['GlassTypeForInnerWindow'], 'No')
 
 
         # 枠の影響を考慮しない場合
         if window_part['FrameRef'] == 'No':
-            etr_d1_i = eater_d.get_etr_d_i(etr_g1_i, '影響がない')
-            etr_d2_i = eater_d.get_etr_d_i(etr_g2_i, '影響がない')
+            etr_dC1_i = eater_d.get_etr_d_i(etr_gC1_i, '影響がない')
+            etr_dC2_i = eater_d.get_etr_d_i(etr_gC2_i, '影響がない')
         # 枠の影響を考慮する場合
         else:
             # 外窓
             # 木製建具又は樹脂製建具
             if window_part['SashSpec'] == 'WoodenOrResin':
-                etr_d1_i = eater_d.get_etr_d_i(etr_g1_i, '木製建具又は樹脂製建具')
+                etr_dC1_i = eater_d.get_etr_d_i(etr_gC1_i, '木製建具又は樹脂製建具')
             # 木と金属の複合材料製建具、樹脂と金属の複合材料製建具、金属製熱遮断構造建具又は金属製建具
             else:
-                etr_d1_i = eater_d.get_etr_d_i(etr_g1_i, '木と金属の複合材料製建具、樹脂と金属の複合材料製建具、金属製熱遮断構造建具又は金属製建具')
+                etr_dC1_i = eater_d.get_etr_d_i(etr_gC1_i, '木と金属の複合材料製建具、樹脂と金属の複合材料製建具、金属製熱遮断構造建具又は金属製建具')
             
             # 内窓
             # 木製建具又は樹脂製建具
             if window_part['SashSpecForInnerWindow'] == 'WoodenOrResin':
-                etr_d2_i = eater_d.get_etr_d_i(etr_g2_i, '木製建具又は樹脂製建具')
+                etr_dC2_i = eater_d.get_etr_d_i(etr_gC2_i, '木製建具又は樹脂製建具')
             # 木と金属の複合材料製建具、樹脂と金属の複合材料製建具、金属製熱遮断構造建具又は金属製建具
             else:
-                etr_d2_i = eater_d.get_etr_d_i(etr_g2_i, '木と金属の複合材料製建具、樹脂と金属の複合材料製建具、金属製熱遮断構造建具又は金属製建具')
+                etr_dC2_i = eater_d.get_etr_d_i(etr_gC2_i, '木と金属の複合材料製建具、樹脂と金属の複合材料製建具、金属製熱遮断構造建具又は金属製建具')
 
         if window_part['SashSpec'] == 'WoodenOrResin' and window_part['SashSpecForInnerWindow'] == 'WoodenOrResin':
             r_f = get_r_f('室内側の窓及び外気側の窓の両方の枠が木製建具又は樹脂製建具')
         else:
             r_f = get_r_f('それ以外')
         
-        etr_d_i = get_eta_d_i(etr_d1_i, etr_d2_i, r_f)
+        etr_d_C_i = get_eta_d_C_i(etr_dC1_i, etr_dC2_i, r_f)
 
     # 二重窓でない
     else:
-        if 'SolarHeatGainCoefficient' in window_part:
-            etr_g_i = window_part['SolarHeatGainCoefficient']
+        if 'SolarHeatGainCoefficientCooling' in window_part:
+            etr_gC_i = window_part['SolarHeatGainCoefficientCooling']
         else:
-            etr_g_i = calc_etr_g_byKey(window_part['GlassType'], attachment)
+            etr_gC_i = calc_etr_g_byKey(window_part['GlassType'], attachment_C)
         # 枠の影響を考慮しない場合
         if window_part['FrameRef'] == 'No':
-            etr_d_i = eater_d.get_etr_d_i(etr_g_i, '影響がない')
+            etr_d_C_i = eater_d.get_etr_d_i(etr_gC_i, '影響がない')
         # 枠の影響を考慮する場合
         else:
             # 木製建具又は樹脂製建具
             if window_part['SashSpec'] == 'WoodenOrResin':
-                etr_d_i = eater_d.get_etr_d_i(etr_g_i, '木製建具又は樹脂製建具')
+                etr_d_C_i = eater_d.get_etr_d_i(etr_gC_i, '木製建具又は樹脂製建具')
             # 木と金属の複合材料製建具、樹脂と金属の複合材料製建具、金属製熱遮断構造建具又は金属製建具
             else:
-                etr_d_i = eater_d.get_etr_d_i(etr_g_i, '木と金属の複合材料製建具、樹脂と金属の複合材料製建具、金属製熱遮断構造建具又は金属製建具')
+                etr_d_C_i = eater_d.get_etr_d_i(etr_gC_i, '木と金属の複合材料製建具、樹脂と金属の複合材料製建具、金属製熱遮断構造建具又は金属製建具')
     
-    return get_eta_C_i(f_C_i, etr_d_i)
+    return get_eta_C_i(f_C_i, etr_d_C_i)
 
 
 # 6.2 垂直面日射熱取得率
 
-def get_eta_d_i(etr_d1_i, etr_d2_i, r_f):
-    """二重窓等の複数の開口部が組み合わさった開口部の垂直面日射熱取得率 (-) (5)
+def get_eta_d_H_i(etr_dH1_i, etr_dH2_i, r_f):
+    """二重窓等の複数の開口部が組み合わさった開口部の暖房期の垂直面日射熱取得率 (-) (7)
 
     Args:
-      etr_d1_i(float): 開口部の外気側の窓の垂直面日射熱取得率 (-)
-      etr_d2_i(float): 開口部の室内側の窓の垂直面日射熱取得率 (-)
+      etr_dH1_i(float): 開口部の外気側の窓の暖房期の垂直面日射熱取得率 (-)
+      etr_dH2_i(float): 開口部の室内側の窓の暖房期の垂直面日射熱取得率 (-)
       r_f(float): 開口部の全体の面積に対するガラス部分の面積の比 (-)
 
     Returns:
-      float: 二重窓等の複数の開口部が組み合わさった開口部の垂直面日射熱取得率
+      float: 二重窓等の複数の開口部が組み合わさった開口部の暖房期の垂直面日射熱取得率
 
     """
-    return etr_d1_i * etr_d2_i * 1.06 / r_f
+    return etr_dH1_i * etr_dH2_i * 1.06 / r_f
+
+
+def get_eta_d_C_i(etr_dC1_i, etr_dC2_i, r_f):
+    """二重窓等の複数の開口部が組み合わさった開口部の冷房期の垂直面日射熱取得率 (-) (8)
+
+    Args:
+      etr_dC1_i(float): 開口部の外気側の窓の冷房期の垂直面日射熱取得率 (-)
+      etr_dC2_i(float): 開口部の室内側の窓の冷房期の垂直面日射熱取得率 (-)
+      r_f(float): 開口部の全体の面積に対するガラス部分の面積の比 (-)
+
+    Returns:
+      float: 二重窓等の複数の開口部が組み合わさった開口部の冷房期の垂直面日射熱取得率
+
+    """
+    return etr_dC1_i * etr_dC2_i * 1.06 / r_f
 
 
 def get_r_f(frame_type):
@@ -343,7 +362,7 @@ def calc_etr_g_byKey(glass_type, attachment):
     """ノードの値から垂直面日射熱取得率を取得（C 表1）
 
     Args:
-      glass_type(String): ガラス仕様の区分
+      glass_type(String): ガラスの仕様
       attachment(String): 付属品部材
 
     Returns:
@@ -353,15 +372,14 @@ def calc_etr_g_byKey(glass_type, attachment):
 
     # ノードの値と関数get_etr_g内のガラス仕様の区分を対応づける
     type_dict = {
-        '3PairDoubleLowEG':'2枚以上のガラス表面にLow-E膜を使用したLow-E三層複層ガラス(日射取得型)',
-        '3PairDoubleLowES':'2枚以上のガラス表面にLow-E膜を使用したLow-E三層複層ガラス(日射遮蔽型)',
-        '3PairLowEG':'Low-E三層複層ガラス(日射取得型)',
-        '3PairLowES':'Low-E三層複層ガラス(日射遮蔽型)',
-        '3PairClear':'三層複層ガラス',
-        '2PairLowEG':'Low-E二層複層ガラス(日射取得型)',
-        '2PairLowES':'Low-E二層複層ガラス(日射遮蔽型)',
-        '2PairClear':'二層複層ガラス',
-        '2PairSingleClear':'単板ガラス2枚を組み合わせたもの',
+        '3PairDoubleLowEG':'2枚以上のガラス表面にLow-E膜を使用したLow-E三層複層ガラス又はLow-E真空複層ガラス（日射取得型）',
+        '3PairDoubleLowES':'2枚以上のガラス表面にLow-E膜を使用したLow-E三層複層ガラス又はLow-E真空複層ガラス（日射遮蔽型）',
+        '3PairLowEG':'Low-E三層複層ガラス又はLow-E真空複層ガラス（日射取得型）',
+        '3PairLowES':'Low-E三層複層ガラス又はLow-E真空複層ガラス（日射遮蔽型）',
+        '3PairClear':'三層複層ガラス又は真空複層ガラス',
+        '2PairLowEG':'Low-E二層複層ガラス又はLow-E真空ガラス（日射取得型）',
+        '2PairLowES':'Low-E二層複層ガラス又はLow-E真空ガラス（日射遮蔽型）',
+        '2PairClear':'二層複層ガラス、真空ガラス又は単板ガラス2枚を組み合わせたもの',
         'SingleClear':'単板ガラス'
     }
 
@@ -369,7 +387,8 @@ def calc_etr_g_byKey(glass_type, attachment):
         'No':'付属部材なし',
         'WindbreakSpace':'風除室',
         'Shoji':'和障子',
-        'ExteriorBlind':'外付けブラインド'
+        'InteriorShade':'内付けの日射遮蔽部材（和障子を除く）',
+        'ExteriorShade':'外付けの日射遮蔽部材'
     }
 
     return eater_d.get_etr_g(type_dict[glass_type], attachment_dict[attachment])
